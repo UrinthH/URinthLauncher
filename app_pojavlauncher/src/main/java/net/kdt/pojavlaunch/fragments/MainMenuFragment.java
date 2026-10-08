@@ -72,6 +72,7 @@ public class MainMenuFragment extends Fragment {
         getChildFragmentManager().addOnBackStackChangedListener(() -> {
             if (centerContainer != null && getChildFragmentManager().getBackStackEntryCount() == 0) {
                 centerContainer.setVisibility(View.GONE);
+                if (launcherView != null) launcherView.onCenterContentClosed();
             }
         });
         return root;
