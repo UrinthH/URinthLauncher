@@ -31,6 +31,7 @@ import net.kdt.pojavlaunch.instances.Instances;
 import net.kdt.pojavlaunch.fragments.InstanceEditorFragment;
 import net.kdt.pojavlaunch.fragments.ForgeInstallFragment;
 import net.kdt.pojavlaunch.fragments.LegacyFabricInstallFragment;
+import net.kdt.pojavlaunch.fragments.ModrinthBrowserFragment;
 import net.kdt.pojavlaunch.prefs.screens.LauncherPreferenceFragment;
 import net.kdt.pojavlaunch.tasks.AsyncVersionList;
 import net.kdt.pojavlaunch.profiles.VersionSelectorDialog;
@@ -372,6 +373,17 @@ public final class ModrinthLauncherView extends View {
         text(c,subtitle,x+72,y+56,12,MUTED,false);
         text(c,detail,x+20,y+86,13,TEXT,false);
         pill(c,x+w-152,y+h-47,x+w-18,y+h-15,action);
+    }
+
+    private void openContentCategory(String category) {
+        MainMenuFragment host = getMainMenuHost();
+        if (host != null) {
+            android.os.Bundle args = new android.os.Bundle();
+            args.putString(ModrinthBrowserFragment.ARG_CATEGORY, category);
+            host.showCenterFragment(ModrinthBrowserFragment.class, ModrinthBrowserFragment.TAG, args);
+        } else {
+            Toast.makeText(getContext(), "Launcher panel is not ready yet", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private MainMenuFragment getMainMenuHost() {
@@ -919,11 +931,19 @@ public final class ModrinthLauncherView extends View {
                 if (host != null && host.isCenterContentVisible()) host.closeCenterContent();
                 selectedPage = idx;
             }
-            else if(idx==2){Tools.swapFragment(activity,SearchModFragment.class,SearchModFragment.TAG,null);}
+            else if(idx==2){openContentCategory("mod");}
+            else if(idx==3){openContentCategory("resourcepack");}
+            else if(idx==4){Tools.swapFragment(activity,SearchModFragment.class,SearchModFragment.TAG,null);}
             else if(idx==5){Tools.swapFragment(activity,LauncherPreferenceFragment.class,LauncherActivity.SETTING_FRAGMENT_TAG,null);}
             invalidate(); return true;
         }
-        if(menuOpen && x<228 && y>=378 && y<522){return true;}
+        if(menuOpen && x<228 && y>=378 && y<522){
+            int idx=(int)((y-378)/48);
+            if(idx==0) openContentCategory("modpack");
+            else if(idx==1) openContentCategory("shader");
+            else if(idx==2) openContentCategory("world");
+            return true;
+        }
         if (selectedPage == 1 && x >= 242 && x < 1215 && y >= 75 && y < 660) {
             float left=menuOpen?242:18f, width=1215f-left, gap=14f, cardW=(width-4*gap)/3f;
             float startX=left+gap, startY=163f, cardH=140f, rowGap=14f;
