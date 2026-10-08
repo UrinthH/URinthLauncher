@@ -10,6 +10,7 @@ import android.view.View;
 import android.widget.Toast;
 
 import androidx.core.content.ContextCompat;
+import androidx.fragment.app.FragmentActivity;
 
 import com.kdt.mcgui.mcVersionSpinner;
 
@@ -47,13 +48,15 @@ public final class ModrinthLauncherView extends View {
     private final Bitmap logo;
     private final Bitmap discord;
     private final mcVersionSpinner versionSpinner;
+    private final FragmentActivity activity;
     private final Runnable modInstaller;
     private boolean menuOpen = true;
     private boolean ultraOn;
     private float sx = 1f, sy = 1f;
 
-    public ModrinthLauncherView(Context context, mcVersionSpinner spinner, Runnable installer) {
-        super(context);
+    public ModrinthLauncherView(FragmentActivity activity, mcVersionSpinner spinner, Runnable installer) {
+        super(activity);
+        this.activity = activity;
         versionSpinner = spinner;
         modInstaller = installer;
         logo = bitmap(R.drawable.ic_modrinth);
@@ -311,11 +314,11 @@ public final class ModrinthLauncherView extends View {
         float x=e.getX()/sx,y=e.getY()/sy;
         Context c=getContext();
         if(y<62 && x<75){menuOpen=!menuOpen;invalidate();return true;}
-        if(y<62 && x>1350){Tools.swapFragment((android.app.Activity)c,LauncherPreferenceFragment.class,LauncherActivity.SETTING_FRAGMENT_TAG,null);return true;}
+        if(y<62 && x>1350){Tools.swapFragment(activity,LauncherPreferenceFragment.class,LauncherActivity.SETTING_FRAGMENT_TAG,null);return true;}
         if(menuOpen && x<228 && y>=72 && y<365){
             int idx=(int)((y-72)/48);
-            if(idx==1){versionSpinner.openProfileEditor((android.app.Activity)c);}
-            else if(idx==2){Tools.swapFragment((android.app.Activity)c,SearchModFragment.class,SearchModFragment.TAG,null);}
+            if(idx==1){versionSpinner.openProfileEditor(activity);}
+            else if(idx==2){Tools.swapFragment(activity,SearchModFragment.class,SearchModFragment.TAG,null);}
             else if(idx==5){Tools.swapFragment((android.app.Activity)c,LauncherPreferenceFragment.class,LauncherActivity.SETTING_FRAGMENT_TAG,null);}
             invalidate(); return true;
         }
@@ -341,7 +344,7 @@ public final class ModrinthLauncherView extends View {
             ultraOn=!ultraOn;c.getSharedPreferences("urinth_ui",Context.MODE_PRIVATE).edit().putBoolean("ultra",ultraOn).apply();invalidate();return true;
         }
         if(x>=1230 && y>=362 && y<435){
-            Tools.openURL((android.app.Activity)c,c.getString(R.string.social_media_invite));return true;
+            Tools.openURL(activity,c.getString(R.string.social_media_invite));return true;
         }
         return true;
     }
