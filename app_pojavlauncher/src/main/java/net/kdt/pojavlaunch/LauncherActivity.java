@@ -21,6 +21,9 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.core.app.ActivityCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentContainerView;
@@ -130,14 +133,23 @@ public class LauncherActivity extends BaseActivity {
     }
 
     private void applyImmersiveFullscreen() {
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
         getWindow().setFlags(
                 WindowManager.LayoutParams.FLAG_FULLSCREEN,
                 WindowManager.LayoutParams.FLAG_FULLSCREEN
         );
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            getWindow().setStatusBarColor(Color.TRANSPARENT);
-            getWindow().setNavigationBarColor(Color.TRANSPARENT);
+        getWindow().setStatusBarColor(Color.TRANSPARENT);
+        getWindow().setNavigationBarColor(Color.TRANSPARENT);
+
+        WindowInsetsControllerCompat controller =
+                WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
+        if (controller != null) {
+            controller.setSystemBarsBehavior(
+                    WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            );
+            controller.hide(WindowInsetsCompat.Type.systemBars());
         }
+
         getWindow().getDecorView().setSystemUiVisibility(
                 View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
                         | View.SYSTEM_UI_FLAG_FULLSCREEN
