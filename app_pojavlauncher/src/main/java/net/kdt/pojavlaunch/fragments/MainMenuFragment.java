@@ -7,6 +7,7 @@ import android.view.ViewGroup;
 import android.widget.FrameLayout;
 import android.graphics.Color;
 
+import androidx.activity.OnBackPressedCallback;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -74,6 +75,20 @@ public class MainMenuFragment extends Fragment {
             }
         });
         return root;
+    }
+
+    @Override
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
+        OnBackPressedCallback callback = new OnBackPressedCallback(isCenterContentVisible()) {
+            @Override
+            public void handleOnBackPressed() {
+                closeCenterContent();
+                setEnabled(false);
+            }
+        };
+        requireActivity().getOnBackPressedDispatcher().addCallback(getViewLifecycleOwner(), callback);
+        getChildFragmentManager().addOnBackStackChangedListener(() -> callback.setEnabled(isCenterContentVisible()));
     }
 
     public void showAuthChooser() {
