@@ -54,6 +54,10 @@ public final class ModrinthLauncherView extends View {
     private final RectF r = new RectF();
     private final Bitmap logo;
     private final Bitmap discord;
+    private final Bitmap heroArtwork;
+    private final Bitmap cherryArtwork;
+    private final Bitmap snowArtwork;
+    private final Bitmap badlandsArtwork;
     private final mcVersionSpinner versionSpinner;
     private final AccountSpinner accountSpinner;
     private final FragmentActivity activity;
@@ -77,6 +81,10 @@ public final class ModrinthLauncherView extends View {
         modInstaller = installer;
         logo = bitmap(R.drawable.ic_modrinth);
         discord = bitmap(R.drawable.ic_discord);
+        heroArtwork = bitmap(R.drawable.urinth_hero);
+        cherryArtwork = bitmap(R.drawable.urinth_cherry);
+        snowArtwork = bitmap(R.drawable.urinth_snow);
+        badlandsArtwork = bitmap(R.drawable.urinth_badlands);
         SharedPreferences prefs = activity.getSharedPreferences("urinth_ui", Context.MODE_PRIVATE);
         ultraOn = prefs.getBoolean("ultra", true);
         p.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
@@ -202,59 +210,19 @@ public final class ModrinthLauncherView extends View {
 
     private void drawHero(Canvas c,float x,float y,float w,float h) {
         round(c,x,y,x+w,y+h,14,Color.rgb(9,38,57),CYAN,1.5f);
-        RectF clip=new RectF(x+1,y+1,x+w-1,y+h-1);
-        c.save(); c.clipRect(clip);
-
-        p.setShader(new LinearGradient(x,y,x+w,y+h*.75f,
-                Color.rgb(38,57,133),Color.rgb(245,105,102),Shader.TileMode.CLAMP));
-        c.drawRect(clip,p); p.setShader(null);
-
-        // Soft blocky clouds.
-        drawCloud(c,x+95,y+42,1.0f);
-        drawCloud(c,x+w-360,y+34,0.8f);
-
-        // Ocean and layered horizon.
-        p.setColor(Color.rgb(19,103,139)); c.drawRect(x,y+h*.58f,x+w,y+h,p);
-        p.setColor(Color.rgb(17,82,119)); c.drawRect(x,y+h*.70f,x+w,y+h,p);
-        p.setColor(Color.rgb(15,69,102)); c.drawRect(x,y+h*.82f,x+w,y+h,p);
-
-        // Sun glow and sun.
-        p.setColor(Color.argb(55,255,241,177)); c.drawCircle(x+w*.72f,y+h*.45f,43,p);
-        p.setColor(Color.rgb(255,239,167)); c.drawCircle(x+w*.72f,y+h*.45f,25,p);
-
-        // Distant blocky islands.
-        p.setColor(Color.rgb(31,67,74));
-        Path island=new Path();
-        island.moveTo(x+305,y+h*.62f); island.lineTo(x+395,y+h*.40f); island.lineTo(x+455,y+h*.55f);
-        island.lineTo(x+520,y+h*.62f); island.close(); c.drawPath(island,p);
-        island.reset();
-        island.moveTo(x+w-330,y+h*.62f); island.lineTo(x+w-240,y+h*.38f); island.lineTo(x+w-175,y+h*.54f);
-        island.lineTo(x+w-110,y+h*.62f); island.close(); c.drawPath(island,p);
-
-        // Minecraft-like sailing boat.
-        p.setColor(Color.rgb(39,31,37)); c.drawRoundRect(x+w*.585f,y+h*.70f,x+w*.685f,y+h*.76f,8,8,p);
-        p.setColor(Color.rgb(119,72,44)); c.drawRect(x+w*.61f,y+h*.64f,x+w*.62f,y+h*.72f,p);
-        p.setColor(Color.rgb(247,231,196));
-        Path sail=new Path(); sail.moveTo(x+w*.62f,y+h*.70f); sail.lineTo(x+w*.62f,y+h*.39f); sail.lineTo(x+w*.69f,y+h*.68f); sail.close(); c.drawPath(sail,p);
-        p.setColor(Color.rgb(218,191,151));
-        Path sail2=new Path(); sail2.moveTo(x+w*.62f,y+h*.70f); sail2.lineTo(x+w*.62f,y+h*.48f); sail2.lineTo(x+w*.665f,y+h*.68f); sail2.close(); c.drawPath(sail2,p);
-
-        // Water highlights.
-        p.setColor(Color.argb(120,133,210,224));
-        for(int i=0;i<8;i++){
-            float yy=y+h*.72f+(i%3)*17;
-            float xx=x+315+i*83;
-            c.drawRect(xx,yy,xx+58,yy+2,p);
-        }
+        c.save();
+        c.clipRect(x+1,y+1,x+w-1,y+h-1);
+        drawBitmap(c,heroArtwork,x+1,y+1,w-2,h-2);
         c.restore();
 
-        // Text stays over the artwork like the reference.
-        text(c,"Play, Explore,",x+22,y+53,27,TEXT,true);
-        text(c,"Create, Together.",x+22,y+82,27,TEXT,true);
-        text(c,"The best Minecraft experience,",x+22,y+110,13,TEXT,false);
-        text(c,"now on your Android device.",x+22,y+128,13,TEXT,false);
+        // Keep the reference-style copy readable over the artwork.
+        p.setColor(Color.argb(80,0,15,28));
+        c.drawRoundRect(x+12,y+14,x+365,y+h-14,12,12,p);
+        text(c,"Play, Explore,",x+28,y+56,27,TEXT,true);
+        text(c,"Create, Together.",x+28,y+85,27,TEXT,true);
+        text(c,"The best Minecraft experience,",x+28,y+113,13,TEXT,false);
+        text(c,"now on your Android device.",x+28,y+131,13,TEXT,false);
     }
-
     private void drawCloud(Canvas c,float x,float y,float scale) {
         p.setColor(Color.argb(105,255,255,255));
         c.drawRect(x,y+13*scale,x+88*scale,y+31*scale,p);
@@ -321,60 +289,10 @@ public final class ModrinthLauncherView extends View {
     }
 
     private void drawBiome(Canvas c,float x,float y,float w,float h,int type) {
-        c.save(); c.clipRect(x,y,x+w,y+h);
-
-        int top=type==0?Color.rgb(86,39,122):type==1?Color.rgb(66,128,190):Color.rgb(194,91,37);
-        int bottom=type==0?Color.rgb(224,104,157):type==1?Color.rgb(179,220,250):Color.rgb(242,156,55);
-        p.setShader(new LinearGradient(x,y,x,y+h,top,bottom,Shader.TileMode.CLAMP));
-        c.drawRect(x,y,x+w,y+h,p); p.setShader(null);
-
-        // Soft sky light.
-        p.setColor(Color.argb(100,255,241,197)); c.drawCircle(x+w*.72f,y+h*.30f,18,p);
-
-        if(type==0) {
-            // Cherry grove: trunks, branches, layered pink leaf clusters.
-            p.setColor(Color.rgb(87,52,62));
-            for(int i=0;i<7;i++){
-                float tx=x+18+i*(w-36)/6f;
-                float base=y+122-(i%2)*5;
-                c.drawRect(tx,base-55,tx+9,base+28,p);
-                c.drawRect(tx+5,base-47,tx+31,base-40,p);
-                p.setColor(Color.rgb(245,104,166)); c.drawCircle(tx+6,base-61,17,p);
-                p.setColor(Color.rgb(224,77,147)); c.drawCircle(tx+22,base-53,15,p);
-                p.setColor(Color.rgb(255,139,186)); c.drawCircle(tx-5,base-47,13,p);
-                p.setColor(Color.rgb(87,52,62));
-            }
-            p.setColor(Color.rgb(44,93,55)); c.drawRect(x,y+125,x+w,y+h,p);
-            p.setColor(Color.rgb(117,70,91)); c.drawRect(x,y+118,x+w,y+125,p);
-            for(int i=0;i<8;i++){p.setColor(Color.rgb(255,183,211));c.drawCircle(x+22+i*42,y+132+(i%2)*8,4,p);}
-        } else if(type==1) {
-            // Snowy mountains with spruce silhouettes.
-            p.setColor(Color.rgb(244,249,255));
-            Path m=new Path(); m.moveTo(x,y+120);m.lineTo(x+62,y+48);m.lineTo(x+111,y+104);m.lineTo(x+170,y+34);m.lineTo(x+w,y+112);m.lineTo(x+w,y+160);m.lineTo(x,y+160);m.close();c.drawPath(m,p);
-            p.setColor(Color.rgb(203,226,245));
-            Path shade=new Path(); shade.moveTo(x+62,y+48);shade.lineTo(x+86,y+93);shade.lineTo(x+74,y+90);shade.close();c.drawPath(shade,p);
-            p.setColor(Color.rgb(38,81,76)); c.drawRect(x,y+119,x+w,y+160,p);
-            for(int i=0;i<8;i++) drawPine(c,x+18+i*43,y+111-(i%3)*6,0.62f);
-            p.setColor(Color.rgb(235,247,255));
-            for(int i=0;i<14;i++) c.drawCircle(x+12+i*31,y+138+(i%2)*8,2,p);
-        } else {
-            // Badlands/desert: layered mesas and red-orange terrain.
-            p.setColor(Color.rgb(137,61,40));
-            for(int layer=0;layer<3;layer++){
-                Path mesa=new Path();
-                float yy=y+84+layer*15;
-                mesa.moveTo(x,yy+30); mesa.lineTo(x+35,yy+8); mesa.lineTo(x+82,yy+20);
-                mesa.lineTo(x+120,yy-20); mesa.lineTo(x+172,yy+15); mesa.lineTo(x+225,yy-5);
-                mesa.lineTo(x+w,yy+22); mesa.lineTo(x+w,y+h); mesa.lineTo(x,y+h); mesa.close();
-                c.drawPath(mesa,p);
-                p.setColor(layer==0?Color.rgb(223,105,51):layer==1?Color.rgb(193,78,40):Color.rgb(157,64,38));
-            }
-            p.setColor(Color.rgb(241,143,61)); c.drawRect(x,y+128,x+w,y+h,p);
-            p.setColor(Color.rgb(107,57,39));
-            for(int i=0;i<5;i++){float tx=x+34+i*66; c.drawRect(tx,y+106,tx+7,y+133,p); c.drawCircle(tx+3,y+103,10,p);}
-            p.setColor(Color.rgb(255,192,91)); c.drawCircle(x+w*.72f,y+h*.30f,20,p);
-        }
-
+        Bitmap artwork = type == 0 ? cherryArtwork : type == 1 ? snowArtwork : badlandsArtwork;
+        c.save();
+        c.clipRect(x,y,x+w,y+h);
+        drawBitmap(c,artwork,x,y,w,h);
         c.restore();
         round(c,x,y,x+w,y+h,12,Color.TRANSPARENT,Color.rgb(9,156,186),1.5f);
     }
