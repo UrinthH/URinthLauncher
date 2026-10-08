@@ -203,6 +203,7 @@ public final class ModrinthLauncherView extends View {
 
     @Override protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
+        // Fill the entire available display area without a left/right letterbox.
         sx = getWidth() / W;
         sy = getHeight() / H;
         canvas.save();
