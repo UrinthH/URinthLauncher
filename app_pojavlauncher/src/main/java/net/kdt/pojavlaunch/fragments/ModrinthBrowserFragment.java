@@ -2,7 +2,6 @@ package net.kdt.pojavlaunch.fragments;
 
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
-import android.content.Context;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.view.Gravity;
@@ -74,7 +73,7 @@ public class ModrinthBrowserFragment extends Fragment {
     }
 
     private static class Version {
-        String id, name, number, gameVersion, loader, url, filename, sha1, type;
+        String id = "", name = "", number = "", gameVersion = "", loader = "", url = "", filename = "", sha1 = "", type = "";
         long size;
         Version(JsonObject json) {
             id = string(json, "id");
@@ -102,6 +101,26 @@ public class ModrinthBrowserFragment extends Fragment {
                 sha1 = hashes.has("sha1") ? hashes.get("sha1").getAsString() : "";
             }
         }
+    }
+
+    private static String readResponse(InputStream input) throws java.io.IOException {
+        java.io.ByteArrayOutputStream output = new java.io.ByteArrayOutputStream();
+        byte[] buffer = new byte[8192];
+        int count;
+        while ((count = input.read(buffer)) != -1) output.write(buffer, 0, count);
+        return output.toString("UTF-8");
+    }
+
+    private static String sha1(File file) throws Exception {
+        java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-1");
+        try (InputStream input = new java.io.FileInputStream(file)) {
+            byte[] buffer = new byte[8192];
+            int count;
+            while ((count = input.read(buffer)) != -1) digest.update(buffer, 0, count);
+        }
+        StringBuilder result = new StringBuilder();
+        for (byte b : digest.digest()) result.append(String.format(Locale.ROOT, "%02x", b & 0xff));
+        return result.toString();
     }
 
     private static String string(JsonObject object, String key) {
@@ -235,7 +254,7 @@ public class ModrinthBrowserFragment extends Fragment {
                 connection.setRequestProperty("User-Agent", "URinthLauncher/1.0 (Android)");
                 String body;
                 try (InputStream in = connection.getInputStream()) {
-                    body = new String(in.readAllBytes(), StandardCharsets.UTF_8);
+                    body = readResponse(in);
                 }
                 JsonObject json = JsonParser.parseString(body).getAsJsonObject();
                 JsonArray hits = json.getAsJsonArray("hits");
@@ -486,7 +505,7 @@ public class ModrinthBrowserFragment extends Fragment {
                     connection.disconnect();
                 }
                 if (!version.sha1.isEmpty()) {
-                    String actual = org.apache.commons.codec.digest.DigestUtils.sha1Hex(destination);
+                    String actual = sha1(destination);
                     if (!actual.equalsIgnoreCase(version.sha1)) {
                         destination.delete();
                         throw new java.io.IOException("Downloaded file failed its SHA-1 check.");
