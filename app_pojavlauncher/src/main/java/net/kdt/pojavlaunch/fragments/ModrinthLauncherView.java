@@ -127,18 +127,18 @@ public final class ModrinthLauncherView extends View {
                 bitmap -> { heroRealisticArtwork = bitmap; invalidate(); }
         );
 
-        // A reusable artwork pool. New instances automatically select an image
-        // from this pool, so added instances never render without artwork.
+        // Verified official Minecraft biome artwork. Each card gets a different biome
+        // so the three visible instances never look like duplicate screenshots.
         loadRemoteArtwork(
-                "https://www.minecraft.net/content/dam/minecraftnet/games/minecraft/key-art/Ambient-Hero-B_Vibrant-Visuals_1080x1080.jpg",
+                "https://www.minecraft.net/content/dam/minecraftnet/games/minecraft/screenshots/cherry-carousel1.jpg",
                 bitmap -> { versionBiomeArtworks[0] = bitmap; invalidate(); }
         );
         loadRemoteArtwork(
-                "https://www.minecraft.net/content/dam/minecraftnet/games/minecraft/key-art/Ambient-Hero-B_Vibrant-Visuals_1080x1080.jpg",
+                "https://www.minecraft.net/content/dam/minecraftnet/games/minecraft/screenshots/desert-header.jpg.jpg",
                 bitmap -> { versionBiomeArtworks[1] = bitmap; invalidate(); }
         );
         loadRemoteArtwork(
-                "https://www.minecraft.net/content/dam/minecraftnet/games/minecraft/key-art/Ambient-Hero-B_Vibrant-Visuals_1080x1080.jpg",
+                "https://www.minecraft.net/content/dam/minecraftnet/games/minecraft/screenshots/sparse-header.jpg",
                 bitmap -> { versionBiomeArtworks[2] = bitmap; invalidate(); }
         );
         loadRemoteArtwork(
@@ -343,7 +343,49 @@ public final class ModrinthLauncherView extends View {
 
     private void drawRealisticHeroImage(Canvas c,float x,float y,float w,float h) {
         if (heroRealisticArtwork != null) {
+            // Shader-style hero treatment: richer highlights, cooler shadows,
+            // cinematic contrast, atmospheric haze and a soft vignette.
+            android.graphics.ColorMatrix cm = new android.graphics.ColorMatrix(new float[]{
+                    1.18f, 0.02f, 0, 0, 2,
+                    0.01f, 1.14f, 0.01f, 0, 2,
+                    0, 0.03f, 1.22f, 0, 5,
+                    0, 0, 0, 1, 0
+            });
+            p.setColorFilter(new android.graphics.ColorMatrixColorFilter(cm));
             drawCoverBitmap(c, heroRealisticArtwork, x, y, w, h);
+            p.setColorFilter(null);
+
+            // Warm sunset light across the upper horizon.
+            LinearGradient sunset = new LinearGradient(
+                    x, y, x, y + h * 0.78f,
+                    Color.argb(105, 255, 185, 105),
+                    Color.argb(0, 255, 185, 105),
+                    Shader.TileMode.CLAMP
+            );
+            p.setShader(sunset);
+            c.drawRect(x, y, x+w, y+h, p);
+            p.setShader(null);
+
+            // Cool atmospheric depth toward the lower frame.
+            LinearGradient atmosphere = new LinearGradient(
+                    x, y, x, y+h,
+                    Color.argb(0, 30, 190, 215),
+                    Color.argb(78, 0, 24, 42),
+                    Shader.TileMode.CLAMP
+            );
+            p.setShader(atmosphere);
+            c.drawRect(x, y, x+w, y+h, p);
+            p.setShader(null);
+
+            RadialGradient vignette = new RadialGradient(
+                    x+w*0.52f, y+h*0.40f, Math.max(w,h)*0.76f,
+                    new int[]{Color.TRANSPARENT, Color.argb(115,0,0,0)},
+                    new float[]{0.45f, 1f},
+                    Shader.TileMode.CLAMP
+            );
+            p.setShader(vignette);
+            c.drawRect(x,y,x+w,y+h,p);
+            p.setShader(null);
         } else {
             round(c,x,y,x+w,y+h,24,Color.rgb(24,52,60),Color.TRANSPARENT,0);
         }
