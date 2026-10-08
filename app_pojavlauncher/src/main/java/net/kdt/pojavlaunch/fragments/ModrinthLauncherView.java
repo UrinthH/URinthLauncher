@@ -395,7 +395,38 @@ public final class ModrinthLauncherView extends View {
     private void drawSettings(Canvas c,float x,float y){p.setColor(TEXT);p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(4);c.drawCircle(x,y,10,p);for(int i=0;i<8;i++){double a=i*Math.PI/4; c.drawLine(x+(float)Math.cos(a)*12,y+(float)Math.sin(a)*12,x+(float)Math.cos(a)*16,y+(float)Math.sin(a)*16,p);}p.setStyle(Paint.Style.FILL);}
 
     private void drawCircleIcon(Canvas c,float x,float y,String s){p.setColor(Color.rgb(6,115,111));c.drawCircle(x,y,22,p);text(c,s,x-8,y+8,22,ACCENT,true);}
-    private void drawNavIcon(Canvas c,float x,float y,int type){p.setColor(TEXT);p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(3);if(type==0){c.drawRect(x-10,y-8,x+10,y+10,p);Path q=new Path();q.moveTo(x-14,y-8);q.lineTo(x,y-18);q.lineTo(x+14,y-8);q.close();c.drawPath(q,p);}else if(type==2){c.drawCircle(x,y,10,p);c.drawLine(x-15,y,x+15,y,p);c.drawLine(x,y-15,x,y+15,p);}else{c.drawRoundRect(x-12,y-9,x+12,y+9,3,3,p);c.drawLine(x-6,y-9,x-6,y-14,p);c.drawLine(x+6,y-9,x+6,y-14,p);}p.setStyle(Paint.Style.FILL);}
+    private void drawNavIcon(Canvas c,float x,float y,int type){
+        p.setColor(TEXT); p.setStyle(Paint.Style.STROKE); p.setStrokeWidth(2.5f);
+        Path q = new Path();
+        switch(type){
+            case 0: // Home
+                q.moveTo(x-13,y-2); q.lineTo(x,y-14); q.lineTo(x+13,y-2);
+                q.moveTo(x-10,y-3); q.lineTo(x-10,y+11); q.lineTo(x+10,y+11); q.lineTo(x+10,y-3);
+                c.drawPath(q,p); c.drawRect(x-3,y+3,x+3,y+11,p); break;
+            case 1: // Instances
+                c.drawRoundRect(x-12,y-10,x+12,y+10,3,3,p);
+                c.drawLine(x-7,y-5,x+7,y-5,p); c.drawLine(x-7,y,x+7,y,p); c.drawLine(x-7,y+5,x+3,y+5,p); break;
+            case 2: // Mods
+                c.drawCircle(x,y,11,p); c.drawLine(x-16,y,x+16,y,p); c.drawLine(x,y-16,x,y+16,p);
+                c.drawCircle(x,y,3,p); break;
+            case 3: // Resource Packs
+                c.drawRect(x-12,y-10,x+12,y+10,p); c.drawLine(x-4,y-10,x-4,y+10,p);
+                c.drawLine(x+4,y-10,x+4,y+10,p); break;
+            case 4: // Servers
+                c.drawRoundRect(x-13,y-11,x+13,y+11,3,3,p); c.drawLine(x-9,y-4,x+9,y-4,p);
+                c.drawCircle(x-7,y+4,1,p); c.drawCircle(x-1,y+4,1,p); c.drawCircle(x+5,y+4,1,p); break;
+            case 5: // Settings
+                c.drawCircle(x,y,6,p); for(int i=0;i<8;i++){double a=i*Math.PI/4; c.drawLine(x+(float)Math.cos(a)*9,y+(float)Math.sin(a)*9,x+(float)Math.cos(a)*14,y+(float)Math.sin(a)*14,p);} break;
+            case 6: // Modpacks
+                c.drawRect(x-13,y-9,x-1,y+8,p); c.drawRect(x+1,y-9,x+13,y+8,p); c.drawLine(x-13,y-2,x-1,y-2,p); c.drawLine(x+1,y-2,x+13,y-2,p); break;
+            case 7: // Shaders
+                c.drawLine(x-13,y+9,x+13,y-9,p); c.drawCircle(x-7,y-7,3,p); c.drawCircle(x+7,y+7,3,p); break;
+            default: // Worlds
+                c.drawCircle(x,y,12,p); c.drawLine(x-12,y,x+12,y,p); c.drawLine(x,y-12,x,y+12,p);
+                c.drawArc(x-7,y-12,x+7,y+12,0,180,false,p); break;
+        }
+        p.setStyle(Paint.Style.FILL);
+    }
 
     @Override public boolean onTouchEvent(MotionEvent e) {
         if(e.getAction()!=MotionEvent.ACTION_UP) return true;
