@@ -47,13 +47,15 @@ public final class ModrinthLauncherView extends View {
     private final Bitmap logo;
     private final Bitmap discord;
     private final mcVersionSpinner versionSpinner;
+    private final Runnable modInstaller;
     private boolean menuOpen = true;
     private boolean ultraOn;
     private float sx = 1f, sy = 1f;
 
-    public ModrinthLauncherView(Context context, mcVersionSpinner spinner) {
+    public ModrinthLauncherView(Context context, mcVersionSpinner spinner, Runnable installer) {
         super(context);
         versionSpinner = spinner;
+        modInstaller = installer;
         logo = bitmap(R.drawable.ic_modrinth);
         discord = bitmap(R.drawable.ic_discord);
         SharedPreferences prefs = context.getSharedPreferences("urinth_ui", Context.MODE_PRIVATE);
@@ -318,8 +320,14 @@ public final class ModrinthLauncherView extends View {
             invalidate(); return true;
         }
         if(menuOpen && x<228 && y>=378 && y<522){return true;}
-        if(x>242 && x<1215 && y>=505 && y<650 && y<545){
+        if(x>242 && x<1215 && y>=505 && y<545){
             Tools.swapFragment((android.app.Activity)c,SearchModFragment.class,SearchModFragment.TAG,null);return true;
+        }
+        if(x>242 && x<1215 && y>=553 && y<650){
+            float gap=10f, cw=(1215f-242f-gap*4f)/5f;
+            int mod=(int)((x-242f)/(cw+gap));
+            if(mod>=0 && mod<5){ modInstaller.run(); }
+            return true;
         }
         if(x>242 && x<1215 && y>=258 && y<418){
             int card=(int)((x-242)/((1215-242+12)/3f));
