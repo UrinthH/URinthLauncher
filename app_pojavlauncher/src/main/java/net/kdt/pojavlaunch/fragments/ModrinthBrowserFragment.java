@@ -532,10 +532,22 @@ public class ModrinthBrowserFragment extends Fragment {
             selectedInstance[0] = selected;
             selectedVersion[0] = null;
             versionList.removeAllViews();
-            int compatibleCount = 0;
+            List<Version> compatibleVersions = new ArrayList<>();
+            List<Version> incompatibleVersions = new ArrayList<>();
             for (Version version : versions) {
+                if (isCompatible(version, selected, category)) compatibleVersions.add(version);
+                else incompatibleVersions.add(version);
+            }
+            int compatibleCount = compatibleVersions.size();
+            // Keep rendering light on mobile: show the newest compatible releases first,
+            // followed by a smaller sample of incompatible releases for clear comparison.
+            List<Version> visibleVersions = new ArrayList<>();
+            int compatibleLimit = Math.min(compatibleVersions.size(), 24);
+            visibleVersions.addAll(compatibleVersions.subList(0, compatibleLimit));
+            int incompatibleLimit = Math.min(incompatibleVersions.size(), compatibleCount == 0 ? 24 : 8);
+            visibleVersions.addAll(incompatibleVersions.subList(0, incompatibleLimit));
+            for (Version version : visibleVersions) {
                 boolean matches = isCompatible(version, selected, category);
-                if (matches) compatibleCount++;
                 LinearLayout row = new LinearLayout(requireContext());
                 row.setOrientation(LinearLayout.VERTICAL);
                 row.setPadding(dp(12), dp(9), dp(12), dp(9));
@@ -591,13 +603,8 @@ public class ModrinthBrowserFragment extends Fragment {
             } else {
                 compatibility.setText(compatibleCount + " compatible release(s) · " + selected.versionId + " · Tap a green release to select it.");
                 compatibility.setTextColor(Color.rgb(103, 255, 190));
-                for (int i = 0; i < versionList.getChildCount(); i++) {
-                    View child = versionList.getChildAt(i);
-                    if (isCompatible(versions.get(i), selected, category)) {
-                        child.performClick();
-                        break;
-                    }
-                }
+                // Compatible releases are listed first, so the default selection is the newest match.
+                if (versionList.getChildCount() > 0) versionList.getChildAt(0).performClick();
             }
         };
         profileSpinner.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
@@ -687,7 +694,7 @@ public class ModrinthBrowserFragment extends Fragment {
         dialog.setIndeterminate(true);
         dialog.setCancelable(false);
         dialog.show();
-        PojavApplication.sExecutorService.execute(() -> {
+        Thread installThread = new Thread(() -> {
             File destination = null;
             try {
                 File gameDir = instance.getGameDirectory();
@@ -734,7 +741,9 @@ public class ModrinthBrowserFragment extends Fragment {
                             .setPositiveButton("OK", null).show();
                 });
             }
-        });
+        }, "urinth-modrinth-install");
+        installThread.setPriority(Thread.NORM_PRIORITY);
+        installThread.start();
     }
 
     private void showModpackVersionDialog(Project project, List<Version> versions) {
