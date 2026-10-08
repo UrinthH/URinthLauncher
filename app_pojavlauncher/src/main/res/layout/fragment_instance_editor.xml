@@ -50,7 +50,7 @@
                 app:layout_constraintBottom_toTopOf="@+id/vprof_editor_instance_name"
                 app:layout_constraintStart_toStartOf="@+id/vprof_editor_instance_name" />
 
-            <EditText android:hintTextColor="#91AAB8" android:textColor="#F2F8FA"
+            <EditText android:textColorHint="#91AAB8" android:textColor="#F2F8FA"
                 android:id="@+id/vprof_editor_instance_name"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
