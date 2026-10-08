@@ -70,7 +70,7 @@ public class LauncherActivity extends BaseActivity {
         if(!value || manager.isStateSaved()) return false;
         Fragment fragment = manager.findFragmentById(mFragmentView.getId());
         if(!(fragment instanceof MainMenuFragment)) return false;
-        Tools.swapFragment(this, SelectAuthFragment.class, SelectAuthFragment.TAG, null);
+        ((MainMenuFragment) fragment).showAuthChooser();
         return false;
     };
 
