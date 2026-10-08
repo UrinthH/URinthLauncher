@@ -120,30 +120,30 @@ public final class ModrinthLauncherView extends View {
         // Nostalgic Overworld night: Minecraft's own 25w44a night screenshot,
         // replacing the previous Sift background.
         loadRemoteArtwork(
-                "https://www.minecraft.net/content/dam/minecraftnet/games/minecraft/key-art/Ambient-Hero-B_Vibrant-Visuals_1080x1080.jpg",
+                "https://www.minecraft.net/content/dam/minecraftnet/games/minecraft/screenshots/MCV_ChaseTheSkies_Ocean01_VV_.net_1280x720.jpg",
                 bitmap -> { backgroundArtwork = bitmap; invalidate(); }
         );
         loadRemoteArtwork(
-                "https://www.minecraft.net/content/dam/minecraftnet/games/minecraft/screenshots/ATB_WarmOcean_header.jpg",
+                "https://www.minecraft.net/content/dam/minecraftnet/games/minecraft/screenshots/MCV_ChaseTheSkies_Swamp02_VV_.net_1280x720.jpg",
                 bitmap -> { heroRealisticArtwork = bitmap; invalidate(); }
         );
 
         // Verified official Minecraft biome artwork. Each card gets a different biome
         // so the three visible instances never look like duplicate screenshots.
         loadRemoteArtwork(
-                "https://www.minecraft.net/content/dam/minecraftnet/games/minecraft/screenshots/cherrygrove-header.jpg",
+                "https://www.minecraft.net/content/dam/minecraftnet/games/minecraft/screenshots/MCV_VibrantVisuals_MCL_comparison_03_cherrygrove.jpg",
                 bitmap -> { versionBiomeArtworks[0] = bitmap; invalidate(); }
         );
         loadRemoteArtwork(
-                "https://www.minecraft.net/content/dam/minecraftnet/games/minecraft/screenshots/frozen-header.jpg",
+                "https://www.minecraft.net/content/dam/minecraftnet/games/minecraft/screenshots/vv_Tundra_AG_02_1280x720.jpg",
                 bitmap -> { versionBiomeArtworks[1] = bitmap; invalidate(); }
         );
         loadRemoteArtwork(
-                "https://www.minecraft.net/content/dam/minecraftnet/games/minecraft/screenshots/badlands-header.jpg",
+                "https://www.minecraft.net/content/dam/minecraftnet/games/minecraft/screenshots/vv_Mesa_AG_01_1280x720.jpg",
                 bitmap -> { versionBiomeArtworks[2] = bitmap; invalidate(); }
         );
         loadRemoteArtwork(
-                "https://www.minecraft.net/content/dam/minecraftnet/games/minecraft/screenshots/25w44a_1170x500.jpg",
+                "https://www.minecraft.net/content/dam/minecraftnet/games/minecraft/screenshots/MCV_VibrantVisuals_MCL_comparison_04_tundra.jpg",
                 bitmap -> { versionBiomeArtworks[3] = bitmap; invalidate(); }
         );
         loadRemoteArtwork(
@@ -270,7 +270,7 @@ public final class ModrinthLauncherView extends View {
         if (backgroundArtwork != null) {
             drawCoverBitmap(c, backgroundArtwork, 0, 0, W, H);
             // Keep the launcher panels readable while retaining the scenery underneath.
-            p.setColor(Color.argb(34, 2, 16, 25));
+            p.setColor(Color.argb(112, 2, 12, 22));
             c.drawRect(0, 0, W, H, p);
         } else {
             p.setShader(new LinearGradient(0,0,0,H,
@@ -278,7 +278,7 @@ public final class ModrinthLauncherView extends View {
             c.drawRect(0,0,W,H,p);
             p.setShader(null);
         }
-        p.setColor(Color.argb(34, 3, 22, 34));
+        p.setColor(Color.argb(58, 3, 16, 27));
         c.drawRect(0,58,W,H,p);
     }
 
@@ -422,7 +422,10 @@ public final class ModrinthLauncherView extends View {
                     0, 0, 0, 1, 0
             });
             p.setColorFilter(new android.graphics.ColorMatrixColorFilter(cm));
-            drawCoverBitmap(c,b,x,y,w,h);
+            // The official cherry-grove source is a before/after comparison.
+            // Render only the Vibrant Visuals half so the card stays consistently shader-lit.
+            if (index == 0) drawCoverBitmapRightHalf(c, b, x, y, w, h);
+            else drawCoverBitmap(c,b,x,y,w,h);
             p.setColorFilter(null);
 
             LinearGradient light = new LinearGradient(
@@ -694,6 +697,18 @@ public final class ModrinthLauncherView extends View {
     private float measure(String s,float size,boolean bold){p.setTextSize(size);p.setTypeface(Typeface.create("sans-serif",bold?Typeface.BOLD:Typeface.NORMAL));return p.measureText(s);}
 
     private void drawBitmap(Canvas c,Bitmap b,float x,float y,float w,float h){if(b!=null)c.drawBitmap(b,null,new RectF(x,y,x+w,y+h),p);}
+
+    private void drawCoverBitmapRightHalf(Canvas c, Bitmap b, float x, float y, float w, float h) {
+        if (b == null) return;
+        Rect source = new Rect(b.getWidth() / 2, 0, b.getWidth(), b.getHeight());
+        float sourceWidth = source.width();
+        float scale = Math.max(w / sourceWidth, h / source.height());
+        float dw = sourceWidth * scale;
+        float dh = source.height() * scale;
+        float dx = x + (w - dw) * 0.5f;
+        float dy = y + (h - dh) * 0.5f;
+        c.drawBitmap(b, source, new RectF(dx, dy, dx + dw, dy + dh), p);
+    }
 
     private void drawCoverBitmap(Canvas c, Bitmap b, float x, float y, float w, float h) {
         if (b == null) return;
