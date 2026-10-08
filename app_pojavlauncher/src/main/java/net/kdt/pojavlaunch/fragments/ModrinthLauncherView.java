@@ -225,7 +225,7 @@ public final class ModrinthLauncherView extends View {
         if (backgroundArtwork != null) {
             drawCoverBitmap(c, backgroundArtwork, 0, 0, W, H);
             // Keep the launcher panels readable while retaining the scenery underneath.
-            p.setColor(Color.argb(48, 2, 16, 25));
+            p.setColor(Color.argb(34, 2, 16, 25));
             c.drawRect(0, 0, W, H, p);
         } else {
             p.setShader(new LinearGradient(0,0,0,H,
@@ -233,7 +233,7 @@ public final class ModrinthLauncherView extends View {
             c.drawRect(0,0,W,H,p);
             p.setShader(null);
         }
-        p.setColor(Color.argb(42, 3, 22, 34));
+        p.setColor(Color.argb(34, 3, 22, 34));
         c.drawRect(0,58,W,H,p);
     }
 
@@ -307,6 +307,26 @@ public final class ModrinthLauncherView extends View {
         c.drawCircle(x+72*scale,y+17*scale,16*scale,p);
     }
 
+    private void drawRealisticHeroImage(Canvas c,float x,float y,float w,float h) {
+        if (backgroundArtwork != null) {
+            drawCoverBitmap(c, backgroundArtwork, x, y, w, h);
+        } else {
+            round(c,x,y,x+w,y+h,24,Color.rgb(24,52,60),Color.TRANSPARENT,0);
+        }
+    }
+
+    private void drawRealisticInstanceImage(Canvas c,float x,float y,float w,float h,int index) {
+        Bitmap b = null;
+        if (index == 0) b = backgroundArtwork;
+        else if (index == 1) b = backgroundArtwork;
+        else if (index == 2) b = backgroundArtwork;
+        if (b != null) {
+            drawCoverBitmap(c,b,x,y,w,h);
+        } else {
+            round(c,x,y,x+w,y+h,18,Color.rgb(24,52,60),Color.TRANSPARENT,0);
+        }
+    }
+
     private void drawInstances(Canvas c,float x,float y,float w) {
         float gap=12, cw=(w-gap*2)/3f;
         float contentWidth = instanceCards.length * (cw + gap) - gap;
@@ -321,7 +341,7 @@ public final class ModrinthLauncherView extends View {
         for(int i=0;i<count;i++) {
             float xx=x+i*(cw+gap);
             int artworkType=i%3;
-            drawBiome(c,xx,y,cw,160,artworkType);
+            drawRealisticInstanceImage(c, xx, y, cw, 160, i);
             round(c,xx,y+100,xx+cw,y+160,0,Color.argb(205,3,25,39),Color.TRANSPARENT,0);
 
             DisplayInstance instance = i < instanceCards.length ? instanceCards[i] : null;
@@ -448,8 +468,7 @@ public final class ModrinthLauncherView extends View {
                 ultraOn ? ACCENT : Color.rgb(87,108,118), 1.5f);
         p.setColor(ultraOn ? ACCENT : Color.rgb(142,161,169));
         c.drawCircle(ultraOn ? x+w-34 : x+w-70, 307, 12, p);
-        text(c,ultraOn ? "ON" : "OFF", x+w-126, 312, 11,
-                ultraOn ? ACCENT : MUTED, true);
+        
 
         round(c,x,362,x+w,435,13,Color.rgb(49,66,165),Color.rgb(80,107,245),1.5f);
         drawBitmap(c,discord,x+18,377,48,48);
