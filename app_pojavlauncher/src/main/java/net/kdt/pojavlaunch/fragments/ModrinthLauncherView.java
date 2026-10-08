@@ -900,8 +900,11 @@ public final class ModrinthLauncherView extends View {
         if(y<62 && x<75){menuOpen=!menuOpen;invalidate();return true;}
         if(menuOpen && x<228 && y>=72 && y<365){
             int idx=(int)((y-72)/48);
-            if(idx==0){selectedPage=0;}
-            else if(idx==1){selectedPage=1;}
+            if(idx==0 || idx==1) {
+                MainMenuFragment host = getMainMenuHost();
+                if (host != null && host.isCenterContentVisible()) host.closeCenterContent();
+                selectedPage = idx;
+            }
             else if(idx==2){Tools.swapFragment(activity,SearchModFragment.class,SearchModFragment.TAG,null);}
             else if(idx==5){Tools.swapFragment(activity,LauncherPreferenceFragment.class,LauncherActivity.SETTING_FRAGMENT_TAG,null);}
             invalidate(); return true;
