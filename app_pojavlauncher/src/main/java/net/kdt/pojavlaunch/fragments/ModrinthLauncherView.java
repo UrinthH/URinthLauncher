@@ -128,15 +128,15 @@ public final class ModrinthLauncherView extends View {
         // Verified official Minecraft biome artwork. Each card gets a different biome
         // so the three visible instances never look like duplicate screenshots.
         loadRemoteArtwork(
-                "https://www.minecraft.net/content/dam/minecraftnet/games/minecraft/screenshots/cherry-carousel1.jpg",
+                "https://www.minecraft.net/content/dam/minecraftnet/games/minecraft/screenshots/cherrygrove-header.jpg",
                 bitmap -> { versionBiomeArtworks[0] = bitmap; invalidate(); }
         );
         loadRemoteArtwork(
-                "https://www.minecraft.net/content/dam/minecraftnet/games/minecraft/screenshots/desert-header.jpg.jpg",
+                "https://www.minecraft.net/content/dam/minecraftnet/games/minecraft/screenshots/frozen-header.jpg",
                 bitmap -> { versionBiomeArtworks[1] = bitmap; invalidate(); }
         );
         loadRemoteArtwork(
-                "https://www.minecraft.net/content/dam/minecraftnet/games/minecraft/screenshots/sparse-header.jpg",
+                "https://www.minecraft.net/content/dam/minecraftnet/games/minecraft/screenshots/badlands-header.jpg",
                 bitmap -> { versionBiomeArtworks[2] = bitmap; invalidate(); }
         );
         loadRemoteArtwork(
@@ -274,9 +274,10 @@ public final class ModrinthLauncherView extends View {
         drawHamburger(c,38,31);
         drawBitmap(c,logo,80,10,48,48);
         text(c,"Modrinth",143,39,27,TEXT,true);
-        text(c,"Launcher",255,39,27,ACCENT,true);
-        p.setColor(Color.rgb(36,99,116)); c.drawRect(370,17,372,45,p);
-        text(c,"Made By: Macase, Nile.",395,37,14,ACCENT,true);
+        // Keep the H in Modrinth and the L in Launcher clearly separated.
+        text(c,"Launcher",272,39,27,ACCENT,true);
+        p.setColor(Color.rgb(36,99,116)); c.drawRect(388,17,390,45,p);
+        text(c,"Made By: Macase, Nile.",410,37,14,ACCENT,true);
     }
 
     private void drawSidebar(Canvas c) {
@@ -533,7 +534,7 @@ public final class ModrinthLauncherView extends View {
         text(c,"★",x+3,y+30,31,TEXT,true);
         text(c,"Optimize Mods",x+52,y+28,21,TEXT,true);
         pillOutline(c,x+w-95,y+2,x+w,y+40,"▦  View All");
-        String[][] mods={{"Sodium","Mobile rendering"},{"Lithium","Game logic optimization"},{"ImmediatelyFast","Faster UI rendering"},{"ModernFix","Memory optimization"},{"Vulkan","Experimental mobile renderer"}};
+        String[][] mods={{"Sodium","High-FPS rendering"},{"Lithium","Game logic optimization"},{"ImmediatelyFast","Faster UI rendering"},{"ModernFix","Memory optimization"},{"VulkanMod","Vulkan renderer"}};
         float gap=10,cw=(w-gap*4)/5f;
         for(int i=0;i<5;i++) {
             float xx=x+i*(cw+gap);
