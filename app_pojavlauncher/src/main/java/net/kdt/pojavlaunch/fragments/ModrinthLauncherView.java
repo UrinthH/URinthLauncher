@@ -360,8 +360,15 @@ public final class ModrinthLauncherView extends View {
         for(int i=0;i<count;i++) {
             float xx=x+i*(cw+gap);
             int artworkType=i%3;
+            // Keep every artwork strictly inside its own rounded card.
+            c.save();
+            Path cardClip = new Path();
+            cardClip.addRoundRect(new RectF(xx, y, xx+cw, y+160), 12, 12, Path.Direction.CW);
+            c.clipPath(cardClip);
             drawRealisticInstanceImage(c, xx, y, cw, 160, i);
-            round(c,xx,y+100,xx+cw,y+160,0,Color.argb(205,3,25,39),Color.TRANSPARENT,0);
+            round(c,xx,y+100,xx+cw,y+160,0,Color.argb(215,3,25,39),Color.TRANSPARENT,0);
+            c.restore();
+            round(c,xx,y,xx+cw,y+160,12,Color.TRANSPARENT,Color.rgb(9,156,186),1.5f);
 
             DisplayInstance instance = i < instanceCards.length ? instanceCards[i] : null;
             String name = instance != null && Tools.isValidString(instance.name)
@@ -376,7 +383,9 @@ public final class ModrinthLauncherView extends View {
             }
 
             pill(c,xx+cw-105,y+125,xx+cw-37,y+153,"▶ Play");
-            text(c,"⋮",xx+cw-20,y+140,24,TEXT,true);
+            // Protected three-dot menu zone, always above the artwork.
+            round(c,xx+cw-35,y+118,xx+cw-7,y+153,10,Color.argb(225,3,20,30),Color.TRANSPARENT,0);
+            text(c,"⋮",xx+cw-27,y+143,24,TEXT,true);
         }
         c.restore();
     }
