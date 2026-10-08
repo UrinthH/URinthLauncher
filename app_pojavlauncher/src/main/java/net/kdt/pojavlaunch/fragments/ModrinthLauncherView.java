@@ -74,6 +74,10 @@ public final class ModrinthLauncherView extends View {
     private boolean menuOpen = true;
     private boolean ultraOn;
     private float sx = 1f, sy = 1f;
+    private float instanceScrollX;
+    private float touchDownX;
+    private float lastTouchX;
+    private boolean draggingInstances;
     private Account currentAccount;
     private DisplayInstance[] instanceCards = new DisplayInstance[0];
 
@@ -221,7 +225,7 @@ public final class ModrinthLauncherView extends View {
         if (backgroundArtwork != null) {
             drawCoverBitmap(c, backgroundArtwork, 0, 0, W, H);
             // Keep the launcher panels readable while retaining the scenery underneath.
-            p.setColor(Color.argb(155, 2, 16, 25));
+            p.setColor(Color.argb(48, 2, 16, 25));
             c.drawRect(0, 0, W, H, p);
         } else {
             p.setShader(new LinearGradient(0,0,0,H,
@@ -229,7 +233,7 @@ public final class ModrinthLauncherView extends View {
             c.drawRect(0,0,W,H,p);
             p.setShader(null);
         }
-        p.setColor(Color.argb(105, 3, 22, 34));
+        p.setColor(Color.argb(42, 3, 22, 34));
         c.drawRect(0,58,W,H,p);
     }
 
@@ -305,10 +309,20 @@ public final class ModrinthLauncherView extends View {
 
     private void drawInstances(Canvas c,float x,float y,float w) {
         float gap=12, cw=(w-gap*2)/3f;
-        for(int i=0;i<3;i++) {
+        float contentWidth = instanceCards.length * (cw + gap) - gap;
+        float maxScroll = Math.max(0f, contentWidth - w);
+        instanceScrollX = Math.max(0f, Math.min(instanceScrollX, maxScroll));
+
+        c.save();
+        c.clipRect(x, y, x+w, y+160);
+        c.translate(-instanceScrollX, 0);
+
+        int count = Math.max(3, instanceCards.length);
+        for(int i=0;i<count;i++) {
             float xx=x+i*(cw+gap);
-            drawBiome(c,xx,y,cw,160,i);
-            round(c,xx,y+100,xx+cw,y+160,0,Color.argb(225,3,25,39),Color.TRANSPARENT,0);
+            int artworkType=i%3;
+            drawBiome(c,xx,y,cw,160,artworkType);
+            round(c,xx,y+100,xx+cw,y+160,0,Color.argb(205,3,25,39),Color.TRANSPARENT,0);
 
             DisplayInstance instance = i < instanceCards.length ? instanceCards[i] : null;
             String name = instance != null && Tools.isValidString(instance.name)
@@ -325,6 +339,7 @@ public final class ModrinthLauncherView extends View {
             pill(c,xx+cw-105,y+125,xx+cw-37,y+153,"▶ Play");
             text(c,"⋮",xx+cw-20,y+140,24,TEXT,true);
         }
+        c.restore();
     }
 
     private void drawInstanceIcon(Canvas c, DisplayInstance instance,
@@ -427,8 +442,14 @@ public final class ModrinthLauncherView extends View {
         drawBitmap(c,ultraIcon,x+16,290,40,40);
         text(c,"UrinthUltra Mode",x+67,302,14,TEXT,true);
         text(c,"Enable ultra performance mode",x+67,323,10,MUTED,false);
-        pill(c,x+w-86,292,x+w-52,322,"OFF");
-        pill(c,x+w-56,292,x+w-16,322,ultraOn?"ON":"OFF");
+        // Single persistent ON/OFF switch.
+        round(c,x+w-88,289,x+w-16,325,18,
+                ultraOn ? Color.rgb(7,126,105) : Color.rgb(34,51,61),
+                ultraOn ? ACCENT : Color.rgb(87,108,118), 1.5f);
+        p.setColor(ultraOn ? ACCENT : Color.rgb(142,161,169));
+        c.drawCircle(ultraOn ? x+w-34 : x+w-70, 307, 12, p);
+        text(c,ultraOn ? "ON" : "OFF", x+w-126, 312, 11,
+                ultraOn ? ACCENT : MUTED, true);
 
         round(c,x,362,x+w,435,13,Color.rgb(49,66,165),Color.rgb(80,107,245),1.5f);
         drawBitmap(c,discord,x+18,377,48,48);
@@ -512,9 +533,36 @@ public final class ModrinthLauncherView extends View {
     }
 
     @Override public boolean onTouchEvent(MotionEvent e) {
-        if(e.getAction()!=MotionEvent.ACTION_UP) return true;
         float x=e.getX()/sx,y=e.getY()/sy;
         Context c=getContext();
+
+        if (e.getAction() == MotionEvent.ACTION_DOWN) {
+            touchDownX = x;
+            lastTouchX = x;
+            draggingInstances = x >= 242 && x < 1215 && y >= 258 && y < 418;
+            return true;
+        }
+
+        if (e.getAction() == MotionEvent.ACTION_MOVE) {
+            if (draggingInstances) {
+                float delta = x - lastTouchX;
+                float gap = 12f, cw = (1215f-242f-gap*2f)/3f;
+                float contentWidth = instanceCards.length * (cw + gap) - gap;
+                float maxScroll = Math.max(0f, contentWidth - (1215f-242f));
+                instanceScrollX = Math.max(0f, Math.min(maxScroll, instanceScrollX - delta));
+                lastTouchX = x;
+                invalidate();
+            }
+            return true;
+        }
+
+        if (e.getAction() != MotionEvent.ACTION_UP) return true;
+
+        if (draggingInstances && Math.abs(x - touchDownX) > 12f) {
+            draggingInstances = false;
+            return true;
+        }
+        draggingInstances = false;
         if(y<62 && x<75){menuOpen=!menuOpen;invalidate();return true;}
         if(y<62 && x>1350){Tools.swapFragment(activity,LauncherPreferenceFragment.class,LauncherActivity.SETTING_FRAGMENT_TAG,null);return true;}
         if(menuOpen && x<228 && y>=72 && y<365){
@@ -536,10 +584,11 @@ public final class ModrinthLauncherView extends View {
         }
         if(x>242 && x<1215 && y>=258 && y<418){
             float gap=12f, cw=(1215f-242f-gap*2f)/3f;
-            int card=(int)((x-242f)/(cw+gap));
-            if(card>=0&&card<3) {
+            float contentX = x + instanceScrollX;
+            int card=(int)((contentX-242f)/(cw+gap));
+            if(card>=0 && card<instanceCards.length) {
                 float cardX=242f+card*(cw+gap);
-                if(x >= cardX+cw-42f && y >= 358f && y < 418f) {
+                if(contentX >= cardX+cw-42f && y >= 358f && y < 418f) {
                     openInstanceEditor(card);
                 } else {
                     ExtraCore.setValue(ExtraConstants.LAUNCH_GAME,true);
