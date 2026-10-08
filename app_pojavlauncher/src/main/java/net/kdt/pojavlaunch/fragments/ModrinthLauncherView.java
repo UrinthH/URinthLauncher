@@ -604,6 +604,12 @@ public final class ModrinthLauncherView extends View {
 
     }
 
+    public void showAuthChooser() {
+        accountChooserOpen = false;
+        authChooserOpen = true;
+        invalidate();
+    }
+
     private void drawOverlayDim(Canvas c) {
         p.setColor(Color.argb(135, 0, 8, 15));
         c.drawRect(0, 0, W, H, p);
