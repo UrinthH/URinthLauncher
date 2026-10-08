@@ -66,6 +66,8 @@ public final class ModrinthLauncherView extends View {
     private final Bitmap updateIcon;
     private final Bitmap ultraIcon;
     private Bitmap backgroundArtwork;
+    private Bitmap heroRealisticArtwork;
+    private final Bitmap[] overworldBiomeArtworks = new Bitmap[3];
     private final Map<String, Bitmap> modIcons = new HashMap<>();
     private final mcVersionSpinner versionSpinner;
     private final AccountSpinner accountSpinner;
@@ -114,23 +116,42 @@ public final class ModrinthLauncherView extends View {
     }
 
     private void loadBackgroundArtwork() {
+        loadRemoteArtwork(
+                "https://www.minecraft.net/content/dam/minecraftnet/games/spicewood/screenshots/MCL_Dungeons2_sift_1280x720.jpg",
+                bitmap -> { backgroundArtwork = bitmap; invalidate(); }
+        );
+        loadRemoteArtwork(
+                "https://www.minecraft.net/content/dam/minecraftnet/games/minecraft/screenshots/ATB_WarmOcean_header.jpg",
+                bitmap -> { heroRealisticArtwork = bitmap; invalidate(); }
+        );
+        loadRemoteArtwork(
+                "https://www.minecraft.net/content/dam/minecraftnet/games/minecraft/screenshots/cherrygrove-header.jpg",
+                bitmap -> { overworldBiomeArtworks[0] = bitmap; invalidate(); }
+        );
+        loadRemoteArtwork(
+                "https://www.minecraft.net/content/dam/minecraftnet/games/minecraft/screenshots/frozen-header.jpg",
+                bitmap -> { overworldBiomeArtworks[1] = bitmap; invalidate(); }
+        );
+        loadRemoteArtwork(
+                "https://www.minecraft.net/content/dam/minecraftnet/games/minecraft/screenshots/badlands-header.jpg",
+                bitmap -> { overworldBiomeArtworks[2] = bitmap; invalidate(); }
+        );
+    }
+
+    private void loadRemoteArtwork(String imageUrl, java.util.function.Consumer<Bitmap> onLoaded) {
         PojavApplication.sExecutorService.execute(() -> {
             HttpURLConnection connection = null;
             try {
-                URL url = new URL("https://www.minecraft.net/content/dam/minecraftnet/games/spicewood/screenshots/MCL_Dungeons2_sift_1280x720.jpg");
-                connection = (HttpURLConnection) url.openConnection();
+                connection = (HttpURLConnection) new URL(imageUrl).openConnection();
                 connection.setConnectTimeout(7000);
                 connection.setReadTimeout(7000);
                 connection.setRequestProperty("User-Agent", "URinthLauncher/1.0");
                 Bitmap loaded = BitmapFactory.decodeStream(connection.getInputStream());
                 if (loaded != null) {
-                    Tools.runOnUiThread(() -> {
-                        backgroundArtwork = loaded;
-                        invalidate();
-                    });
+                    Tools.runOnUiThread(() -> onLoaded.accept(loaded));
                 }
             } catch (Exception ignored) {
-                // Keep the existing fallback background if the image cannot be reached.
+                // Keep the launcher usable if a remote artwork asset is unavailable.
             } finally {
                 if (connection != null) connection.disconnect();
             }
@@ -288,7 +309,7 @@ public final class ModrinthLauncherView extends View {
         round(c,x,y,x+w,y+h,14,Color.rgb(9,38,57),CYAN,1.5f);
         c.save();
         c.clipRect(x+1,y+1,x+w-1,y+h-1);
-        drawBitmap(c,heroArtwork,x+1,y+1,w-2,h-2);
+        drawRealisticHeroImage(c,x+1,y+1,w-2,h-2);
         c.restore();
 
         // Keep the reference-style copy readable over the artwork.
@@ -308,18 +329,16 @@ public final class ModrinthLauncherView extends View {
     }
 
     private void drawRealisticHeroImage(Canvas c,float x,float y,float w,float h) {
-        if (backgroundArtwork != null) {
-            drawCoverBitmap(c, backgroundArtwork, x, y, w, h);
+        if (heroRealisticArtwork != null) {
+            drawCoverBitmap(c, heroRealisticArtwork, x, y, w, h);
         } else {
             round(c,x,y,x+w,y+h,24,Color.rgb(24,52,60),Color.TRANSPARENT,0);
         }
     }
 
     private void drawRealisticInstanceImage(Canvas c,float x,float y,float w,float h,int index) {
-        Bitmap b = null;
-        if (index == 0) b = backgroundArtwork;
-        else if (index == 1) b = backgroundArtwork;
-        else if (index == 2) b = backgroundArtwork;
+        Bitmap b = index >= 0 && index < overworldBiomeArtworks.length
+                ? overworldBiomeArtworks[index] : null;
         if (b != null) {
             drawCoverBitmap(c,b,x,y,w,h);
         } else {
