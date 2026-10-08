@@ -296,14 +296,6 @@ public class MainMenuFragment extends Fragment {
                 net.kdt.pojavlaunch.LauncherActivity.SETTING_FRAGMENT_TAG, null));
         menu.setOnClickListener(v -> nav.setVisibility(nav.getVisibility() == View.VISIBLE ? View.GONE : View.VISIBLE));
 
-        // Keep the original launcher actions available from the same real UI.
-        navItems.addView(space(c, 8));
-        navItems.addView(wiki);
-        navItems.addView(controls);
-        navItems.addView(jar);
-        navItems.addView(logs);
-        navItems.addView(directory);
-
         root.addView(mVersionSpinner, new LinearLayout.LayoutParams(1, 1));
         return root;
     }
