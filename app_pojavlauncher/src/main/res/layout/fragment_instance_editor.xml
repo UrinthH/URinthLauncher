@@ -148,7 +148,6 @@
 
             <CheckBox
         android:buttonTint="#00DDB5"
-        android:textColor="#F2F8FA"
                 android:id="@+id/vprof_editor_data_checkbox_container"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
