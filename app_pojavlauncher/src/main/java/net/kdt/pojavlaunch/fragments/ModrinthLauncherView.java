@@ -116,10 +116,10 @@ public final class ModrinthLauncherView extends View {
     }
 
     private void loadBackgroundArtwork() {
-        // Nostalgic Overworld night: Minecraft's own 25w46a night screenshot,
+        // Nostalgic Overworld night: Minecraft's own 25w44a night screenshot,
         // replacing the previous Sift background.
         loadRemoteArtwork(
-                "https://www.minecraft.net/content/dam/minecraftnet/games/minecraft/screenshots/25w46a_1170x500.jpg",
+                "https://www.minecraft.net/content/dam/minecraftnet/games/minecraft/screenshots/25w44a_1170x500.jpg",
                 bitmap -> { backgroundArtwork = bitmap; invalidate(); }
         );
         loadRemoteArtwork(
@@ -146,7 +146,7 @@ public final class ModrinthLauncherView extends View {
                 bitmap -> { versionBiomeArtworks[3] = bitmap; invalidate(); }
         );
         loadRemoteArtwork(
-                "https://www.minecraft.net/content/dam/minecraftnet/games/minecraft/screenshots/1.21.11-pre1_1170x500.jpg",
+                "https://www.minecraft.net/content/dam/minecraftnet/games/minecraft/screenshots/ATB_WarmOcean_header.jpg",
                 bitmap -> { versionBiomeArtworks[4] = bitmap; invalidate(); }
         );
     }
