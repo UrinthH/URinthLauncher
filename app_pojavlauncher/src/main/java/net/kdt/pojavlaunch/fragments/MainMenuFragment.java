@@ -17,6 +17,7 @@ import com.kdt.mcgui.AccountSpinner;
 
 public class MainMenuFragment extends Fragment {
     public static final String TAG = "MainMenuFragment";
+    private ModrinthLauncherView launcherView;
 
     private final ActivityResultLauncher<Object> mModInstallerLauncher =
             registerForActivityResult(new OpenDocumentWithExtension("jar"), data -> {
@@ -36,7 +37,7 @@ public class MainMenuFragment extends Fragment {
         accountParams.leftMargin = 1;
         accountParams.topMargin = 1;
 
-        ModrinthLauncherView launcherView = new ModrinthLauncherView(
+        launcherView = new ModrinthLauncherView(
                 requireActivity(), spinner, accountSpinner, () -> {
                     if (net.kdt.pojavlaunch.progresskeeper.ProgressKeeper.getTaskCount() == 0) {
                         mModInstallerLauncher.launch(null);
@@ -47,5 +48,9 @@ public class MainMenuFragment extends Fragment {
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         root.addView(accountSpinner, accountParams);
         return root;
+    }
+
+    public void showAuthChooser() {
+        if (launcherView != null) launcherView.showAuthChooser();
     }
 }
