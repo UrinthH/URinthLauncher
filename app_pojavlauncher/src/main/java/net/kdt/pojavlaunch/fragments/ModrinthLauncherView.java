@@ -376,6 +376,13 @@ public final class ModrinthLauncherView extends View {
         pill(c,x+w-152,y+h-47,x+w-18,y+h-15,action);
     }
 
+    public void onCenterContentClosed() {
+        if (selectedPage > 1) {
+            selectedPage = 0;
+            invalidate();
+        }
+    }
+
     private void openContentCategory(String category) {
         MainMenuFragment host = getMainMenuHost();
         if (host != null) {
