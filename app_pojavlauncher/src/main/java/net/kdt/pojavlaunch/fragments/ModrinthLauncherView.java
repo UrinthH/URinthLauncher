@@ -13,6 +13,7 @@ import androidx.core.content.ContextCompat;
 import androidx.fragment.app.FragmentActivity;
 
 import com.kdt.mcgui.mcVersionSpinner;
+import com.kdt.mcgui.AccountSpinner;
 
 import net.kdt.pojavlaunch.CustomControlsActivity;
 import net.kdt.pojavlaunch.PojavApplication;
@@ -54,6 +55,7 @@ public final class ModrinthLauncherView extends View {
     private final Bitmap logo;
     private final Bitmap discord;
     private final mcVersionSpinner versionSpinner;
+    private final AccountSpinner accountSpinner;
     private final FragmentActivity activity;
     private final Runnable modInstaller;
     private boolean menuOpen = true;
@@ -67,10 +69,11 @@ public final class ModrinthLauncherView extends View {
         return false;
     };
 
-    public ModrinthLauncherView(FragmentActivity activity, mcVersionSpinner spinner, Runnable installer) {
+    public ModrinthLauncherView(FragmentActivity activity, mcVersionSpinner spinner, AccountSpinner accountSpinner, Runnable installer) {
         super(activity);
         this.activity = activity;
         versionSpinner = spinner;
+        this.accountSpinner = accountSpinner;
         modInstaller = installer;
         logo = bitmap(R.drawable.ic_modrinth);
         discord = bitmap(R.drawable.ic_discord);
@@ -513,7 +516,12 @@ public final class ModrinthLauncherView extends View {
             return true;
         }
         if(x>=1230 && y>=75 && y<188){
-            ExtraCore.setValue(ExtraConstants.SELECT_AUTH_METHOD,true);return true;
+            if(currentAccount != null) {
+                accountSpinner.performClick();
+            } else {
+                ExtraCore.setValue(ExtraConstants.SELECT_AUTH_METHOD,true);
+            }
+            return true;
         }
         if(x>=1230 && y>=274 && y<352){
             ultraOn=!ultraOn;c.getSharedPreferences("urinth_ui",Context.MODE_PRIVATE).edit().putBoolean("ultra",ultraOn).apply();invalidate();return true;
