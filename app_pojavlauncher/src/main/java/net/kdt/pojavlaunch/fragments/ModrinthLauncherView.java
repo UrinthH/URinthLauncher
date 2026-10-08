@@ -15,13 +15,19 @@ import androidx.fragment.app.FragmentActivity;
 import com.kdt.mcgui.mcVersionSpinner;
 
 import net.kdt.pojavlaunch.CustomControlsActivity;
+import net.kdt.pojavlaunch.PojavApplication;
 import net.kdt.pojavlaunch.LauncherActivity;
 import net.kdt.pojavlaunch.Tools;
 import net.kdt.pojavlaunch.contracts.OpenDocumentWithExtension;
 import net.kdt.pojavlaunch.extra.ExtraConstants;
 import net.kdt.pojavlaunch.extra.ExtraCore;
+import net.kdt.pojavlaunch.authenticator.accounts.Account;
+import net.kdt.pojavlaunch.authenticator.accounts.Accounts;
+import net.kdt.pojavlaunch.extra.ExtraListener;
+import net.kdt.pojavlaunch.instances.DisplayInstance;
 import net.kdt.pojavlaunch.instances.Instance;
 import net.kdt.pojavlaunch.instances.Instances;
+import net.kdt.pojavlaunch.fragments.InstanceEditorFragment;
 import net.kdt.pojavlaunch.prefs.screens.LauncherPreferenceFragment;
 import net.kdt.pojavlaunch.tasks.AsyncVersionList;
 import net.kdt.pojavlaunch.utils.FileUtils;
@@ -53,6 +59,13 @@ public final class ModrinthLauncherView extends View {
     private boolean menuOpen = true;
     private boolean ultraOn;
     private float sx = 1f, sy = 1f;
+    private Account currentAccount;
+    private DisplayInstance[] instanceCards = new DisplayInstance[0];
+
+    private final ExtraListener<Void> accountRefreshListener = (key, value) -> {
+        reloadLauncherData();
+        return false;
+    };
 
     public ModrinthLauncherView(FragmentActivity activity, mcVersionSpinner spinner, Runnable installer) {
         super(activity);
@@ -67,6 +80,40 @@ public final class ModrinthLauncherView extends View {
         stroke.setStyle(Paint.Style.STROKE);
         stroke.setStrokeWidth(2f);
         setFocusable(true);
+        reloadLauncherData();
+    }
+
+    private void reloadLauncherData() {
+        PojavApplication.sExecutorService.execute(() -> {
+            Account account = Accounts.getCurrent();
+            DisplayInstance[] loaded = new DisplayInstance[0];
+            try {
+                loaded = Instances.loadDisplay().list.toArray(new DisplayInstance[0]);
+            } catch (Exception ignored) {
+                // Keep the launcher usable if the instance directory is temporarily unavailable.
+            }
+            final DisplayInstance[] result = loaded;
+            Tools.runOnUiThread(() -> {
+                currentAccount = account;
+                instanceCards = result;
+                invalidate();
+            });
+        });
+    }
+
+    @Override
+    protected void onAttachedToWindow() {
+        super.onAttachedToWindow();
+        ExtraCore.addExtraListener(ExtraConstants.REFRESH_ACCOUNT_SPINNER, accountRefreshListener);
+        reloadLauncherData();
+    }
+
+    @Override
+    protected void onDetachedFromWindow() {
+        ExtraCore.removeExtraListenerFromValue(
+                ExtraConstants.REFRESH_ACCOUNT_SPINNER, accountRefreshListener
+        );
+        super.onDetachedFromWindow();
     }
 
     private Bitmap bitmap(int id) {
@@ -219,12 +266,36 @@ public final class ModrinthLauncherView extends View {
             float xx=x+i*(cw+gap);
             drawBiome(c,xx,y,cw,160,i);
             round(c,xx,y+100,xx+cw,y+160,0,Color.argb(225,3,25,39),Color.TRANSPARENT,0);
-            drawBitmap(c,blockIcon(),xx+15,y+112,42,42);
-            text(c,"URinthH",xx+65,y+130,15,TEXT,true);
-            text(c,"Vannila 26.3.",xx+65,y+151,12,TEXT,false);
+
+            DisplayInstance instance = i < instanceCards.length ? instanceCards[i] : null;
+            String name = instance != null && Tools.isValidString(instance.name)
+                    ? instance.name : "No instance";
+            String version = instance != null && Tools.isValidString(instance.versionId)
+                    ? instance.versionId : "";
+
+            drawInstanceIcon(c, instance, xx+15, y+112, 42, 42);
+            text(c,name,xx+65,y+130,15,TEXT,true);
+            if (!version.isEmpty()) {
+                text(c,version,xx+65,y+151,12,TEXT,false);
+            }
+
             pill(c,xx+cw-105,y+125,xx+cw-37,y+153,"▶ Play");
             text(c,"⋮",xx+cw-20,y+140,24,TEXT,true);
         }
+    }
+
+    private void drawInstanceIcon(Canvas c, DisplayInstance instance,
+                                  float x, float y, float w, float h) {
+        if(instance != null) {
+            Drawable icon = net.kdt.pojavlaunch.instances.InstanceIconProvider
+                    .fetchIcon(getResources(), instance);
+            if(icon != null) {
+                icon.setBounds((int)x,(int)y,(int)(x+w),(int)(y+h));
+                icon.draw(c);
+                return;
+            }
+        }
+        drawBitmap(c,blockIcon(),x,y,w,h);
     }
 
     private Bitmap blockCache;
@@ -237,6 +308,13 @@ public final class ModrinthLauncherView extends View {
         q.setColor(Color.rgb(129,80,44)); c.drawRect(13,28,51,54,q);
         q.setColor(Color.rgb(94,197,73)); c.drawCircle(30,25,13,q);
         blockCache=b; return b;
+    }
+
+    private void openInstanceEditor(int card) {
+        if(card < 0 || card >= instanceCards.length) return;
+        DisplayInstance display = instanceCards[card];
+        Instances.setSelectedInstance(display);
+        Tools.swapFragment(activity, InstanceEditorFragment.class, InstanceEditorFragment.TAG, null);
     }
 
     private void drawBiome(Canvas c,float x,float y,float w,float h,int type) {
@@ -330,10 +408,20 @@ public final class ModrinthLauncherView extends View {
     private void drawRight(Canvas c) {
         float x=1230,w=288;
         panel(c,x,75,w,113);
-        drawBitmap(c,blockIcon(),x+14,88,43,43);
-        text(c,"Add Account",x+67,101,15,TEXT,true);
-        text(c,"Sign in to your Minecraft account",x+67,121,11,MUTED,false);
-        pillOutline(c,x+15,140,x+w-15,177,"＋  Add Account");
+        if(currentAccount != null) {
+            Bitmap face = currentAccount.getSkinFace();
+            drawBitmap(c,face != null ? face : blockIcon(),x+14,88,43,43);
+            String username = Tools.isValidString(currentAccount.username)
+                    ? currentAccount.username : "Minecraft account";
+            text(c,username,x+67,101,15,TEXT,true);
+            text(c,"Minecraft profile",x+67,121,11,MUTED,false);
+            pillOutline(c,x+15,140,x+w-15,177,"Profile");
+        } else {
+            drawBitmap(c,blockIcon(),x+14,88,43,43);
+            text(c,"Add Account",x+67,101,15,TEXT,true);
+            text(c,"Sign in to your Minecraft account",x+67,121,11,MUTED,false);
+            pillOutline(c,x+15,140,x+w-15,177,"＋  Add Account");
+        }
 
         panel(c,x,196,w,67);
         drawCircleIcon(c,x+36,229,"↻");
@@ -412,8 +500,16 @@ public final class ModrinthLauncherView extends View {
             return true;
         }
         if(x>242 && x<1215 && y>=258 && y<418){
-            int card=(int)((x-242)/((1215-242+12)/3f));
-            if(card>=0&&card<3) ExtraCore.setValue(ExtraConstants.LAUNCH_GAME,true);
+            float gap=12f, cw=(1215f-242f-gap*2f)/3f;
+            int card=(int)((x-242f)/(cw+gap));
+            if(card>=0&&card<3) {
+                float cardX=242f+card*(cw+gap);
+                if(x >= cardX+cw-42f && y >= 358f && y < 418f) {
+                    openInstanceEditor(card);
+                } else {
+                    ExtraCore.setValue(ExtraConstants.LAUNCH_GAME,true);
+                }
+            }
             return true;
         }
         if(x>=1230 && y>=75 && y<188){
