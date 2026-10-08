@@ -67,7 +67,7 @@ public final class ModrinthLauncherView extends View {
     private final Bitmap ultraIcon;
     private Bitmap backgroundArtwork;
     private Bitmap heroRealisticArtwork;
-    private final Bitmap[] overworldBiomeArtworks = new Bitmap[3];
+    private final Bitmap[] versionBiomeArtworks = new Bitmap[5];
     private final Map<String, Bitmap> modIcons = new HashMap<>();
     private final mcVersionSpinner versionSpinner;
     private final AccountSpinner accountSpinner;
@@ -116,25 +116,38 @@ public final class ModrinthLauncherView extends View {
     }
 
     private void loadBackgroundArtwork() {
+        // Nostalgic Overworld night: Minecraft's own 25w46a night screenshot,
+        // replacing the previous Sift background.
         loadRemoteArtwork(
-                "https://www.minecraft.net/content/dam/minecraftnet/games/spicewood/screenshots/MCL_Dungeons2_sift_1280x720.jpg",
+                "https://www.minecraft.net/content/dam/minecraftnet/games/minecraft/screenshots/25w46a_1170x500.jpg",
                 bitmap -> { backgroundArtwork = bitmap; invalidate(); }
         );
         loadRemoteArtwork(
                 "https://www.minecraft.net/content/dam/minecraftnet/games/minecraft/screenshots/ATB_WarmOcean_header.jpg",
                 bitmap -> { heroRealisticArtwork = bitmap; invalidate(); }
         );
+
+        // A reusable artwork pool. New instances automatically select an image
+        // from this pool, so added instances never render without artwork.
         loadRemoteArtwork(
                 "https://www.minecraft.net/content/dam/minecraftnet/games/minecraft/screenshots/cherrygrove-header.jpg",
-                bitmap -> { overworldBiomeArtworks[0] = bitmap; invalidate(); }
+                bitmap -> { versionBiomeArtworks[0] = bitmap; invalidate(); }
         );
         loadRemoteArtwork(
                 "https://www.minecraft.net/content/dam/minecraftnet/games/minecraft/screenshots/frozen-header.jpg",
-                bitmap -> { overworldBiomeArtworks[1] = bitmap; invalidate(); }
+                bitmap -> { versionBiomeArtworks[1] = bitmap; invalidate(); }
         );
         loadRemoteArtwork(
                 "https://www.minecraft.net/content/dam/minecraftnet/games/minecraft/screenshots/badlands-header.jpg",
-                bitmap -> { overworldBiomeArtworks[2] = bitmap; invalidate(); }
+                bitmap -> { versionBiomeArtworks[2] = bitmap; invalidate(); }
+        );
+        loadRemoteArtwork(
+                "https://www.minecraft.net/content/dam/minecraftnet/games/minecraft/screenshots/25w44a_1170x500.jpg",
+                bitmap -> { versionBiomeArtworks[3] = bitmap; invalidate(); }
+        );
+        loadRemoteArtwork(
+                "https://www.minecraft.net/content/dam/minecraftnet/games/minecraft/screenshots/1.21.11-pre1_1170x500.jpg",
+                bitmap -> { versionBiomeArtworks[4] = bitmap; invalidate(); }
         );
     }
 
@@ -337,15 +350,22 @@ public final class ModrinthLauncherView extends View {
     }
 
     private void drawRealisticInstanceImage(Canvas c,float x,float y,float w,float h,int index) {
-        Bitmap b = index >= 0 && index < overworldBiomeArtworks.length
-                ? overworldBiomeArtworks[index] : null;
+        Bitmap b = index >= 0 && index < versionBiomeArtworks.length
+                ? versionBiomeArtworks[index] : null;
+        if (b == null && versionBiomeArtworks.length > 0) {
+            // If a newly added instance is beyond the initial pool, keep it
+            // populated by deterministically reusing a different biome instead
+            // of ever showing an empty version card.
+            b = versionBiomeArtworks[Math.abs(index) % versionBiomeArtworks.length];
+        }
+
         if (b != null) {
-            // Cinematic shader-like presentation: richer contrast/saturation and
-            // a soft lighting grade over the real Minecraft biome screenshot.
+            // Cinematic shader-style grade: stronger contrast, saturation,
+            // cool shadows, warm highlights and a soft vignette.
             android.graphics.ColorMatrix cm = new android.graphics.ColorMatrix(new float[]{
-                    1.10f, 0, 0, 0, 3,
-                    0, 1.08f, 0, 0, 3,
-                    0, 0, 1.12f, 0, 4,
+                    1.16f, 0, 0, 0, 2,
+                    0, 1.13f, 0, 0, 2,
+                    0, 0, 1.20f, 0, 5,
                     0, 0, 0, 1, 0
             });
             p.setColorFilter(new android.graphics.ColorMatrixColorFilter(cm));
@@ -354,11 +374,23 @@ public final class ModrinthLauncherView extends View {
 
             LinearGradient light = new LinearGradient(
                     x, y, x+w, y+h,
-                    Color.argb(30,255,255,255),
-                    Color.argb(70,0,12,25),
+                    Color.argb(38,255,255,255),
+                    Color.argb(95,0,8,20),
                     Shader.TileMode.CLAMP
             );
             p.setShader(light);
+            c.drawRect(x,y,x+w,y+h,p);
+            p.setShader(null);
+
+            // Subtle cinematic vignette so the card reads like a shader-rendered
+            // Minecraft screenshot rather than a flat thumbnail.
+            RadialGradient vignette = new RadialGradient(
+                    x+w*0.5f, y+h*0.42f, Math.max(w,h)*0.72f,
+                    new int[]{Color.TRANSPARENT, Color.argb(105,0,0,0)},
+                    new float[]{0.48f, 1f},
+                    Shader.TileMode.CLAMP
+            );
+            p.setShader(vignette);
             c.drawRect(x,y,x+w,y+h,p);
             p.setShader(null);
         } else {
@@ -379,7 +411,6 @@ public final class ModrinthLauncherView extends View {
         int count = Math.max(3, instanceCards.length);
         for(int i=0;i<count;i++) {
             float xx=x+i*(cw+gap);
-            int artworkType=i%3;
             // Keep every artwork strictly inside its own rounded card.
             c.save();
             Path cardClip = new Path();
