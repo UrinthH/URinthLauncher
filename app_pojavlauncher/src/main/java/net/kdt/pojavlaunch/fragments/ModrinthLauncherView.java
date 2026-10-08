@@ -80,6 +80,9 @@ public final class ModrinthLauncherView extends View {
     private float lastTouchX;
     private boolean draggingInstances;
     private Account currentAccount;
+    private Account[] savedAccounts = new Account[0];
+    private boolean accountChooserOpen;
+    private boolean authChooserOpen;
     private DisplayInstance[] instanceCards = new DisplayInstance[0];
 
     private final ExtraListener<Void> accountRefreshListener = (key, value) -> {
@@ -197,6 +200,13 @@ public final class ModrinthLauncherView extends View {
     private void reloadLauncherData() {
         PojavApplication.sExecutorService.execute(() -> {
             Account account = Accounts.getCurrent();
+            Account[] accounts = new Account[0];
+            try {
+                accounts = Accounts.load().accounts.toArray(new Account[0]);
+            } catch (Exception ignored) {
+                // Keep the launcher usable if account storage is temporarily unavailable.
+            }
+            final Account[] accountResult = accounts;
             DisplayInstance[] loaded = new DisplayInstance[0];
             try {
                 loaded = Instances.loadDisplay().list.toArray(new DisplayInstance[0]);
@@ -206,6 +216,7 @@ public final class ModrinthLauncherView extends View {
             final DisplayInstance[] result = loaded;
             Tools.runOnUiThread(() -> {
                 currentAccount = account;
+                savedAccounts = accountResult;
                 instanceCards = result;
                 invalidate();
             });
@@ -249,6 +260,8 @@ public final class ModrinthLauncherView extends View {
         if (menuOpen) drawSidebar(canvas);
         drawMain(canvas);
         drawRight(canvas);
+        if (accountChooserOpen) drawAccountChooser(canvas);
+        if (authChooserOpen) drawAuthChooser(canvas);
         canvas.restore();
     }
 
@@ -591,6 +604,63 @@ public final class ModrinthLauncherView extends View {
 
     }
 
+    private void drawOverlayDim(Canvas c) {
+        p.setColor(Color.argb(135, 0, 8, 15));
+        c.drawRect(0, 0, W, H, p);
+    }
+
+    private void drawAuthChooser(Canvas c) {
+        drawOverlayDim(c);
+        float w = 500, h = 330;
+        float x = (W - w) / 2f, y = (H - h) / 2f;
+        round(c, x, y, x+w, y+h, 18, Color.rgb(6,31,47), Color.rgb(28,154,177), 2f);
+        drawBitmap(c, logo, x+28, y+25, 42, 42);
+        text(c, "Add Account", x+82, y+53, 22, TEXT, true);
+        text(c, "Choose a real authentication method", x+82, y+76, 11, MUTED, false);
+        drawAuthButton(c, x+28, y+102, x+w-28, y+159, "Microsoft", "Official Microsoft account", 0);
+        drawAuthButton(c, x+28, y+170, x+w-28, y+227, "Ely.by", "Ely.by account", 1);
+        drawAuthButton(c, x+28, y+238, x+w-28, y+295, "Local", "Offline local account", 2);
+        text(c, "×", x+w-30, y+28, 22, MUTED, true);
+    }
+
+    private void drawAuthButton(Canvas c, float x, float y, float x2, float y2, String title, String sub, int type) {
+        round(c, x, y, x2, y2, 12, PANEL_2, Color.rgb(19,91,112), 1.2f);
+        p.setColor(type == 0 ? Color.rgb(44,117,224) : type == 1 ? Color.rgb(115,70,188) : Color.rgb(78,102,113));
+        c.drawCircle(x+29, (y+y2)/2f, 16, p);
+        text(c, type == 0 ? "M" : type == 1 ? "E" : "L", x+22, (y+y2)/2f+6, 15, TEXT, true);
+        text(c, title, x+58, y+25, 14, TEXT, true);
+        text(c, sub, x+58, y+44, 10, MUTED, false);
+        text(c, "›", x2-25, (y+y2)/2f+7, 23, ACCENT, true);
+    }
+
+    private void drawAccountChooser(Canvas c) {
+        drawOverlayDim(c);
+        float x = 24, y = 72, w = 430;
+        int count = Math.max(1, savedAccounts.length);
+        float h = 92 + count * 62;
+        round(c, x, y, x+w, y+h, 16, Color.rgb(6,31,47), Color.rgb(28,154,177), 2f);
+        text(c, "Accounts", x+22, y+32, 20, TEXT, true);
+        text(c, "Switch Minecraft profile", x+22, y+51, 10, MUTED, false);
+        if (savedAccounts.length == 0) {
+            text(c, "No saved accounts", x+22, y+86, 12, MUTED, false);
+        } else {
+            for (int i=0; i<savedAccounts.length; i++) {
+                Account a = savedAccounts[i];
+                float yy = y+66+i*62;
+                if (a == currentAccount || (currentAccount != null && a.username.equals(currentAccount.username)))
+                    round(c, x+14, yy, x+w-14, yy+52, 11, Color.rgb(7,79,76), Color.rgb(0,225,180), 1.2f);
+                Bitmap face = a.getSkinFace();
+                drawBitmap(c, face != null ? face : blockIcon(), x+25, yy+7, 38, 38);
+                text(c, Tools.isValidString(a.username) ? a.username : "Minecraft account", x+76, yy+22, 13, TEXT, true);
+                text(c, a.authType != null ? a.authType.name() : "Account", x+76, yy+40, 9, MUTED, false);
+            }
+        }
+        float addY = y+66+count*62;
+        round(c, x+14, addY, x+w-14, addY+52, 11, PANEL_2, ACCENT, 1.2f);
+        text(c, "+", x+30, addY+34, 23, ACCENT, true);
+        text(c, "Add Account", x+65, addY+32, 13, TEXT, true);
+    }
+
     private void panel(Canvas c,float x,float y,float w,float h) {
         round(c,x,y,x+w,y+h,13,PANEL,Color.rgb(13,112,141),1.5f);
     }
@@ -691,6 +761,46 @@ public final class ModrinthLauncherView extends View {
 
         if (e.getAction() != MotionEvent.ACTION_UP) return true;
 
+        if (authChooserOpen) {
+            if (x >= 488 && x <= 1048 && y >= 178 && y < 550) {
+                float dialogY = (H-330f)/2f;
+                if (y >= dialogY+102 && y < dialogY+159) {
+                    authChooserOpen = false; invalidate();
+                    Tools.swapFragment(activity, MicrosoftLoginFragment.class, MicrosoftLoginFragment.TAG, null);
+                    return true;
+                }
+                if (y >= dialogY+170 && y < dialogY+227) {
+                    authChooserOpen = false; invalidate();
+                    Tools.swapFragment(activity, ElyByLoginFragment.class, ElyByLoginFragment.TAG, null);
+                    return true;
+                }
+                if (y >= dialogY+238 && y < dialogY+295) {
+                    authChooserOpen = false; invalidate();
+                    Tools.swapFragment(activity, LocalLoginFragment.class, LocalLoginFragment.TAG, null);
+                    return true;
+                }
+            }
+            authChooserOpen = false; invalidate(); return true;
+        }
+
+        if (accountChooserOpen) {
+            float ax=24, ay=72, aw=430;
+            int count=Math.max(1,savedAccounts.length);
+            for(int i=0;i<savedAccounts.length;i++) {
+                float yy=ay+66+i*62;
+                if(x>=ax+14 && x<=ax+aw-14 && y>=yy && y<yy+52) {
+                    Accounts.setCurrent(savedAccounts[i]);
+                    currentAccount=savedAccounts[i];
+                    accountChooserOpen=false; invalidate(); return true;
+                }
+            }
+            float addY=ay+66+count*62;
+            if(x>=ax+14 && x<=ax+aw-14 && y>=addY && y<addY+52) {
+                accountChooserOpen=false; authChooserOpen=true; invalidate(); return true;
+            }
+            accountChooserOpen=false; invalidate(); return true;
+        }
+
         if (draggingInstances && Math.abs(x - touchDownX) > 12f) {
             draggingInstances = false;
             return true;
@@ -730,10 +840,11 @@ public final class ModrinthLauncherView extends View {
         }
         if(x>=1230 && y>=75 && y<188){
             if(currentAccount != null) {
-                accountSpinner.performClick();
+                accountChooserOpen = true;
             } else {
-                ExtraCore.setValue(ExtraConstants.SELECT_AUTH_METHOD,true);
+                authChooserOpen = true;
             }
+            invalidate();
             return true;
         }
         if(x>=1230 && y>=274 && y<352){
