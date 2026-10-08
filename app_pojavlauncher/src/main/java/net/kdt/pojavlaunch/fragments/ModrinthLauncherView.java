@@ -34,6 +34,10 @@ import net.kdt.pojavlaunch.tasks.AsyncVersionList;
 import net.kdt.pojavlaunch.utils.FileUtils;
 
 import java.io.File;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.util.HashMap;
+import java.util.Map;
 
 import git.artdeell.mojo.R;
 
@@ -58,6 +62,9 @@ public final class ModrinthLauncherView extends View {
     private final Bitmap cherryArtwork;
     private final Bitmap snowArtwork;
     private final Bitmap badlandsArtwork;
+    private final Bitmap updateIcon;
+    private final Bitmap ultraIcon;
+    private final Map<String, Bitmap> modIcons = new HashMap<>();
     private final mcVersionSpinner versionSpinner;
     private final AccountSpinner accountSpinner;
     private final FragmentActivity activity;
@@ -85,6 +92,9 @@ public final class ModrinthLauncherView extends View {
         cherryArtwork = bitmap(R.drawable.urinth_cherry);
         snowArtwork = bitmap(R.drawable.urinth_snow);
         badlandsArtwork = bitmap(R.drawable.urinth_badlands);
+        updateIcon = bitmap(R.drawable.ic_px_verify_hash);
+        ultraIcon = bitmap(R.drawable.ic_px_speed);
+        loadRealModIcons();
         SharedPreferences prefs = activity.getSharedPreferences("urinth_ui", Context.MODE_PRIVATE);
         ultraOn = prefs.getBoolean("ultra", true);
         p.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
@@ -92,6 +102,24 @@ public final class ModrinthLauncherView extends View {
         stroke.setStrokeWidth(2f);
         setFocusable(true);
         reloadLauncherData();
+    }
+
+    private void loadRealModIcons() {
+        final String[] slugs = {"sodium","lithium","iris","distanthorizons","xaeros-minimap"};
+        for (String slug : slugs) {
+            PojavApplication.sExecutorService.execute(() -> {
+                try {
+                    HttpURLConnection api = (HttpURLConnection) new URL("https://api.modrinth.com/v2/project/" + slug).openConnection();
+                    api.setConnectTimeout(5000); api.setReadTimeout(5000);
+                    api.setRequestProperty("User-Agent", "URinthLauncher/1.0");
+                    Bitmap b = BitmapFactory.decodeStream(api.getInputStream());
+                    api.disconnect();
+                    if (b != null) {
+                        Tools.runOnUiThread(() -> { modIcons.put(slug, b); invalidate(); });
+                    }
+                } catch (Exception ignored) { }
+            });
+        }
     }
 
     private void reloadLauncherData() {
@@ -321,9 +349,10 @@ public final class ModrinthLauncherView extends View {
     }
 
     private void drawModIcon(Canvas c,float x,float y,int i) {
-        int[] colors={Color.rgb(142,209,79),Color.rgb(158,72,245),Color.rgb(245,91,176),Color.rgb(88,157,220),Color.rgb(112,125,151)};
-        p.setColor(colors[i]); c.drawRoundRect(x,y,x+39,y+39,10,10,p);
-        text(c,i==0?"S":i==1?"ϟ":i==2?"✿":i==3?"◉":"⊘",x+10,y+27,20,TEXT,true);
+        String[] slugs={"sodium","lithium","iris","distanthorizons","xaeros-minimap"};
+        Bitmap b=modIcons.get(slugs[i]);
+        if(b!=null) { drawBitmap(c,b,x,y,39,39); return; }
+        p.setColor(PANEL_2); c.drawRoundRect(x,y,x+39,y+39,10,10,p);
     }
 
     private void drawRight(Canvas c) {
@@ -345,13 +374,13 @@ public final class ModrinthLauncherView extends View {
         }
 
         panel(c,x,196,w,67);
-        drawCircleIcon(c,x+36,229,"↻");
+        drawBitmap(c,updateIcon,x+16,209,40,40);
         text(c,"Check Updates",x+67,224,14,TEXT,true);
         text(c,"Check for new versions and fixes",x+67,245,10,MUTED,false);
         text(c,"›",x+w-25,233,24,TEXT,true);
 
         panel(c,x,274,w,78);
-        drawCircleIcon(c,x+36,310,"⚡");
+        drawBitmap(c,ultraIcon,x+16,290,40,40);
         text(c,"UrinthUltra Mode",x+67,302,14,TEXT,true);
         text(c,"Enable ultra performance mode",x+67,323,10,MUTED,false);
         pill(c,x+w-86,292,x+w-52,322,"OFF");
