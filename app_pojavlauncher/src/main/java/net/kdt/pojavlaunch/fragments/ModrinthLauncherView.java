@@ -172,7 +172,7 @@ public final class ModrinthLauncherView extends View {
     }
 
     private void loadRealModIcons() {
-        final String[] slugs = {"sodium","lithium","iris","distanthorizons","xaeros-minimap"};
+        final String[] slugs = {"sodium","lithium","immediatelyfast","modernfix","vulkanmod"};
         for (String slug : slugs) {
             PojavApplication.sExecutorService.execute(() -> {
                 try {
@@ -279,7 +279,6 @@ public final class ModrinthLauncherView extends View {
         text(c,"Launcher",255,39,27,ACCENT,true);
         p.setColor(Color.rgb(36,99,116)); c.drawRect(370,17,372,45,p);
         text(c,"Made By: Macase, Nile.",395,37,14,ACCENT,true);
-        drawSettings(c,1398,31);
     }
 
     private void drawSidebar(Canvas c) {
@@ -534,9 +533,9 @@ public final class ModrinthLauncherView extends View {
 
     private void drawMods(Canvas c,float x,float y,float w) {
         text(c,"★",x+3,y+30,31,TEXT,true);
-        text(c,"Latest Mods",x+52,y+28,21,TEXT,true);
+        text(c,"Optimize Mods",x+52,y+28,21,TEXT,true);
         pillOutline(c,x+w-95,y+2,x+w,y+40,"▦  View All");
-        String[][] mods={{"Sodium","NeoForge 1.21.1"},{"Lithium","Fabric 1.21.1"},{"Iris","Fabric 1.21.1"},{"Distant Horizons","Forge 1.21.1"},{"Xaero's Minimap","Forge 1.21.1"}};
+        String[][] mods={{"Sodium","Mobile rendering"},{"Lithium","Game logic optimization"},{"ImmediatelyFast","Faster UI rendering"},{"ModernFix","Memory optimization"},{"Vulkan","Experimental mobile renderer"}};
         float gap=10,cw=(w-gap*4)/5f;
         for(int i=0;i<5;i++) {
             float xx=x+i*(cw+gap);
@@ -549,7 +548,7 @@ public final class ModrinthLauncherView extends View {
     }
 
     private void drawModIcon(Canvas c,float x,float y,int i) {
-        String[] slugs={"sodium","lithium","iris","distanthorizons","xaeros-minimap"};
+        String[] slugs={"sodium","lithium","immediatelyfast","modernfix","vulkanmod"};
         Bitmap b=modIcons.get(slugs[i]);
         if(b!=null) { drawBitmap(c,b,x,y,39,39); return; }
         p.setColor(PANEL_2); c.drawRoundRect(x,y,x+39,y+39,10,10,p);
@@ -591,10 +590,6 @@ public final class ModrinthLauncherView extends View {
         c.drawCircle(ultraOn ? x+w-34 : x+w-70, 307, 12, p);
         
 
-        round(c,x,362,x+w,435,13,Color.rgb(49,66,165),Color.rgb(80,107,245),1.5f);
-        drawBitmap(c,discord,x+18,377,48,48);
-        text(c,"Discord",x+82,407,17,TEXT,true);
-        text(c,"›",x+w-27,409,25,TEXT,true);
     }
 
     private void panel(Canvas c,float x,float y,float w,float h) {
@@ -746,9 +741,6 @@ public final class ModrinthLauncherView extends View {
         }
         if(x>=1230 && y>=274 && y<352){
             ultraOn=!ultraOn;c.getSharedPreferences("urinth_ui",Context.MODE_PRIVATE).edit().putBoolean("ultra",ultraOn).apply();invalidate();return true;
-        }
-        if(x>=1230 && y>=362 && y<435){
-            Tools.openURL(activity,c.getString(R.string.social_media_invite));return true;
         }
         return true;
     }
