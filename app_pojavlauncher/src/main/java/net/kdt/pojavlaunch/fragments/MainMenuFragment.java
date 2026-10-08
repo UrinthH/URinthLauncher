@@ -30,18 +30,18 @@ public class MainMenuFragment extends Fragment {
         spinner.setVisibility(View.INVISIBLE);
 
         FrameLayout root = new FrameLayout(requireContext());
-        ModrinthLauncherView launcherView = new ModrinthLauncherView(
-                requireActivity(), spinner, () -> {
-                    if (net.kdt.pojavlaunch.progresskeeper.ProgressKeeper.getTaskCount() == 0) {
-                        mModInstallerLauncher.launch(null);
-                    }
-                });
-
         AccountSpinner accountSpinner = new AccountSpinner(requireContext());
         accountSpinner.setAlpha(0f);
         FrameLayout.LayoutParams accountParams = new FrameLayout.LayoutParams(1, 1);
         accountParams.leftMargin = 1;
         accountParams.topMargin = 1;
+
+        ModrinthLauncherView launcherView = new ModrinthLauncherView(
+                requireActivity(), spinner, accountSpinner, () -> {
+                    if (net.kdt.pojavlaunch.progresskeeper.ProgressKeeper.getTaskCount() == 0) {
+                        mModInstallerLauncher.launch(null);
+                    }
+                });
 
         root.addView(launcherView, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
