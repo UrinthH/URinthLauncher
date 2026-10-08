@@ -3,6 +3,9 @@ package net.kdt.pojavlaunch.fragments;
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.graphics.Color;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.view.View;
@@ -10,6 +13,7 @@ import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.ScrollView;
@@ -36,6 +40,7 @@ import net.kdt.pojavlaunch.modloaders.modpacks.models.ModItem;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URLEncoder;
@@ -68,26 +73,33 @@ public class ModrinthBrowserFragment extends Fragment {
             id = json.has("project_id") ? json.get("project_id").getAsString() : "";
             title = json.has("title") ? json.get("title").getAsString() : "Unknown project";
             description = json.has("description") ? json.get("description").getAsString() : "";
-            icon = json.has("icon_url") ? json.get("icon_url").getAsString() : "";
+            icon = string(json, "icon_url");
         }
     }
 
     private static class Version {
         String id = "", name = "", number = "", gameVersion = "", loader = "", url = "", filename = "", sha1 = "", type = "";
+        final List<String> gameVersions = new ArrayList<>();
+        final List<String> loaders = new ArrayList<>();
         long size;
         Version(JsonObject json) {
             id = string(json, "id");
             name = string(json, "name");
             number = string(json, "version_number");
             type = string(json, "version_type");
-            JsonArray games = json.has("game_versions") ? json.getAsJsonArray("game_versions") : new JsonArray();
-            gameVersion = games.size() > 0 ? games.get(0).getAsString() : "";
-            JsonArray loaders = json.has("loaders") ? json.getAsJsonArray("loaders") : new JsonArray();
-            loader = loaders.size() > 0 ? loaders.get(0).getAsString() : "";
-            JsonArray files = json.has("files") ? json.getAsJsonArray("files") : new JsonArray();
+            JsonArray games = json.has("game_versions") && json.get("game_versions").isJsonArray()
+                    ? json.getAsJsonArray("game_versions") : new JsonArray();
+            for (int i = 0; i < games.size(); i++) gameVersions.add(games.get(i).getAsString());
+            gameVersion = gameVersions.isEmpty() ? "" : gameVersions.get(0);
+            JsonArray supportedLoaders = json.has("loaders") && json.get("loaders").isJsonArray()
+                    ? json.getAsJsonArray("loaders") : new JsonArray();
+            for (int i = 0; i < supportedLoaders.size(); i++) loaders.add(supportedLoaders.get(i).getAsString());
+            loader = loaders.isEmpty() ? "" : loaders.get(0);
+            JsonArray files = json.has("files") && json.get("files").isJsonArray()
+                    ? json.getAsJsonArray("files") : new JsonArray();
             if (files.size() > 0) {
                 JsonObject file = files.get(0).getAsJsonObject();
-                for (int i=0; i<files.size(); i++) {
+                for (int i = 0; i < files.size(); i++) {
                     JsonObject candidate = files.get(i).getAsJsonObject();
                     if (candidate.has("primary") && candidate.get("primary").getAsBoolean()) {
                         file = candidate;
@@ -97,13 +109,14 @@ public class ModrinthBrowserFragment extends Fragment {
                 url = string(file, "url");
                 filename = string(file, "filename");
                 size = file.has("size") ? file.get("size").getAsLong() : 0;
-                JsonObject hashes = file.has("hashes") ? file.getAsJsonObject("hashes") : new JsonObject();
-                sha1 = hashes.has("sha1") ? hashes.get("sha1").getAsString() : "";
+                JsonObject hashes = file.has("hashes") && file.get("hashes").isJsonObject()
+                        ? file.getAsJsonObject("hashes") : new JsonObject();
+                sha1 = string(hashes, "sha1");
             }
         }
     }
 
-    private static String readResponse(InputStream input) throws java.io.IOException {
+        private static String readResponse(InputStream input) throws java.io.IOException {
         java.io.ByteArrayOutputStream output = new java.io.ByteArrayOutputStream();
         byte[] buffer = new byte[8192];
         int count;
@@ -278,38 +291,98 @@ public class ModrinthBrowserFragment extends Fragment {
         });
     }
 
+    private android.graphics.drawable.Drawable rounded(int fill, int radiusDp, int stroke, int strokeDp) {
+        GradientDrawable drawable = new GradientDrawable();
+        drawable.setColor(fill);
+        drawable.setCornerRadius(dp(radiusDp));
+        if (strokeDp > 0) drawable.setStroke(dp(strokeDp), stroke);
+        return drawable;
+    }
+
+    private void loadProjectIcon(Project project, ImageView image) {
+        if (project.icon == null || project.icon.isEmpty()) return;
+        image.setTag(project.icon);
+        PojavApplication.sExecutorService.execute(() -> {
+            HttpURLConnection connection = null;
+            try {
+                connection = (HttpURLConnection) new java.net.URL(project.icon).openConnection();
+                connection.setConnectTimeout(8000);
+                connection.setReadTimeout(10000);
+                connection.setRequestProperty("User-Agent", "URinthLauncher/1.0 (Android)");
+                try (InputStream in = connection.getInputStream()) {
+                    Bitmap bitmap = BitmapFactory.decodeStream(in);
+                    if (bitmap != null) Tools.runOnUiThread(() -> {
+                        if (project.icon.equals(image.getTag())) image.setImageBitmap(bitmap);
+                    });
+                }
+            } catch (Exception ignored) {
+                // Keep the branded placeholder when a project has no usable icon.
+            } finally {
+                if (connection != null) connection.disconnect();
+            }
+        });
+    }
+
     private void addProjectCard(Project project) {
         LinearLayout card = new LinearLayout(requireContext());
-        card.setOrientation(LinearLayout.VERTICAL);
-        card.setPadding(dp(14), dp(10), dp(14), dp(10));
-        card.setBackgroundColor(CARD);
+        card.setOrientation(LinearLayout.HORIZONTAL);
+        card.setGravity(Gravity.CENTER_VERTICAL);
+        card.setPadding(dp(14), dp(12), dp(14), dp(12));
+        card.setBackground(rounded(CARD, 14, Color.rgb(20, 76, 91), 1));
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, -2);
-        params.bottomMargin = dp(8);
+        params.bottomMargin = dp(10);
         resultList.addView(card, params);
+
+        ImageView icon = new ImageView(requireContext());
+        icon.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        icon.setBackground(rounded(Color.rgb(0, 70, 72), 12, ACCENT, 1));
+        icon.setClipToOutline(true);
+        icon.setImageDrawable(rounded(Color.rgb(0, 70, 72), 12, ACCENT, 1));
+        LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams(dp(58), dp(58));
+        iconParams.rightMargin = dp(12);
+        card.addView(icon, iconParams);
+        loadProjectIcon(project, icon);
+
+        LinearLayout details = new LinearLayout(requireContext());
+        details.setOrientation(LinearLayout.VERTICAL);
+        card.addView(details, new LinearLayout.LayoutParams(0, -2, 1f));
 
         TextView title = new TextView(requireContext());
         title.setText(project.title);
         title.setTextColor(TEXT);
-        title.setTextSize(16);
+        title.setTextSize(15);
+        title.setMaxLines(2);
         title.setTypeface(null, android.graphics.Typeface.BOLD);
-        card.addView(title);
+        details.addView(title);
+
         TextView description = new TextView(requireContext());
         description.setText(project.description);
         description.setTextColor(MUTED);
-        description.setTextSize(12);
-        LinearLayout.LayoutParams descriptionParams = new LinearLayout.LayoutParams(-1, -2);
-        descriptionParams.topMargin = dp(4);
-        card.addView(description, descriptionParams);
+        description.setTextSize(11);
+        description.setMaxLines(3);
+        description.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        LinearLayout.LayoutParams descParams = new LinearLayout.LayoutParams(-1, -2);
+        descParams.topMargin = dp(4);
+        details.addView(description, descParams);
+
+        TextView metadata = new TextView(requireContext());
+        metadata.setText(categoryTitle() + "  ·  Modrinth");
+        metadata.setTextColor(ACCENT);
+        metadata.setTextSize(10);
+        LinearLayout.LayoutParams metaParams = new LinearLayout.LayoutParams(-1, -2);
+        metaParams.topMargin = dp(6);
+        details.addView(metadata, metaParams);
+
         Button install = button(category.equals("modpack") ? "Choose version" : "Install");
-        LinearLayout.LayoutParams installParams = new LinearLayout.LayoutParams(dp(140), dp(40));
-        installParams.gravity = Gravity.RIGHT;
-        installParams.topMargin = dp(8);
+        install.setTextSize(11);
+        LinearLayout.LayoutParams installParams = new LinearLayout.LayoutParams(dp(94), dp(40));
+        installParams.leftMargin = dp(10);
         card.addView(install, installParams);
         card.setOnClickListener(v -> openProject(project));
         install.setOnClickListener(v -> openProject(project));
     }
 
-    private void openProject(Project project) {
+        private void openProject(Project project) {
         status.setText("Loading compatible versions for " + project.title + "…");
         progress.setVisibility(View.VISIBLE);
         PojavApplication.sExecutorService.execute(() -> {
@@ -322,7 +395,7 @@ public class ModrinthBrowserFragment extends Fragment {
                 connection.setRequestProperty("User-Agent", "URinthLauncher/1.0 (Android)");
                 String body;
                 try (InputStream in = connection.getInputStream()) {
-                    body = new String(in.readAllBytes(), StandardCharsets.UTF_8);
+                    body = readResponse(in);
                 }
                 JsonArray json = JsonParser.parseString(body).getAsJsonArray();
                 List<Version> versions = new ArrayList<>();
@@ -369,100 +442,235 @@ public class ModrinthBrowserFragment extends Fragment {
 
         LinearLayout layout = new LinearLayout(requireContext());
         layout.setOrientation(LinearLayout.VERTICAL);
-        layout.setPadding(dp(20), dp(8), dp(20), dp(4));
-        TextView info = new TextView(requireContext());
-        info.setText("Choose the Minecraft profile and a compatible project version.");
-        info.setTextColor(MUTED);
-        layout.addView(info);
+        layout.setPadding(dp(18), dp(8), dp(18), dp(8));
+        layout.setBackgroundColor(Color.rgb(6, 25, 38));
+
+        LinearLayout projectHeader = new LinearLayout(requireContext());
+        projectHeader.setGravity(Gravity.CENTER_VERTICAL);
+        projectHeader.setPadding(0, 0, 0, dp(10));
+        layout.addView(projectHeader);
+
+        ImageView projectIcon = new ImageView(requireContext());
+        projectIcon.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        projectIcon.setBackground(rounded(Color.rgb(0, 70, 72), 10, ACCENT, 1));
+        projectIcon.setClipToOutline(true);
+        LinearLayout.LayoutParams projectIconParams = new LinearLayout.LayoutParams(dp(48), dp(48));
+        projectIconParams.rightMargin = dp(12);
+        projectHeader.addView(projectIcon, projectIconParams);
+        loadProjectIcon(project, projectIcon);
+
+        LinearLayout projectTitles = new LinearLayout(requireContext());
+        projectTitles.setOrientation(LinearLayout.VERTICAL);
+        projectHeader.addView(projectTitles, new LinearLayout.LayoutParams(0, -2, 1f));
+        TextView title = new TextView(requireContext());
+        title.setText("Install " + project.title);
+        title.setTextColor(TEXT);
+        title.setTextSize(18);
+        title.setTypeface(null, android.graphics.Typeface.BOLD);
+        projectTitles.addView(title);
+        TextView subtitle = new TextView(requireContext());
+        subtitle.setText("Choose a profile and check version compatibility");
+        subtitle.setTextColor(MUTED);
+        subtitle.setTextSize(11);
+        projectTitles.addView(subtitle);
+
+        TextView profileLabel = new TextView(requireContext());
+        profileLabel.setText("TARGET PROFILE");
+        profileLabel.setTextColor(ACCENT);
+        profileLabel.setTextSize(10);
+        profileLabel.setTypeface(null, android.graphics.Typeface.BOLD);
+        LinearLayout.LayoutParams profileLabelParams = new LinearLayout.LayoutParams(-1, -2);
+        profileLabelParams.topMargin = dp(4);
+        layout.addView(profileLabel, profileLabelParams);
 
         Spinner profileSpinner = new Spinner(requireContext());
         List<String> profileLabels = new ArrayList<>();
         for (Instance instance : instances) {
-            profileLabels.add((instance.name == null ? "Minecraft" : instance.name) + " — " + instance.versionId);
+            profileLabels.add((instance.name == null ? "Minecraft" : instance.name) + "  ·  " + instance.versionId);
         }
         profileSpinner.setAdapter(new ArrayAdapter<>(requireContext(), android.R.layout.simple_spinner_dropdown_item, profileLabels));
-        LinearLayout.LayoutParams spinParams = new LinearLayout.LayoutParams(-1, dp(48));
-        spinParams.topMargin = dp(8);
-        layout.addView(profileSpinner, spinParams);
+        profileSpinner.setPopupBackgroundDrawable(rounded(Color.rgb(8, 35, 49), 10, Color.rgb(21, 99, 111), 1));
+        profileSpinner.setBackground(rounded(Color.rgb(8, 40, 55), 10, Color.rgb(21, 99, 111), 1));
+        LinearLayout.LayoutParams profileParams = new LinearLayout.LayoutParams(-1, dp(48));
+        profileParams.topMargin = dp(5);
+        profileParams.bottomMargin = dp(12);
+        layout.addView(profileSpinner, profileParams);
 
-        Spinner versionSpinner = new Spinner(requireContext());
-        List<Version> compatible = new ArrayList<>();
-        ArrayList<String> versionLabels = new ArrayList<>();
-        Instance initial = instances.get(0);
-        for (Version version : versions) {
-            if (isCompatible(version, initial, category)) {
-                compatible.add(version);
-                versionLabels.add(version.number + " · MC " + version.gameVersion + " · " + version.loader);
-            }
-        }
-        if (compatible.isEmpty()) {
-            compatible.addAll(versions);
-            for (Version version : versions) versionLabels.add(version.number + " · MC " + version.gameVersion + " · " + version.loader);
-        }
-        ArrayAdapter<String> versionAdapter = new ArrayAdapter<>(requireContext(), android.R.layout.simple_spinner_dropdown_item, versionLabels);
-        versionSpinner.setAdapter(versionAdapter);
-        LinearLayout.LayoutParams versionParams = new LinearLayout.LayoutParams(-1, dp(48));
-        versionParams.topMargin = dp(8);
-        layout.addView(versionSpinner, versionParams);
+        LinearLayout legend = new LinearLayout(requireContext());
+        legend.setGravity(Gravity.CENTER_VERTICAL);
+        legend.setPadding(0, 0, 0, dp(6));
+        layout.addView(legend);
+        TextView compatibleLegend = new TextView(requireContext());
+        compatibleLegend.setText("● Compatible");
+        compatibleLegend.setTextColor(Color.rgb(54, 232, 167));
+        compatibleLegend.setTextSize(11);
+        legend.addView(compatibleLegend);
+        TextView incompatibleLegend = new TextView(requireContext());
+        incompatibleLegend.setText("    ● Incompatible");
+        incompatibleLegend.setTextColor(Color.rgb(255, 112, 122));
+        incompatibleLegend.setTextSize(11);
+        legend.addView(incompatibleLegend);
+
+        ScrollView versionScroll = new ScrollView(requireContext());
+        versionScroll.setFillViewport(false);
+        LinearLayout versionList = new LinearLayout(requireContext());
+        versionList.setOrientation(LinearLayout.VERTICAL);
+        versionScroll.addView(versionList);
+        layout.addView(versionScroll, new LinearLayout.LayoutParams(-1, dp(210)));
+
         TextView compatibility = new TextView(requireContext());
         compatibility.setTextColor(MUTED);
         compatibility.setTextSize(11);
-        LinearLayout.LayoutParams compatibilityParams = new LinearLayout.LayoutParams(-1, -2);
-        compatibilityParams.topMargin = dp(6);
-        layout.addView(compatibility, compatibilityParams);
+        compatibility.setPadding(0, dp(8), 0, dp(2));
+        layout.addView(compatibility);
 
+        final Version[] selectedVersion = new Version[1];
+        final Instance[] selectedInstance = new Instance[]{instances.get(0)};
         Runnable refreshVersions = () -> {
-            Instance selected = instances.get(profileSpinner.getSelectedItemPosition());
-            compatible.clear();
-            versionLabels.clear();
+            int selectedPosition = Math.max(0, Math.min(profileSpinner.getSelectedItemPosition(), instances.size() - 1));
+            Instance selected = instances.get(selectedPosition);
+            selectedInstance[0] = selected;
+            selectedVersion[0] = null;
+            versionList.removeAllViews();
+            int compatibleCount = 0;
             for (Version version : versions) {
-                if (isCompatible(version, selected, category)) {
-                    compatible.add(version);
-                    versionLabels.add(version.number + " · MC " + version.gameVersion + " · " + version.loader);
+                boolean matches = isCompatible(version, selected, category);
+                if (matches) compatibleCount++;
+                LinearLayout row = new LinearLayout(requireContext());
+                row.setOrientation(LinearLayout.VERTICAL);
+                row.setPadding(dp(12), dp(9), dp(12), dp(9));
+                int fill = matches ? Color.rgb(12, 58, 49) : Color.rgb(61, 32, 39);
+                int stroke = matches ? Color.rgb(25, 190, 137) : Color.rgb(191, 70, 83);
+                row.setBackground(rounded(fill, 10, stroke, 1));
+                LinearLayout.LayoutParams rowParams = new LinearLayout.LayoutParams(-1, -2);
+                rowParams.bottomMargin = dp(7);
+                versionList.addView(row, rowParams);
+
+                TextView versionName = new TextView(requireContext());
+                versionName.setText((matches ? "✓  " : "✕  ") + version.number + "  ·  MC " + version.gameVersion);
+                versionName.setTextColor(matches ? Color.rgb(103, 255, 190) : Color.rgb(255, 142, 150));
+                versionName.setTextSize(13);
+                versionName.setTypeface(null, android.graphics.Typeface.BOLD);
+                row.addView(versionName);
+
+                TextView versionMeta = new TextView(requireContext());
+                versionMeta.setText("Loader: " + (version.loaders.isEmpty() ? "not specified" : android.text.TextUtils.join(", ", version.loaders)));
+                versionMeta.setTextColor(matches ? Color.rgb(181, 232, 214) : Color.rgb(224, 175, 180));
+                versionMeta.setTextSize(10);
+                LinearLayout.LayoutParams versionMetaParams = new LinearLayout.LayoutParams(-1, -2);
+                versionMetaParams.topMargin = dp(3);
+                row.addView(versionMeta, versionMetaParams);
+
+                TextView verdict = new TextView(requireContext());
+                verdict.setText(matches ? "COMPATIBLE WITH THIS PROFILE" : compatibilityReason(version, selected, category));
+                verdict.setTextColor(matches ? Color.rgb(103, 255, 190) : Color.rgb(255, 142, 150));
+                verdict.setTextSize(9);
+                verdict.setTypeface(null, android.graphics.Typeface.BOLD);
+                LinearLayout.LayoutParams verdictParams = new LinearLayout.LayoutParams(-1, -2);
+                verdictParams.topMargin = dp(3);
+                row.addView(verdict, verdictParams);
+
+                if (matches) {
+                    row.setOnClickListener(v -> {
+                        selectedVersion[0] = version;
+                        for (int i = 0; i < versionList.getChildCount(); i++) {
+                            View child = versionList.getChildAt(i);
+                            child.setAlpha(child == row ? 1f : 0.78f);
+                        }
+                        row.setBackground(rounded(Color.rgb(9, 82, 62), 10, ACCENT, 2));
+                        compatibility.setText("Selected " + version.number + " for " + (selected.name == null ? "Minecraft" : selected.name));
+                        compatibility.setTextColor(Color.rgb(103, 255, 190));
+                    });
+                } else {
+                    row.setAlpha(0.86f);
                 }
             }
-            versionAdapter.notifyDataSetChanged();
-            if (compatible.isEmpty()) {
-                compatibility.setText("No matching versions for this profile. Choose a profile with a supported Minecraft version and loader.");
+            if (compatibleCount == 0) {
+                compatibility.setText("No compatible release found for this profile. Pick another profile.");
+                compatibility.setTextColor(Color.rgb(255, 142, 150));
             } else {
-                compatibility.setText(compatible.size() + " compatible version(s) for " + selected.versionId);
-                versionSpinner.setSelection(0);
+                compatibility.setText(compatibleCount + " compatible release(s) · " + selected.versionId + " · Tap a green release to select it.");
+                compatibility.setTextColor(Color.rgb(103, 255, 190));
+                for (int i = 0; i < versionList.getChildCount(); i++) {
+                    View child = versionList.getChildAt(i);
+                    if (isCompatible(versions.get(i), selected, category)) {
+                        child.performClick();
+                        break;
+                    }
+                }
             }
         };
         profileSpinner.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
             @Override public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) { refreshVersions.run(); }
             @Override public void onNothingSelected(android.widget.AdapterView<?> parent) { }
         });
-        refreshVersions.run();
 
         AlertDialog dialog = new AlertDialog.Builder(requireContext())
-                .setTitle("Install " + project.title)
                 .setView(layout)
                 .setNegativeButton("Cancel", null)
                 .setPositiveButton("Install", null)
                 .create();
-        dialog.setOnShowListener(d -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
-            if (compatible.isEmpty()) {
-                compatibility.setText("No compatible version is available for the selected profile.");
-                return;
-            }
-            Instance target = instances.get(profileSpinner.getSelectedItemPosition());
-            Version selected = compatible.get(Math.min(versionSpinner.getSelectedItemPosition(), compatible.size()-1));
-            dialog.dismiss();
-            downloadIntoProfile(project, selected, target);
-        }));
+        dialog.setOnShowListener(ignored -> {
+            dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(MUTED);
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(ACCENT);
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+                if (selectedVersion[0] == null) {
+                    compatibility.setText("Select a green compatible release before installing.");
+                    compatibility.setTextColor(Color.rgb(255, 142, 150));
+                    return;
+                }
+                Version chosen = selectedVersion[0];
+                Instance target = selectedInstance[0];
+                dialog.dismiss();
+                downloadIntoProfile(project, chosen, target);
+            });
+        });
         dialog.show();
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(rounded(Color.rgb(6, 25, 38), 18, Color.rgb(16, 113, 121), 1));
+            int width = (int) (getResources().getDisplayMetrics().widthPixels * 0.86f);
+            dialog.getWindow().setLayout(width, -2);
+        }
+        refreshVersions.run();
     }
 
-    private boolean isCompatible(Version version, Instance instance, String type) {
+    private String compatibilityReason(Version version, Instance instance, String type) {
         String game = instance.versionId == null ? "" : instance.versionId;
-        if (!game.equals(version.gameVersion) && !game.endsWith("-" + version.gameVersion) && !game.contains(version.gameVersion)) return false;
+        boolean gameMatches = false;
+        for (String supported : version.gameVersions) {
+            if (game.equals(supported) || game.endsWith("-" + supported) || game.contains("-" + supported)) {
+                gameMatches = true;
+                break;
+            }
+        }
+        if (!gameMatches) return "INCOMPATIBLE · Minecraft version mismatch";
+        if ("resourcepack".equals(type) || "shader".equals(type) || "world".equals(type)) return "INCOMPATIBLE · Unsupported release";
+        String loader = loaderFor(game);
+        if (loader.isEmpty()) return "INCOMPATIBLE · Profile loader could not be identified";
+        if (!version.loaders.contains(loader.toLowerCase(Locale.ROOT))) return "INCOMPATIBLE · Loader mismatch (" + loader + ")";
+        return "INCOMPATIBLE · Unsupported release";
+    }
+
+        private boolean isCompatible(Version version, Instance instance, String type) {
+        String game = instance.versionId == null ? "" : instance.versionId;
+        boolean gameMatches = false;
+        for (String supported : version.gameVersions) {
+            if (game.equals(supported) || game.endsWith("-" + supported) || game.contains("-" + supported)) {
+                gameMatches = true;
+                break;
+            }
+        }
+        if (!gameMatches) return false;
         if ("resourcepack".equals(type) || "shader".equals(type) || "world".equals(type)) return true;
         String loader = loaderFor(game);
-        return loader.isEmpty() || version.loader.equalsIgnoreCase(loader);
+        if (loader.isEmpty()) return false;
+        for (String supportedLoader : version.loaders) {
+            if (supportedLoader.equalsIgnoreCase(loader)) return true;
+        }
+        return false;
     }
 
-    private String loaderFor(String versionId) {
+        private String loaderFor(String versionId) {
         String value = versionId == null ? "" : versionId.toLowerCase(Locale.ROOT);
         if (value.startsWith("fabric-loader-")) return "fabric";
         if (value.startsWith("quilt-loader-")) return "quilt";
