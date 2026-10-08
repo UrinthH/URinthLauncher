@@ -119,7 +119,7 @@ public final class ModrinthLauncherView extends View {
         // Nostalgic Overworld night: Minecraft's own 25w44a night screenshot,
         // replacing the previous Sift background.
         loadRemoteArtwork(
-                "https://www.minecraft.net/content/dam/minecraftnet/games/minecraft/screenshots/25w44a_1170x500.jpg",
+                "https://www.minecraft.net/content/dam/minecraftnet/games/minecraft/key-art/Ambient-Hero-B_Vibrant-Visuals_1080x1080.jpg",
                 bitmap -> { backgroundArtwork = bitmap; invalidate(); }
         );
         loadRemoteArtwork(
@@ -130,15 +130,15 @@ public final class ModrinthLauncherView extends View {
         // A reusable artwork pool. New instances automatically select an image
         // from this pool, so added instances never render without artwork.
         loadRemoteArtwork(
-                "https://www.minecraft.net/content/dam/minecraftnet/games/minecraft/screenshots/cherrygrove-header.jpg",
+                "https://www.minecraft.net/content/dam/minecraftnet/games/minecraft/key-art/Ambient-Hero-B_Vibrant-Visuals_1080x1080.jpg",
                 bitmap -> { versionBiomeArtworks[0] = bitmap; invalidate(); }
         );
         loadRemoteArtwork(
-                "https://www.minecraft.net/content/dam/minecraftnet/games/minecraft/screenshots/frozen-header.jpg",
+                "https://www.minecraft.net/content/dam/minecraftnet/games/minecraft/key-art/Ambient-Hero-B_Vibrant-Visuals_1080x1080.jpg",
                 bitmap -> { versionBiomeArtworks[1] = bitmap; invalidate(); }
         );
         loadRemoteArtwork(
-                "https://www.minecraft.net/content/dam/minecraftnet/games/minecraft/screenshots/badlands-header.jpg",
+                "https://www.minecraft.net/content/dam/minecraftnet/games/minecraft/key-art/Ambient-Hero-B_Vibrant-Visuals_1080x1080.jpg",
                 bitmap -> { versionBiomeArtworks[2] = bitmap; invalidate(); }
         );
         loadRemoteArtwork(
