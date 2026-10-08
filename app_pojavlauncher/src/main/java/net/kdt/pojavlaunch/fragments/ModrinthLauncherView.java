@@ -276,7 +276,7 @@ public final class ModrinthLauncherView extends View {
         drawHamburger(c,38,31);
         drawBitmap(c,logo,80,10,48,48);
         text(c,"Modrinth",143,39,27,TEXT,true);
-        text(c,"Launcher",247,39,27,ACCENT,true);
+        text(c,"Launcher",255,39,27,ACCENT,true);
         p.setColor(Color.rgb(36,99,116)); c.drawRect(370,17,372,45,p);
         text(c,"Made By: Macase, Nile.",395,37,14,ACCENT,true);
         drawSettings(c,1398,31);
