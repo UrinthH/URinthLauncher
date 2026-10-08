@@ -363,11 +363,15 @@ public final class ModrinthLauncherView extends View {
         pill(c,x+w-152,y+h-47,x+w-18,y+h-15,action);
     }
 
+    private MainMenuFragment getMainMenuHost() {
+        for (androidx.fragment.app.Fragment fragment : activity.getSupportFragmentManager().getFragments()) {
+            if (fragment instanceof MainMenuFragment) return (MainMenuFragment) fragment;
+        }
+        return null;
+    }
+
     private void launchInstanceOption(int option) {
-        MainMenuFragment host = activity.getSupportFragmentManager()
-                .findFragmentByTag(MainMenuFragment.TAG) instanceof MainMenuFragment
-                ? (MainMenuFragment) activity.getSupportFragmentManager().findFragmentByTag(MainMenuFragment.TAG)
-                : null;
+        MainMenuFragment host = getMainMenuHost();
         if (option == 0) {
             VersionSelectorDialog.open(getContext(), false, (id, snapshot) -> {
                 try {
@@ -591,7 +595,9 @@ public final class ModrinthLauncherView extends View {
         if(card < 0 || card >= instanceCards.length) return;
         DisplayInstance display = instanceCards[card];
         Instances.setSelectedInstance(display);
-        Tools.swapFragment(activity, InstanceEditorFragment.class, InstanceEditorFragment.TAG, null);
+        MainMenuFragment host = getMainMenuHost();
+        if (host != null) host.showCenterFragment(InstanceEditorFragment.class, InstanceEditorFragment.TAG, null);
+        else Tools.swapFragment(activity, InstanceEditorFragment.class, InstanceEditorFragment.TAG, null);
     }
 
     private void drawBiome(Canvas c,float x,float y,float w,float h,int type) {
