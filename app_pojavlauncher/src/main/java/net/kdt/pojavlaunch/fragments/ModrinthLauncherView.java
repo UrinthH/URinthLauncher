@@ -319,12 +319,12 @@ public final class ModrinthLauncherView extends View {
             int idx=(int)((y-72)/48);
             if(idx==1){versionSpinner.openProfileEditor(activity);}
             else if(idx==2){Tools.swapFragment(activity,SearchModFragment.class,SearchModFragment.TAG,null);}
-            else if(idx==5){Tools.swapFragment((android.app.Activity)c,LauncherPreferenceFragment.class,LauncherActivity.SETTING_FRAGMENT_TAG,null);}
+            else if(idx==5){Tools.swapFragment(activity,LauncherPreferenceFragment.class,LauncherActivity.SETTING_FRAGMENT_TAG,null);}
             invalidate(); return true;
         }
         if(menuOpen && x<228 && y>=378 && y<522){return true;}
         if(x>242 && x<1215 && y>=505 && y<545){
-            Tools.swapFragment((android.app.Activity)c,SearchModFragment.class,SearchModFragment.TAG,null);return true;
+            Tools.swapFragment(activity,SearchModFragment.class,SearchModFragment.TAG,null);return true;
         }
         if(x>242 && x<1215 && y>=553 && y<650){
             float gap=10f, cw=(1215f-242f-gap*4f)/5f;
