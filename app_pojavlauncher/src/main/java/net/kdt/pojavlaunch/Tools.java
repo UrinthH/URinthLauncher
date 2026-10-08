@@ -50,6 +50,7 @@ import com.google.gson.GsonBuilder;
 
 import net.kdt.pojavlaunch.awt.AWTActivity;
 import net.kdt.pojavlaunch.game.GameActivity;
+import net.kdt.pojavlaunch.fragments.MainMenuFragment;
 import net.kdt.pojavlaunch.game.renderer.RenderSpec;
 import net.kdt.pojavlaunch.instances.Instance;
 import net.kdt.pojavlaunch.lifecycle.ContextExecutor;
@@ -732,11 +733,21 @@ public final class Tools {
         }
     }
 
-    /** Swap the main fragment with another */
+    private static @Nullable MainMenuFragment findMainMenuHost(FragmentActivity activity) {
+        for (Fragment fragment : activity.getSupportFragmentManager().getFragments()) {
+            if (fragment instanceof MainMenuFragment) return (MainMenuFragment) fragment;
+        }
+        return null;
+    }
+
+    /** Swap content in the center pane when the Modrinth launcher shell is active. */
     public static void swapFragment(FragmentActivity fragmentActivity , Class<? extends Fragment> fragmentClass,
                                     @Nullable String fragmentTag, @Nullable Bundle bundle) {
-        // When people tab out, it might happen
-        //TODO handle custom animations
+        MainMenuFragment host = findMainMenuHost(fragmentActivity);
+        if (host != null && host.isCenterContentVisible()) {
+            host.showCenterFragment(fragmentClass, fragmentTag, bundle);
+            return;
+        }
         fragmentActivity.getSupportFragmentManager().beginTransaction()
                 .setReorderingAllowed(true)
                 .addToBackStack(fragmentClass.getName())
@@ -744,12 +755,18 @@ public final class Tools {
     }
 
     public static void backToMainMenu(FragmentActivity fragmentActivity) {
+        MainMenuFragment host = findMainMenuHost(fragmentActivity);
+        if (host != null && host.closeCenterContent()) return;
         fragmentActivity.getSupportFragmentManager().popBackStack(null, FragmentManager.POP_BACK_STACK_INCLUSIVE);
-
     }
 
     /** Remove the current fragment */
     public static void removeCurrentFragment(FragmentActivity fragmentActivity){
+        MainMenuFragment host = findMainMenuHost(fragmentActivity);
+        if (host != null && host.isCenterContentVisible()) {
+            host.getChildFragmentManager().popBackStack();
+            return;
+        }
         fragmentActivity.getSupportFragmentManager().popBackStack();
     }
 
