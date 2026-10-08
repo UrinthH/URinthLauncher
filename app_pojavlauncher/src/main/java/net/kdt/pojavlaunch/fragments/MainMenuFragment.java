@@ -26,7 +26,7 @@ public class MainMenuFragment extends Fragment {
                              @Nullable Bundle savedInstanceState) {
         com.kdt.mcgui.mcVersionSpinner spinner = new com.kdt.mcgui.mcVersionSpinner(requireContext());
         spinner.setVisibility(View.INVISIBLE);
-        return new ModrinthLauncherView(requireContext(), spinner, () -> {
+        return new ModrinthLauncherView(requireActivity(), spinner, () -> {
             if (net.kdt.pojavlaunch.progresskeeper.ProgressKeeper.getTaskCount() == 0) {
                 mModInstallerLauncher.launch(null);
             }
