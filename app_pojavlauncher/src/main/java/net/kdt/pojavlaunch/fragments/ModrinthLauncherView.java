@@ -61,7 +61,7 @@ public final class ModrinthLauncherView extends View {
         modInstaller = installer;
         logo = bitmap(R.drawable.ic_modrinth);
         discord = bitmap(R.drawable.ic_discord);
-        SharedPreferences prefs = context.getSharedPreferences("urinth_ui", Context.MODE_PRIVATE);
+        SharedPreferences prefs = activity.getSharedPreferences("urinth_ui", Context.MODE_PRIVATE);
         ultraOn = prefs.getBoolean("ultra", true);
         p.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
         stroke.setStyle(Paint.Style.STROKE);
