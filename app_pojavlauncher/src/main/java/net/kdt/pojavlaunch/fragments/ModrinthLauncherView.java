@@ -38,6 +38,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
+import org.json.JSONObject;
 
 import git.artdeell.mojo.R;
 
@@ -112,11 +113,18 @@ public final class ModrinthLauncherView extends View {
                     HttpURLConnection api = (HttpURLConnection) new URL("https://api.modrinth.com/v2/project/" + slug).openConnection();
                     api.setConnectTimeout(5000); api.setReadTimeout(5000);
                     api.setRequestProperty("User-Agent", "URinthLauncher/1.0");
-                    Bitmap b = BitmapFactory.decodeStream(api.getInputStream());
-                    api.disconnect();
-                    if (b != null) {
-                        Tools.runOnUiThread(() -> { modIcons.put(slug, b); invalidate(); });
-                    }
+                    java.io.InputStream stream = api.getInputStream();
+                    java.util.Scanner scanner = new java.util.Scanner(stream, "UTF-8").useDelimiter("\\\\A");
+                    String json = scanner.hasNext() ? scanner.next() : "";
+                    scanner.close(); api.disconnect();
+                    String iconUrl = new JSONObject(json).optString("icon_url", "");
+                    if (iconUrl.isEmpty()) return;
+                    HttpURLConnection img = (HttpURLConnection) new URL(iconUrl).openConnection();
+                    img.setConnectTimeout(5000); img.setReadTimeout(5000);
+                    img.setRequestProperty("User-Agent", "URinthLauncher/1.0");
+                    Bitmap b = BitmapFactory.decodeStream(img.getInputStream());
+                    img.disconnect();
+                    if (b != null) Tools.runOnUiThread(() -> { modIcons.put(slug, b); invalidate(); });
                 } catch (Exception ignored) { }
             });
         }
