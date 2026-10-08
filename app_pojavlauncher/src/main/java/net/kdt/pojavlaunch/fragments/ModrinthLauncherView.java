@@ -65,6 +65,7 @@ public final class ModrinthLauncherView extends View {
     private final Bitmap badlandsArtwork;
     private final Bitmap updateIcon;
     private final Bitmap ultraIcon;
+    private Bitmap backgroundArtwork;
     private final Map<String, Bitmap> modIcons = new HashMap<>();
     private final mcVersionSpinner versionSpinner;
     private final AccountSpinner accountSpinner;
@@ -95,6 +96,7 @@ public final class ModrinthLauncherView extends View {
         badlandsArtwork = bitmap(R.drawable.urinth_badlands);
         updateIcon = bitmap(R.drawable.ic_px_verify_hash);
         ultraIcon = bitmap(R.drawable.ic_px_speed);
+        loadBackgroundArtwork();
         loadRealModIcons();
         SharedPreferences prefs = activity.getSharedPreferences("urinth_ui", Context.MODE_PRIVATE);
         ultraOn = prefs.getBoolean("ultra", true);
@@ -103,6 +105,30 @@ public final class ModrinthLauncherView extends View {
         stroke.setStrokeWidth(2f);
         setFocusable(true);
         reloadLauncherData();
+    }
+
+    private void loadBackgroundArtwork() {
+        PojavApplication.sExecutorService.execute(() -> {
+            HttpURLConnection connection = null;
+            try {
+                URL url = new URL("https://www.minecraft.net/content/dam/minecraftnet/games/spicewood/screenshots/MCL_Dungeons2_sift_1280x720.jpg");
+                connection = (HttpURLConnection) url.openConnection();
+                connection.setConnectTimeout(7000);
+                connection.setReadTimeout(7000);
+                connection.setRequestProperty("User-Agent", "URinthLauncher/1.0");
+                Bitmap loaded = BitmapFactory.decodeStream(connection.getInputStream());
+                if (loaded != null) {
+                    Tools.runOnUiThread(() -> {
+                        backgroundArtwork = loaded;
+                        invalidate();
+                    });
+                }
+            } catch (Exception ignored) {
+                // Keep the existing fallback background if the image cannot be reached.
+            } finally {
+                if (connection != null) connection.disconnect();
+            }
+        });
     }
 
     private void loadRealModIcons() {
@@ -189,11 +215,18 @@ public final class ModrinthLauncherView extends View {
 
     private void drawBackground(Canvas c) {
         p.setStyle(Paint.Style.FILL);
-        p.setShader(new LinearGradient(0,0,0,H,
-                Color.rgb(3,19,31), Color.rgb(2,13,24), Shader.TileMode.CLAMP));
-        c.drawRect(0,0,W,H,p);
-        p.setShader(null);
-        p.setColor(Color.rgb(5,25,38));
+        if (backgroundArtwork != null) {
+            c.drawBitmap(backgroundArtwork, null, new RectF(0, 0, W, H), p);
+            // Keep the launcher panels readable while retaining the scenery underneath.
+            p.setColor(Color.argb(155, 2, 16, 25));
+            c.drawRect(0, 0, W, H, p);
+        } else {
+            p.setShader(new LinearGradient(0,0,0,H,
+                    Color.rgb(3,19,31), Color.rgb(2,13,24), Shader.TileMode.CLAMP));
+            c.drawRect(0,0,W,H,p);
+            p.setShader(null);
+        }
+        p.setColor(Color.argb(105, 3, 22, 34));
         c.drawRect(0,58,W,H,p);
     }
 
