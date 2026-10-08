@@ -313,8 +313,9 @@ public final class ModrinthLauncherView extends View {
         String[] more={"Modpacks","Shaders","Worlds"};
         for(int i=0;i<3;i++) {
             float yy=378+i*48;
+            if(selectedPage==6+i) round(c,19,yy,215,yy+42,12,Color.rgb(7,105,91),ACCENT,1.5f);
             drawNavIcon(c,43,yy+21,6+i);
-            text(c,more[i],75,yy+27,14,TEXT,true);
+            text(c,more[i],75,yy+27,14,selectedPage==6+i?ACCENT:TEXT,true);
         }
         round(c,19,522,215,602,12,Color.rgb(5,44,55),ACCENT,1.5f);
         drawBitmap(c,logo,31,536,42,42);
@@ -931,17 +932,17 @@ public final class ModrinthLauncherView extends View {
                 if (host != null && host.isCenterContentVisible()) host.closeCenterContent();
                 selectedPage = idx;
             }
-            else if(idx==2){openContentCategory("mod");}
-            else if(idx==3){openContentCategory("resourcepack");}
-            else if(idx==4){Tools.swapFragment(activity,SearchModFragment.class,SearchModFragment.TAG,null);}
+            else if(idx==2){selectedPage=2;openContentCategory("mod");}
+            else if(idx==3){selectedPage=3;openContentCategory("resourcepack");}
+            else if(idx==4){selectedPage=4;}
             else if(idx==5){Tools.swapFragment(activity,LauncherPreferenceFragment.class,LauncherActivity.SETTING_FRAGMENT_TAG,null);}
             invalidate(); return true;
         }
         if(menuOpen && x<228 && y>=378 && y<522){
             int idx=(int)((y-378)/48);
-            if(idx==0) openContentCategory("modpack");
-            else if(idx==1) openContentCategory("shader");
-            else if(idx==2) openContentCategory("world");
+            if(idx==0){selectedPage=6;openContentCategory("modpack");}
+            else if(idx==1){selectedPage=7;openContentCategory("shader");}
+            else if(idx==2){selectedPage=8;openContentCategory("world");}
             return true;
         }
         if (selectedPage == 1 && x >= 242 && x < 1215 && y >= 75 && y < 660) {
