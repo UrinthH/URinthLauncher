@@ -29,6 +29,8 @@ import net.kdt.pojavlaunch.instances.DisplayInstance;
 import net.kdt.pojavlaunch.instances.Instance;
 import net.kdt.pojavlaunch.instances.Instances;
 import net.kdt.pojavlaunch.fragments.InstanceEditorFragment;
+import net.kdt.pojavlaunch.fragments.ForgeInstallFragment;
+import net.kdt.pojavlaunch.fragments.LegacyFabricInstallFragment;
 import net.kdt.pojavlaunch.prefs.screens.LauncherPreferenceFragment;
 import net.kdt.pojavlaunch.tasks.AsyncVersionList;
 import net.kdt.pojavlaunch.profiles.VersionSelectorDialog;
@@ -340,14 +342,22 @@ public final class ModrinthLauncherView extends View {
         round(c, x, y, x+w, y+h, 16, Color.rgb(4,24,38), LINE, 1.5f);
         text(c, "Instances", x+28, y+42, 27, TEXT, true);
         text(c, "Create and manage your Minecraft profiles", x+28, y+66, 13, MUTED, false);
-        pill(c, x+w-142, y+20, x+w-22, y+54, "⌂ Home");
 
-        float gap=18f, cardW=(w-3*gap)/2f, cardH=174f;
-        float x1=x+gap, x2=x+2*gap+cardW, y1=y+100, y2=y+100+cardH+18;
-        drawInstanceActionCard(c,x1,y1,cardW,cardH,"Vanilla","Official Minecraft releases","Clean, unmodded profiles","Create Vanilla",0);
-        drawInstanceActionCard(c,x2,y1,cardW,cardH,"OptiFine","Graphics and performance","Install an OptiFine profile","Install OptiFine",1);
-        drawInstanceActionCard(c,x1,y2,cardW,cardH,"Fabric","Lightweight mod loader","Fast, modern mod support","Create Fabric",2);
-        drawInstanceActionCard(c,x2,y2,cardW,cardH,"Quilt","Community mod loader","Flexible modded profiles","Create Quilt",3);
+        // Three-column layout keeps every supported installer visible without
+        // adding a redundant Home button that duplicates the sidebar.
+        float gap=14f, cardW=(w-4*gap)/3f, cardH=140f;
+        float startX=x+gap, startY=y+88f;
+        drawInstanceActionCard(c,startX,startY,cardW,cardH,"Vanilla","Official Minecraft releases","Clean, unmodded profiles","Create Vanilla",0);
+        drawInstanceActionCard(c,startX+cardW+gap,startY,cardW,cardH,"OptiFine","Graphics and performance","Shader and FPS support","Install OptiFine",1);
+        drawInstanceActionCard(c,startX+2*(cardW+gap),startY,cardW,cardH,"Fabric","Lightweight mod loader","Fast, modern mod support","Create Fabric",2);
+
+        float row2=startY+cardH+14f;
+        drawInstanceActionCard(c,startX,row2,cardW,cardH,"Quilt","Community mod loader","Flexible modded profiles","Create Quilt",3);
+        drawInstanceActionCard(c,startX+cardW+gap,row2,cardW,cardH,"Forge","Classic mod loader","Huge mod ecosystem","Install Forge",4);
+        drawInstanceActionCard(c,startX+2*(cardW+gap),row2,cardW,cardH,"NeoForge","Modern Forge successor","For newer modded versions","Install NeoForge",5);
+
+        float row3=row2+cardH+14f;
+        drawInstanceActionCard(c,startX,row3,cardW,cardH,"Legacy Fabric","Older Minecraft versions","Legacy Fabric mod support","Install Legacy Fabric",6);
     }
 
     private void drawInstanceActionCard(Canvas c,float x,float y,float w,float h,String title,
@@ -356,7 +366,8 @@ public final class ModrinthLauncherView extends View {
         p.setColor(option==2?ACCENT:CYAN);
         c.drawRoundRect(x+1,y+16,x+5,y+h-16,2,2,p);
         round(c,x+18,y+18,x+58,y+58,11,Color.rgb(8,66,80),Color.TRANSPARENT,0);
-        text(c,option==0?"V":option==1?"O":option==2?"F":"Q",x+31,y+45,20,ACCENT,true);
+        String symbol = option==0?"V":option==1?"O":option==2?"F":option==3?"Q":option==4?"Fg":option==5?"N":"LF";
+        text(c,symbol,x+25,y+45,option>=4?14:20,ACCENT,true);
         text(c,title,x+72,y+34,19,TEXT,true);
         text(c,subtitle,x+72,y+56,12,MUTED,false);
         text(c,detail,x+20,y+86,13,TEXT,false);
@@ -392,6 +403,9 @@ public final class ModrinthLauncherView extends View {
             if (option == 1) host.showCenterFragment(OptiFineInstallFragment.class, OptiFineInstallFragment.TAG, null);
             else if (option == 2) host.showCenterFragment(FabricInstallFragment.class, FabricInstallFragment.TAG, null);
             else if (option == 3) host.showCenterFragment(QuiltInstallFragment.class, QuiltInstallFragment.TAG, null);
+            else if (option == 4) host.showCenterFragment(ForgeInstallFragment.class, ForgeInstallFragment.TAG, null);
+            else if (option == 5) host.showCenterFragment(NeoForgeInstallFragment.class, NeoForgeInstallFragment.TAG, null);
+            else if (option == 6) host.showCenterFragment(LegacyFabricInstallFragment.class, LegacyFabricInstallFragment.TAG, null);
         } else {
             Toast.makeText(getContext(), "Launcher panel is not ready yet", Toast.LENGTH_SHORT).show();
         }
@@ -911,17 +925,24 @@ public final class ModrinthLauncherView extends View {
         }
         if(menuOpen && x<228 && y>=378 && y<522){return true;}
         if (selectedPage == 1 && x >= 242 && x < 1215 && y >= 75 && y < 660) {
-            float left=menuOpen?242:18f, width=1215f-left, gap=18f, cardW=(width-3*gap)/2f;
-            if (y >= 95 && y < 140 && x >= left+width-160) {
-                selectedPage=0; invalidate(); return true;
+            float left=menuOpen?242:18f, width=1215f-left, gap=14f, cardW=(width-4*gap)/3f;
+            float startX=left+gap, startY=163f, cardH=140f, rowGap=14f;
+            if (y >= startY && y < startY+cardH) {
+                int col=(int)((x-startX)/(cardW+gap));
+                if (col>=0 && col<3 && x < startX+3*cardW+2*gap) {
+                    launchInstanceOption(col); return true;
+                }
             }
-            if (y >= 175 && y < 350) {
-                int option = x < left+gap+cardW ? 0 : 1;
-                launchInstanceOption(option); return true;
+            float row2=startY+cardH+rowGap;
+            if (y >= row2 && y < row2+cardH) {
+                int col=(int)((x-startX)/(cardW+gap));
+                if (col>=0 && col<3 && x < startX+3*cardW+2*gap) {
+                    launchInstanceOption(3+col); return true;
+                }
             }
-            if (y >= 367 && y < 545) {
-                int option = x < left+gap+cardW ? 2 : 3;
-                launchInstanceOption(option); return true;
+            float row3=row2+cardH+rowGap;
+            if (y >= row3 && y < row3+cardH && x >= startX && x < startX+cardW) {
+                launchInstanceOption(6); return true;
             }
             return true;
         }
