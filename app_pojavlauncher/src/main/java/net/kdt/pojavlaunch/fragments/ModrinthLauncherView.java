@@ -340,7 +340,27 @@ public final class ModrinthLauncherView extends View {
         Bitmap b = index >= 0 && index < overworldBiomeArtworks.length
                 ? overworldBiomeArtworks[index] : null;
         if (b != null) {
+            // Cinematic shader-like presentation: richer contrast/saturation and
+            // a soft lighting grade over the real Minecraft biome screenshot.
+            android.graphics.ColorMatrix cm = new android.graphics.ColorMatrix(new float[]{
+                    1.10f, 0, 0, 0, 3,
+                    0, 1.08f, 0, 0, 3,
+                    0, 0, 1.12f, 0, 4,
+                    0, 0, 0, 1, 0
+            });
+            p.setColorFilter(new android.graphics.ColorMatrixColorFilter(cm));
             drawCoverBitmap(c,b,x,y,w,h);
+            p.setColorFilter(null);
+
+            LinearGradient light = new LinearGradient(
+                    x, y, x+w, y+h,
+                    Color.argb(30,255,255,255),
+                    Color.argb(70,0,12,25),
+                    Shader.TileMode.CLAMP
+            );
+            p.setShader(light);
+            c.drawRect(x,y,x+w,y+h,p);
+            p.setShader(null);
         } else {
             round(c,x,y,x+w,y+h,18,Color.rgb(24,52,60),Color.TRANSPARENT,0);
         }
