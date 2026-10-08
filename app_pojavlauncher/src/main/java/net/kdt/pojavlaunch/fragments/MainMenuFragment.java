@@ -83,8 +83,8 @@ public class MainMenuFragment extends Fragment {
         OnBackPressedCallback callback = new OnBackPressedCallback(isCenterContentVisible()) {
             @Override
             public void handleOnBackPressed() {
-                closeCenterContent();
-                setEnabled(false);
+                handleCenterBack();
+                setEnabled(isCenterContentVisible());
             }
         };
         requireActivity().getOnBackPressedDispatcher().addCallback(getViewLifecycleOwner(), callback);
@@ -107,6 +107,15 @@ public class MainMenuFragment extends Fragment {
                 .addToBackStack(fragmentClass.getName())
                 .replace(CENTER_CONTAINER_ID, fragmentClass, bundle, tag)
                 .commit();
+    }
+
+    public void handleCenterBack() {
+        if (!isCenterContentVisible()) return;
+        if (getChildFragmentManager().getBackStackEntryCount() > 1) {
+            getChildFragmentManager().popBackStack();
+        } else {
+            closeCenterContent();
+        }
     }
 
     public boolean closeCenterContent() {
