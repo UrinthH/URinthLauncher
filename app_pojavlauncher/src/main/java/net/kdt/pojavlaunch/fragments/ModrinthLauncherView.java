@@ -58,7 +58,6 @@ public final class ModrinthLauncherView extends View {
     private final Paint stroke = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final RectF r = new RectF();
     private final Bitmap logo;
-    private final Bitmap discord;
     private final Bitmap heroArtwork;
     private final Bitmap cherryArtwork;
     private final Bitmap snowArtwork;
@@ -95,7 +94,6 @@ public final class ModrinthLauncherView extends View {
         this.accountSpinner = accountSpinner;
         modInstaller = installer;
         logo = bitmap(R.drawable.ic_modrinth);
-        discord = bitmap(R.drawable.ic_discord);
         heroArtwork = bitmap(R.drawable.urinth_hero);
         cherryArtwork = bitmap(R.drawable.urinth_cherry);
         snowArtwork = bitmap(R.drawable.urinth_snow);
@@ -631,7 +629,6 @@ public final class ModrinthLauncherView extends View {
     }
 
     private void drawHamburger(Canvas c,float x,float y){p.setColor(TEXT);p.setStrokeWidth(3);for(int i=-1;i<=1;i++)c.drawLine(x-13,y+i*8,x+13,y+i*8,p);}
-    private void drawSettings(Canvas c,float x,float y){p.setColor(TEXT);p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(4);c.drawCircle(x,y,10,p);for(int i=0;i<8;i++){double a=i*Math.PI/4; c.drawLine(x+(float)Math.cos(a)*12,y+(float)Math.sin(a)*12,x+(float)Math.cos(a)*16,y+(float)Math.sin(a)*16,p);}p.setStyle(Paint.Style.FILL);}
 
     private void drawCircleIcon(Canvas c,float x,float y,String s){p.setColor(Color.rgb(6,115,111));c.drawCircle(x,y,22,p);text(c,s,x-8,y+8,22,ACCENT,true);}
     private void drawNavIcon(Canvas c,float x,float y,int type){
@@ -699,7 +696,6 @@ public final class ModrinthLauncherView extends View {
         }
         draggingInstances = false;
         if(y<62 && x<75){menuOpen=!menuOpen;invalidate();return true;}
-        if(y<62 && x>1350){Tools.swapFragment(activity,LauncherPreferenceFragment.class,LauncherActivity.SETTING_FRAGMENT_TAG,null);return true;}
         if(menuOpen && x<228 && y>=72 && y<365){
             int idx=(int)((y-72)/48);
             if(idx==1){versionSpinner.openProfileEditor(activity);}
