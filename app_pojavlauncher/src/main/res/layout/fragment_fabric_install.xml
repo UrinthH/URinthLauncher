@@ -4,8 +4,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/background_app"
-    android:paddingHorizontal="@dimen/fragment_padding_medium">
+    android:background="@drawable/background_card"
+    android:padding="24dp">
 
 
     <TextView
@@ -15,6 +15,9 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="@dimen/padding_large"
         android:text="@string/fabric_dl_loader_title"
+        android:textColor="#F2F8FA"
+        android:textSize="24sp"
+        android:textStyle="bold"
 
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -32,6 +35,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/fabric_dl_game_version"
+        android:textColor="#B7CBD5"
         app:layout_constraintBottom_toTopOf="@+id/fabric_installer_game_ver_spinner"
         app:layout_constraintStart_toStartOf="@+id/fabric_installer_game_ver_spinner" />
 
@@ -66,6 +70,7 @@
         android:layout_height="wrap_content"
 
         android:text="@string/fabric_dl_loader_version"
+        android:textColor="#B7CBD5"
         app:layout_constraintBottom_toTopOf="@+id/fabric_installer_loader_ver_spinner"
         app:layout_constraintStart_toStartOf="@+id/fabric_installer_loader_ver_spinner" />
 
@@ -100,6 +105,7 @@
         android:layout_height="wrap_content"
 
         android:text="@string/mcl_options"
+        android:textColor="#B7CBD5"
         app:layout_constraintBottom_toTopOf="@+id/fabric_installer_only_stable_checkbox"
         app:layout_constraintStart_toStartOf="@+id/fabric_installer_only_stable_checkbox" />
     <CheckBox
@@ -107,6 +113,8 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="@string/fabric_dl_only_stable"
+        android:textColor="#F2F8FA"
+        android:buttonTint="#00DDB5"
         android:layout_marginTop="@dimen/padding_extra_large"
         android:minHeight="@dimen/_30sdp"
         android:checked="true"
@@ -131,14 +139,16 @@
             android:layout_weight="1"
             android:gravity="center_vertical"
             android:text="@string/modloader_dl_failed_to_load_list"
-            android:textColor="#FFFF0000"
+            android:textColor="#FF7B86"
             android:textStyle="bold" />
 
         <Button
             android:id="@+id/fabric_installer_retry_button"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/global_retry" />
+            android:text="@string/global_retry"
+            android:backgroundTint="#0B6D73"
+            android:textColor="#F2F8FA" />
     </LinearLayout>
 
     <com.kdt.mcgui.MineButton
@@ -149,6 +159,8 @@
         android:layout_marginBottom="@dimen/padding_heavy"
         android:enabled="false"
         android:text="@string/fabric_dl_install"
+        android:backgroundTint="#00DDB5"
+        android:textColor="#03231F"
         app:layout_constraintBottom_toTopOf="@+id/fabric_installer_progress_bar"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -162,6 +174,7 @@
         android:layout_height="wrap_content"
         android:layout_marginBottom="8dp"
         android:indeterminate="true"
+        android:indeterminateTint="#00DDB5"
         android:visibility="visible"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
