@@ -101,6 +101,8 @@ public final class ModrinthLauncherView extends View {
         SharedPreferences prefs = activity.getSharedPreferences("urinth_ui", Context.MODE_PRIVATE);
         ultraOn = prefs.getBoolean("ultra", true);
         p.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
+        p.setFilterBitmap(true);
+        p.setDither(true);
         stroke.setStyle(Paint.Style.STROKE);
         stroke.setStrokeWidth(2f);
         setFocusable(true);
@@ -216,7 +218,7 @@ public final class ModrinthLauncherView extends View {
     private void drawBackground(Canvas c) {
         p.setStyle(Paint.Style.FILL);
         if (backgroundArtwork != null) {
-            c.drawBitmap(backgroundArtwork, null, new RectF(0, 0, W, H), p);
+            drawCoverBitmap(c, backgroundArtwork, 0, 0, W, H);
             // Keep the launcher panels readable while retaining the scenery underneath.
             p.setColor(Color.argb(155, 2, 16, 25));
             c.drawRect(0, 0, W, H, p);
@@ -460,6 +462,16 @@ public final class ModrinthLauncherView extends View {
     private float measure(String s,float size,boolean bold){p.setTextSize(size);p.setTypeface(Typeface.create("sans-serif",bold?Typeface.BOLD:Typeface.NORMAL));return p.measureText(s);}
 
     private void drawBitmap(Canvas c,Bitmap b,float x,float y,float w,float h){if(b!=null)c.drawBitmap(b,null,new RectF(x,y,x+w,y+h),p);}
+
+    private void drawCoverBitmap(Canvas c, Bitmap b, float x, float y, float w, float h) {
+        if (b == null) return;
+        float scale = Math.max(w / b.getWidth(), h / b.getHeight());
+        float dw = b.getWidth() * scale;
+        float dh = b.getHeight() * scale;
+        float dx = x + (w - dw) * 0.5f;
+        float dy = y + (h - dh) * 0.5f;
+        c.drawBitmap(b, null, new RectF(dx, dy, dx + dw, dy + dh), p);
+    }
 
     private void drawHamburger(Canvas c,float x,float y){p.setColor(TEXT);p.setStrokeWidth(3);for(int i=-1;i<=1;i++)c.drawLine(x-13,y+i*8,x+13,y+i*8,p);}
     private void drawSettings(Canvas c,float x,float y){p.setColor(TEXT);p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(4);c.drawCircle(x,y,10,p);for(int i=0;i<8;i++){double a=i*Math.PI/4; c.drawLine(x+(float)Math.cos(a)*12,y+(float)Math.sin(a)*12,x+(float)Math.cos(a)*16,y+(float)Math.sin(a)*16,p);}p.setStyle(Paint.Style.FILL);}
