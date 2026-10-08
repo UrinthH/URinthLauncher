@@ -31,9 +31,11 @@ import net.kdt.pojavlaunch.instances.Instances;
 import net.kdt.pojavlaunch.fragments.InstanceEditorFragment;
 import net.kdt.pojavlaunch.prefs.screens.LauncherPreferenceFragment;
 import net.kdt.pojavlaunch.tasks.AsyncVersionList;
+import net.kdt.pojavlaunch.profiles.VersionSelectorDialog;
 import net.kdt.pojavlaunch.utils.FileUtils;
 
 import java.io.File;
+import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.HashMap;
@@ -73,6 +75,7 @@ public final class ModrinthLauncherView extends View {
     private final FragmentActivity activity;
     private final Runnable modInstaller;
     private boolean menuOpen = true;
+    private int selectedPage = 0;
     private boolean ultraOn;
     private float sx = 1f, sy = 1f;
     private float instanceScrollX;
@@ -299,9 +302,9 @@ public final class ModrinthLauncherView extends View {
         String[] labels={"Home","Instances","Mods","Resource Packs","Servers","Settings"};
         for(int i=0;i<labels.length;i++) {
             float yy=72+i*48;
-            if(i==0) round(c,19,yy,215,yy+42,12,Color.rgb(7,105,91),ACCENT,1.5f);
+            if(i==selectedPage) round(c,19,yy,215,yy+42,12,Color.rgb(7,105,91),ACCENT,1.5f);
             drawNavIcon(c,43,yy+21,i);
-            text(c,labels[i],75,yy+27,14,i==0?ACCENT:TEXT,true);
+            text(c,labels[i],75,yy+27,14,i==selectedPage?ACCENT:TEXT,true);
         }
         p.setColor(Color.rgb(21,94,112)); c.drawRect(20,365,205,366,p);
         String[] more={"Modpacks","Shaders","Worlds"};
@@ -324,9 +327,70 @@ public final class ModrinthLauncherView extends View {
     private void drawMain(Canvas c) {
         float left=menuOpen?242:18, right=1215;
         float width=right-left;
+        if (selectedPage == 1) {
+            drawInstancesPage(c, left, 75, width, 585);
+            return;
+        }
         drawHero(c,left,75,width,170);
         drawInstances(c,left,258,width);
         drawMods(c,left,505,width);
+    }
+
+    private void drawInstancesPage(Canvas c, float x, float y, float w, float h) {
+        round(c, x, y, x+w, y+h, 16, Color.rgb(4,24,38), LINE, 1.5f);
+        text(c, "Instances", x+28, y+42, 27, TEXT, true);
+        text(c, "Create and manage your Minecraft profiles", x+28, y+66, 13, MUTED, false);
+        pill(c, x+w-142, y+20, x+w-22, y+54, "⌂ Home");
+
+        float gap=18f, cardW=(w-3*gap)/2f, cardH=174f;
+        float x1=x+gap, x2=x+2*gap+cardW, y1=y+100, y2=y+100+cardH+18;
+        drawInstanceActionCard(c,x1,y1,cardW,cardH,"Vanilla","Official Minecraft releases","Clean, unmodded profiles","Create Vanilla",0);
+        drawInstanceActionCard(c,x2,y1,cardW,cardH,"OptiFine","Graphics and performance","Install an OptiFine profile","Install OptiFine",1);
+        drawInstanceActionCard(c,x1,y2,cardW,cardH,"Fabric","Lightweight mod loader","Fast, modern mod support","Create Fabric",2);
+        drawInstanceActionCard(c,x2,y2,cardW,cardH,"Quilt","Community mod loader","Flexible modded profiles","Create Quilt",3);
+    }
+
+    private void drawInstanceActionCard(Canvas c,float x,float y,float w,float h,String title,
+                                        String subtitle,String detail,String action,int option) {
+        round(c,x,y,x+w,y+h,14,Color.rgb(7,37,54),Color.rgb(19,103,128),1.3f);
+        p.setColor(option==2?ACCENT:CYAN);
+        c.drawRoundRect(x+1,y+16,x+5,y+h-16,2,2,p);
+        round(c,x+18,y+18,x+58,y+58,11,Color.rgb(8,66,80),Color.TRANSPARENT,0);
+        text(c,option==0?"V":option==1?"O":option==2?"F":"Q",x+31,y+45,20,ACCENT,true);
+        text(c,title,x+72,y+34,19,TEXT,true);
+        text(c,subtitle,x+72,y+56,12,MUTED,false);
+        text(c,detail,x+20,y+86,13,TEXT,false);
+        pill(c,x+w-152,y+h-47,x+w-18,y+h-15,action);
+    }
+
+    private void launchInstanceOption(int option) {
+        MainMenuFragment host = activity.getSupportFragmentManager()
+                .findFragmentByTag(MainMenuFragment.TAG) instanceof MainMenuFragment
+                ? (MainMenuFragment) activity.getSupportFragmentManager().findFragmentByTag(MainMenuFragment.TAG)
+                : null;
+        if (option == 0) {
+            VersionSelectorDialog.open(getContext(), false, (id, snapshot) -> {
+                try {
+                    Instances.createInstance(instance -> {
+                        instance.name = "Vanilla " + id;
+                        instance.versionId = id;
+                        instance.sharedData = true;
+                    }, "Vanilla");
+                    reloadLauncherData();
+                    Toast.makeText(getContext(), "Vanilla instance created", Toast.LENGTH_SHORT).show();
+                    selectedPage = 0;
+                    invalidate();
+                } catch (IOException e) {
+                    Toast.makeText(getContext(), "Could not create instance: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                }
+            });
+        } else if (host != null) {
+            if (option == 1) host.showCenterFragment(OptiFineInstallFragment.class, OptiFineInstallFragment.TAG, null);
+            else if (option == 2) host.showCenterFragment(FabricInstallFragment.class, FabricInstallFragment.TAG, null);
+            else if (option == 3) host.showCenterFragment(QuiltInstallFragment.class, QuiltInstallFragment.TAG, null);
+        } else {
+            Toast.makeText(getContext(), "Launcher panel is not ready yet", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void drawHero(Canvas c,float x,float y,float w,float h) {
@@ -763,12 +827,12 @@ public final class ModrinthLauncherView extends View {
         if (e.getAction() == MotionEvent.ACTION_DOWN) {
             touchDownX = x;
             lastTouchX = x;
-            draggingInstances = x >= 242 && x < 1215 && y >= 258 && y < 418;
+            draggingInstances = selectedPage == 0 && x >= 242 && x < 1215 && y >= 258 && y < 418;
             return true;
         }
 
         if (e.getAction() == MotionEvent.ACTION_MOVE) {
-            if (draggingInstances) {
+            if (draggingInstances && selectedPage == 0) {
                 float delta = x - lastTouchX;
                 float gap = 12f, cw = (1215f-242f-gap*2f)/3f;
                 float contentWidth = instanceCards.length * (cw + gap) - gap;
@@ -830,12 +894,28 @@ public final class ModrinthLauncherView extends View {
         if(y<62 && x<75){menuOpen=!menuOpen;invalidate();return true;}
         if(menuOpen && x<228 && y>=72 && y<365){
             int idx=(int)((y-72)/48);
-            if(idx==1){versionSpinner.openProfileEditor(activity);}
+            if(idx==0){selectedPage=0;}
+            else if(idx==1){selectedPage=1;}
             else if(idx==2){Tools.swapFragment(activity,SearchModFragment.class,SearchModFragment.TAG,null);}
             else if(idx==5){Tools.swapFragment(activity,LauncherPreferenceFragment.class,LauncherActivity.SETTING_FRAGMENT_TAG,null);}
             invalidate(); return true;
         }
         if(menuOpen && x<228 && y>=378 && y<522){return true;}
+        if (selectedPage == 1 && x >= 242 && x < 1215 && y >= 75 && y < 660) {
+            float left=menuOpen?242:18f, width=1215f-left, gap=18f, cardW=(width-3*gap)/2f;
+            if (y >= 95 && y < 140 && x >= left+width-160) {
+                selectedPage=0; invalidate(); return true;
+            }
+            if (y >= 175 && y < 350) {
+                int option = x < left+gap+cardW ? 0 : 1;
+                launchInstanceOption(option); return true;
+            }
+            if (y >= 367 && y < 545) {
+                int option = x < left+gap+cardW ? 2 : 3;
+                launchInstanceOption(option); return true;
+            }
+            return true;
+        }
         if(x>242 && x<1215 && y>=505 && y<545){
             Tools.swapFragment(activity,SearchModFragment.class,SearchModFragment.TAG,null);return true;
         }
