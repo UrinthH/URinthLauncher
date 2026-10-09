@@ -115,20 +115,6 @@ public class GameRenderer {
         // launch before configuring this session, preventing a previous backend from leaking
         // POJAV_RENDERER/Mesa/GL variables into the next game instance.
         restorePreviousRendererEnvironment();
-        URinthRender.restoreNormalEnvironment();
-
-        // Ultra is a launch-time wrapper around the selected backend, not a fake native driver.
-        // Keep the underlying tag/library intact so capability checks and fallback remain correct.
-        if (URinthRender.isUltraEnabled(context)) {
-            if (!(currentRenderer instanceof UrinthUltraWrapperRenderSpec)) {
-                currentRenderer = new UrinthUltraWrapperRenderSpec(currentRenderer);
-            }
-        } else if (currentRenderer instanceof UrinthUltraWrapperRenderSpec) {
-            // If this instance is reused after the toggle changes, OFF must remove the
-            // wrapper identity as well as restoring the profile environment variables.
-            currentRenderer = ((UrinthUltraWrapperRenderSpec) currentRenderer).getDelegate();
-        }
-
         try {
             configureRendererEnvironment(context, environment);
         } catch (ErrnoException error) {
@@ -147,8 +133,6 @@ public class GameRenderer {
             throws ErrnoException {
         // Respect the renderer selected in Settings; do not silently swap backends.
         currentRenderer.setupEnvironment(context, values);
-        // Apply the opt-in profile to the exact environment map exported to the game process.
-        URinthRender.applyProfile(context, currentRenderer, values);
         applyEnvironmentMap(values);
     }
 
@@ -168,10 +152,8 @@ public class GameRenderer {
                     primaryError);
         }
 
-        boolean keepUltraWrapper = currentRenderer instanceof UrinthUltraWrapperRenderSpec;
         restorePreviousRendererEnvironment();
-        URinthRender.restoreNormalEnvironment();
-        currentRenderer = keepUltraWrapper ? new UrinthUltraWrapperRenderSpec(fallback) : fallback;
+        currentRenderer = fallback;
         Map<String, String> fallbackEnvironment = new HashMap<>();
         try {
             configureRendererEnvironment(context, fallbackEnvironment);
@@ -322,22 +304,16 @@ public class GameRenderer {
                 return false;
             }
 
-            if (currentRenderer instanceof UrinthUltraWrapperRenderSpec) {
-                currentRenderer = new UrinthUltraWrapperRenderSpec(fallback);
-            } else {
-                currentRenderer = fallback;
-            }
+            currentRenderer = fallback;
             final long fallbackStartedAt = SystemClock.elapsedRealtime();
             boolean fallbackReady = false;
             try {
                 // Restore values injected by the failed renderer before preparing GL4ES.
                 // Then construct and apply the fallback's own environment from scratch.
                 restorePreviousRendererEnvironment();
-                URinthRender.restoreNormalEnvironment();
                 if (rendererContext != null) {
                     Map<String, String> fallbackEnvironment = new HashMap<>();
                     currentRenderer.setupEnvironment(rendererContext, fallbackEnvironment);
-                    URinthRender.applyProfile(rendererContext, currentRenderer, fallbackEnvironment);
                     applyEnvironmentMap(fallbackEnvironment);
                 }
                 fallbackReady = prepareRendererSafely(currentRenderer);
