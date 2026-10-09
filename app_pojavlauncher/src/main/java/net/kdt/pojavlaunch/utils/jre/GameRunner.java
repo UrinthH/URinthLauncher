@@ -211,6 +211,14 @@ public class GameRunner {
 
         RenderSpec renderer = gameRenderer.getCurrentRenderer();
 
+        // MobileGlues publishes Minecraft 1.17+ compatibility metadata. Enforce the
+        // version gate before EGL setup; do not silently switch the user's renderer.
+        if (Renderers.MOBILEGLUES_RENDERER.equals(renderer.tag())
+                && !isMobileGluesSupportedVersion(versionInfo)) {
+            showDialog(activity, R.string.compat_mobileglues_version);
+            return;
+        }
+
         // Switch renderer to GL4ES when running a compat context version on LTW
         if(isCompatContext(versionInfo) && !hasAngelica(gamedir) && renderer instanceof GLESRenderSpec.LTWRenderSpec) {
             switchRendererIfSupported(true, GameRenderer.getKnownRenderer(Renderers.GL4ES_RENDERER), gameRenderer, instance, activity, 0);
