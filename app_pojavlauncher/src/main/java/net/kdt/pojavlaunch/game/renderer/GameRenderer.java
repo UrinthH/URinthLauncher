@@ -128,15 +128,57 @@ public class GameRenderer {
             currentRenderer = ((UrinthUltraWrapperRenderSpec) currentRenderer).getDelegate();
         }
 
-        // Respect the renderer selected in Settings; do not silently swap backends.
-        currentRenderer.setupEnvironment(context, environment);
-        // Apply opt-in profile values to the same map that is actually exported to the game
-        // process. Previously this profile helper was never called by the launch pipeline.
-        URinthRender.applyProfile(context, currentRenderer, environment);
-        applyEnvironmentMap(environment);
+        try {
+            configureRendererEnvironment(context, environment);
+        } catch (RuntimeException error) {
+            configureGl4esEnvironmentAfterFailure(context, error);
+        } catch (LinkageError error) {
+            configureGl4esEnvironmentAfterFailure(context, error);
+        }
 
         environment.clear();
         environment = null;
+    }
+
+    private void configureRendererEnvironment(Context context, Map<String, String> values)
+            throws ErrnoException {
+        // Respect the renderer selected in Settings; do not silently swap backends.
+        currentRenderer.setupEnvironment(context, values);
+        // Apply the opt-in profile to the exact environment map exported to the game process.
+        URinthRender.applyProfile(context, currentRenderer, values);
+        applyEnvironmentMap(values);
+    }
+
+    /**
+     * If backend-specific environment setup fails before native initialization, switch to the
+     * known GL4ES fallback and configure its own variables rather than aborting the launch.
+     */
+    private void configureGl4esEnvironmentAfterFailure(Context context, Throwable primaryError)
+            throws ErrnoException {
+        String failedName = currentRenderer == null ? "<null>" : currentRenderer.name();
+        logRendererFailure("Renderer environment setup failed for " + failedName
+                + "; attempting GL4ES fallback", primaryError);
+
+        RenderSpec fallback = getKnownRenderer(FALLBACK_RENDERER);
+        if (fallback == null) {
+            throw new IllegalStateException("Renderer environment setup failed and GL4ES fallback is unavailable",
+                    primaryError);
+        }
+
+        boolean keepUltraWrapper = currentRenderer instanceof UrinthUltraWrapperRenderSpec;
+        restorePreviousRendererEnvironment();
+        URinthRender.restoreNormalEnvironment();
+        currentRenderer = keepUltraWrapper ? new UrinthUltraWrapperRenderSpec(fallback) : fallback;
+        Map<String, String> fallbackEnvironment = new HashMap<>();
+        try {
+            configureRendererEnvironment(context, fallbackEnvironment);
+        } catch (RuntimeException fallbackError) {
+            fallbackError.addSuppressed(primaryError);
+            throw new IllegalStateException("GL4ES fallback environment setup also failed", fallbackError);
+        } catch (LinkageError fallbackError) {
+            fallbackError.addSuppressed(primaryError);
+            throw new IllegalStateException("GL4ES fallback environment setup also failed", fallbackError);
+        }
     }
 
     /**
