@@ -100,10 +100,18 @@ public class GameRenderer {
             Log.w(TAG, "Tried to call setupEnvironment in already initialized environment");
             return;
         }
-        // Undo any profile overrides left by a previous game launch first. The
-        // selected backend then rebuilds its normal environment; Ultra is layered
-        // on only if the saved toggle is ON.
+        // Restore the baseline first so toggling Ultra never leaks overrides between launches.
         URinthRender.restoreNormalEnvironment();
+
+        // Ultra Mode uses the URinthUltra Wrapper integration layer around the user's
+        // selected backend. OFF leaves the normal renderer selection untouched.
+        if (URinthRender.isUltraEnabled(context)
+                && !(currentRenderer instanceof UrinthUltraWrapperRenderSpec)) {
+            currentRenderer = new UrinthUltraWrapperRenderSpec(currentRenderer);
+            Log.i(TAG, "URinthUltra Wrapper selected for this launch; underlying native backend="
+                    + currentRenderer.tag());
+        }
+
         currentRenderer.setupEnvironment(context, environment);
         URinthRender.applyProfile(context, currentRenderer, environment);
         for(Map.Entry<String, String> e : environment.entrySet()) {
