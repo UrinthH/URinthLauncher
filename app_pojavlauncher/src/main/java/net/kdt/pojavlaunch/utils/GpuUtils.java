@@ -189,7 +189,8 @@ public class GpuUtils {
          * @return
          */
         public boolean isAdreno() {
-            return renderer.contains("Adreno") && vendor.contains("Qualcomm");
+            return renderer != null && vendor != null
+                    && renderer.contains("Adreno") && vendor.contains("Qualcomm");
         }
 
         /**
@@ -197,11 +198,12 @@ public class GpuUtils {
          * @return
          */
         public boolean isAdreno500Lower(){
-            return vendor.contains("Qualcomm") &&
-                    (renderer.contains("Adreno (TM) 5") ||
-                    renderer.contains("Adreno (TM) 4") ||
-                    renderer.contains("Adreno (TM) 3") ||
-                    renderer.contains("Adreno (TM) 2"));
+            return vendor != null && renderer != null
+                    && vendor.contains("Qualcomm")
+                    && (renderer.contains("Adreno (TM) 5")
+                    || renderer.contains("Adreno (TM) 4")
+                    || renderer.contains("Adreno (TM) 3")
+                    || renderer.contains("Adreno (TM) 2"));
         }
 
         /**
