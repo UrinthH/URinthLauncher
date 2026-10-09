@@ -58,7 +58,7 @@ public class GameRenderer {
     /** Map renderer string to a known RenderSpec. */
     public static RenderSpec getKnownRenderer(String renderer) {
         if (renderer == null) {
-            Log.e(TAG, "Unknown renderer null");
+            logRendererFailure("Unknown renderer null", null);
             return null;
         }
         switch (renderer) {
@@ -76,7 +76,7 @@ public class GameRenderer {
             case LEGACYZINK_RENDERER: return new MesaRenderSpec.LegacyZinkRenderSpec();
             case MOBILEGLUES_RENDERER: return new MobileGluesRenderSpec();
             default:
-                Log.e(TAG, "Unknown renderer " + renderer);
+                logRendererFailure("Unknown renderer " + renderer, null);
                 return null;
         }
     }
@@ -154,15 +154,28 @@ public class GameRenderer {
      * linkage error when an optional plugin/library is missing or incompatible.
      * Convert those failures into a normal setup failure so fallback can run.
      */
+    /**
+     * Android logging may be unavailable in plain JVM unit tests. Diagnostics
+     * must never break renderer fallback when the platform logger is unavailable.
+     */
+    private static void logRendererFailure(String message, Throwable error) {
+        try {
+            if (error == null) Log.e(TAG, message);
+            else Log.e(TAG, message, error);
+        } catch (RuntimeException ignored) {
+            // Android framework logging is not mocked in local JVM tests.
+        }
+    }
+
     static boolean setupRendererSafely(RenderSpec renderer) {
         if (renderer == null) return false;
         try {
             return renderer.setupRenderer();
         } catch (RuntimeException error) {
-            Log.e(TAG, "Renderer setup threw an exception: backend=" + renderer.name(), error);
+            logRendererFailure("Renderer setup threw an exception: backend=" + renderer.name(), error);
             return false;
         } catch (LinkageError error) {
-            Log.e(TAG, "Renderer native linkage failed: backend=" + renderer.name(), error);
+            logRendererFailure("Renderer native linkage failed: backend=" + renderer.name(), error);
             return false;
         }
     }
@@ -178,11 +191,11 @@ public class GameRenderer {
             setRendererLibraryPath(Tools.NATIVE_LIB_DIR, renderer.librarySearchPath());
             return setupRendererSafely(renderer);
         } catch (RuntimeException error) {
-            Log.e(TAG, "Renderer preparation failed before native setup: backend="
+            logRendererFailure("Renderer preparation failed before native setup: backend="
                     + renderer.name(), error);
             return false;
         } catch (LinkageError error) {
-            Log.e(TAG, "Renderer preparation hit a native linkage error: backend="
+            logRendererFailure("Renderer preparation hit a native linkage error: backend="
                     + renderer.name(), error);
             return false;
         }
