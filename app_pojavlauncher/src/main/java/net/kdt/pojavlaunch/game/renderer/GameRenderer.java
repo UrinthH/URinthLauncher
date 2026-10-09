@@ -57,6 +57,10 @@ public class GameRenderer {
 
     /** Map renderer string to a known RenderSpec. */
     public static RenderSpec getKnownRenderer(String renderer) {
+        if (renderer == null) {
+            Log.e(TAG, "Unknown renderer null");
+            return null;
+        }
         switch (renderer) {
             case "opengles2_4":
             case "opengles2_5":
@@ -145,12 +149,30 @@ public class GameRenderer {
         this.setCurrentRenderer(spec);
     }
 
+    /**
+     * Native renderer initialization can fail with either a Java exception or a
+     * linkage error when an optional plugin/library is missing or incompatible.
+     * Convert those failures into a normal setup failure so fallback can run.
+     */
+    static boolean setupRendererSafely(RenderSpec renderer) {
+        if (renderer == null) return false;
+        try {
+            return renderer.setupRenderer();
+        } catch (RuntimeException error) {
+            Log.e(TAG, "Renderer setup threw an exception: backend=" + renderer.name(), error);
+            return false;
+        } catch (LinkageError error) {
+            Log.e(TAG, "Renderer native linkage failed: backend=" + renderer.name(), error);
+            return false;
+        }
+    }
+
     /** Set up current renderer or fall back to GL4ES if setup fails. */
     public boolean maybeSetupRenderer() {
         final String requestedBackend = currentRenderer.name();
         final long setupStartedAt = SystemClock.elapsedRealtime();
         setRendererLibraryPath(Tools.NATIVE_LIB_DIR, currentRenderer.librarySearchPath());
-        if (!currentRenderer.setupRenderer()) {
+        if (!setupRendererSafely(currentRenderer)) {
             final long primarySetupMs = SystemClock.elapsedRealtime() - setupStartedAt;
             Log.e(TAG, "Renderer setup failed: backend=" + requestedBackend
                     + ", elapsedMs=" + primarySetupMs
@@ -169,7 +191,7 @@ public class GameRenderer {
             }
             setRendererLibraryPath(Tools.NATIVE_LIB_DIR, currentRenderer.librarySearchPath());
             final long fallbackStartedAt = SystemClock.elapsedRealtime();
-            boolean fallbackReady = currentRenderer.setupRenderer();
+            boolean fallbackReady = setupRendererSafely(currentRenderer);
             final long fallbackSetupMs = SystemClock.elapsedRealtime() - fallbackStartedAt;
             Log.i(TAG, "Renderer fallback result: backend=" + currentRenderer.name()
                     + ", ready=" + fallbackReady
