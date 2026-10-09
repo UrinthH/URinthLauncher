@@ -118,6 +118,25 @@ public class GameRunner {
         return DateUtils.dateBefore(DateUtils.getOriginalReleaseDate(version), 2025, 1, 7);
     }
 
+    /** MobileGlues' published launcher metadata requires Minecraft 1.17 or newer. */
+    private static boolean isMobileGluesSupportedVersion(JVersionList.Version version) {
+        if (version == null) return false;
+        String id = version.inheritsFrom != null ? version.inheritsFrom : version.id;
+        if (id == null) return false;
+        String[] parts = id.split("\\.");
+        try {
+            int major = Integer.parseInt(parts[0]);
+            if (major > 1) return true;
+            if (major < 1 || parts.length < 2) return false;
+            String minorDigits = parts[1].replaceFirst("[^0-9].*$", "");
+            if (minorDigits.isEmpty()) return false;
+            return Integer.parseInt(minorDigits) >= 17;
+        } catch (NumberFormatException ignored) {
+            // Unknown snapshot/custom version strings are not auto-switched to MobileGlues.
+            return false;
+        }
+    }
+
     private static boolean isCompatContext(JVersionList.Version version) throws Exception{
         // Day before the release date of 21w10a, the first OpenGL 3 Core Minecraft version
         return DateUtils.dateBefore(DateUtils.getOriginalReleaseDate(version), 2021, 3, 9);
@@ -293,7 +312,7 @@ public class GameRunner {
         URinthRender.applyJvmOptimizationProfile(activity, javaArgList);
 
         // TODO: this should be decoupled from GameRunner completely
-        gameRenderer.setupEnvironment(activity);
+        gameRenderer.setupEnvironment(activity, isMobileGluesSupportedVersion(versionInfo));
         JREUtils.setGameEnvironment(activity);
         JREUtils.chdir(instance.getGameDirectory().getAbsolutePath());
 
