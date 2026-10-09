@@ -6,6 +6,7 @@ import static net.kdt.pojavlaunch.game.renderer.def.Renderers.LEGACYZINK_RENDERE
 import static net.kdt.pojavlaunch.game.renderer.def.Renderers.LTW_RENDERER;
 import static net.kdt.pojavlaunch.game.renderer.def.Renderers.MESA_RENDERER;
 import static net.kdt.pojavlaunch.game.renderer.def.Renderers.MESA_RENDERER_EXT;
+import static net.kdt.pojavlaunch.game.renderer.def.Renderers.MOBILEGLUES_RENDERER;
 import static net.kdt.pojavlaunch.game.renderer.def.Renderers.ZINK_RENDERER;
 
 import android.content.Context;
@@ -18,6 +19,7 @@ import net.kdt.pojavlaunch.Logger;
 import net.kdt.pojavlaunch.Tools;
 import net.kdt.pojavlaunch.game.renderer.impl.GLESRenderSpec;
 import net.kdt.pojavlaunch.game.renderer.impl.MesaRenderSpec;
+import net.kdt.pojavlaunch.game.renderer.impl.MobileGluesRenderSpec;
 import net.kdt.pojavlaunch.prefs.LauncherPreferences;
 
 import java.util.HashMap;
@@ -62,6 +64,7 @@ public class GameRenderer {
             case MESA_RENDERER: return new MesaRenderSpec();
             case MESA_RENDERER_EXT: return new MesaRenderSpec.ExtMesaRenderSpec();
             case LEGACYZINK_RENDERER: return new MesaRenderSpec.LegacyZinkRenderSpec();
+            case MOBILEGLUES_RENDERER: return new MobileGluesRenderSpec();
             default:
                 Log.e(TAG, "Unknown renderer " + renderer);
                 return null;
@@ -79,6 +82,14 @@ public class GameRenderer {
      * @throws ErrnoException if an underlying Os environment call fails.
      */
     public void setupEnvironment(Context context) throws ErrnoException {
+        setupEnvironment(context, true);
+    }
+
+    /**
+     * Prepare the selected backend and optional Ultra profile. MobileGlues is selected only
+     * when Ultra is ON, its plugin library is installed, and the caller confirms MC >= 1.17.
+     */
+    public void setupEnvironment(Context context, boolean allowMobileGlues) throws ErrnoException {
         if (environment == null) {
             Log.w(TAG, "Tried to call setupEnvironment in already initialized environment");
             return;
@@ -86,18 +97,28 @@ public class GameRenderer {
         URinthRender.restoreNormalEnvironment();
 
         boolean ultraEnabled = URinthRender.isUltraEnabled(context);
-        if (currentRenderer instanceof UrinthUltraWrapperRenderSpec) {
-            if (ultraEnabled) {
-                currentRenderer = new UrinthUltraWrapperRenderSpec(
-                        ((UrinthUltraWrapperRenderSpec) currentRenderer).getDelegate());
+        if (ultraEnabled) {
+            RenderSpec delegate = currentRenderer instanceof UrinthUltraWrapperRenderSpec
+                    ? ((UrinthUltraWrapperRenderSpec) currentRenderer).getDelegate()
+                    : currentRenderer;
+
+            if (allowMobileGlues) {
+                RenderSpec mobileGlues = new MobileGluesRenderSpec();
+                if (mobileGlues.compatibleDevice(context)) {
+                    delegate = mobileGlues;
+                    Log.i(TAG, "URinthUltra selected external MobileGlues backend; library availability and GLES compatibility checks passed");
+                } else {
+                    Log.w(TAG, "MobileGlues plugin/library unavailable or GLES 3.x requirement not met; preserving the selected renderer");
+                }
             } else {
-                currentRenderer = ((UrinthUltraWrapperRenderSpec) currentRenderer).getDelegate();
-                Log.i(TAG, "URinthUltra disabled; restored selected backend=" + currentRenderer.tag());
+                Log.i(TAG, "MobileGlues requires Minecraft 1.17+; preserving the selected renderer for this version");
             }
-        } else if (ultraEnabled) {
-            currentRenderer = new UrinthUltraWrapperRenderSpec(currentRenderer);
-            Log.i(TAG, "URinthUltra Wrapper selected for this launch; underlying native backend="
-                    + currentRenderer.tag());
+
+            currentRenderer = new UrinthUltraWrapperRenderSpec(delegate);
+            Log.i(TAG, "URinthUltra Wrapper active; delegated backend=" + currentRenderer.tag());
+        } else if (currentRenderer instanceof UrinthUltraWrapperRenderSpec) {
+            currentRenderer = ((UrinthUltraWrapperRenderSpec) currentRenderer).getDelegate();
+            Log.i(TAG, "URinthUltra disabled; restored selected backend=" + currentRenderer.tag());
         }
 
         currentRenderer.setupEnvironment(context, environment);
