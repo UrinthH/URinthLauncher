@@ -35,12 +35,9 @@ import git.artdeell.mojoexec.MojoExec;
  5. Add the renderer tag onto the list of renderers to check for the compatibility (see RendererCache)
  6. ???
  7. PROFIT
-
 */
 
-/**
- * Class for managing game renderers (OpenGL ES & Vulkan)
- */
+/** Class for managing game renderers (OpenGL ES & Vulkan). */
 public class GameRenderer {
     private final static String TAG = "Renderer";
     private final static String FALLBACK_RENDERER = GL4ES_RENDERER;
@@ -49,19 +46,13 @@ public class GameRenderer {
 
     public GameRenderer(String currentRenderer) {
         this.currentRenderer = getKnownRenderer(currentRenderer);
-        if(this.currentRenderer == null) this.currentRenderer = getKnownRenderer(GL4ES_RENDERER);
-        if(this.currentRenderer == null) throw new IllegalStateException("Failed to create the current renderer!");
+        if (this.currentRenderer == null) this.currentRenderer = getKnownRenderer(GL4ES_RENDERER);
+        if (this.currentRenderer == null) throw new IllegalStateException("Failed to create the current renderer!");
     }
 
-    /**
-     * Map renderer string to a known RenderSpec
-     *
-     * @param renderer renderer string
-     * @return RenderSpec instance if found, null otherwise
-     */
+    /** Map renderer string to a known RenderSpec. */
     public static RenderSpec getKnownRenderer(String renderer) {
         switch (renderer) {
-            // For compatibility
             case "opengles2_4":
             case "opengles2_5":
             case GL4ES_RENDERER: return new GLESRenderSpec.GL4ESRenderSpec();
@@ -77,39 +68,26 @@ public class GameRenderer {
         }
     }
 
-    /**
-     * Set renderer library path
-     *
-     * @param mainPath       base library path
-     * @param additionalPath additional library path to search libs at
-     */
+    /** Set renderer library path. */
     public static void setRendererLibraryPath(String mainPath, String additionalPath) {
         if (additionalPath != null) mainPath = additionalPath + ":" + mainPath;
         MojoExec.setNativeLibraryDir(mainPath);
     }
 
-
-
     /**
-     * Setup current selected renderer environment. Call before using {@link GameRenderer#maybeSetupRenderer()}
-     *
-     * @param context application context
-     * @throws ErrnoException if underlying Os#setenv call threw an exception
+     * Setup current selected renderer environment. Call before maybeSetupRenderer().
+     * @throws ErrnoException if an underlying Os environment call fails.
      */
     public void setupEnvironment(Context context) throws ErrnoException {
-        if(environment == null) {
+        if (environment == null) {
             Log.w(TAG, "Tried to call setupEnvironment in already initialized environment");
             return;
         }
-        // Restore the baseline first so toggling Ultra never leaks overrides between launches.
         URinthRender.restoreNormalEnvironment();
 
-        // Resolve the wrapper from the current toggle every time this instance is prepared.
-        // This also handles reusing a GameRenderer instance after the user turns Ultra Mode off.
         boolean ultraEnabled = URinthRender.isUltraEnabled(context);
         if (currentRenderer instanceof UrinthUltraWrapperRenderSpec) {
             if (ultraEnabled) {
-                // Rebuild the wrapper around the same real backend to avoid nested wrappers.
                 currentRenderer = new UrinthUltraWrapperRenderSpec(
                         ((UrinthUltraWrapperRenderSpec) currentRenderer).getDelegate());
             } else {
@@ -124,50 +102,52 @@ public class GameRenderer {
 
         currentRenderer.setupEnvironment(context, environment);
         URinthRender.applyProfile(context, currentRenderer, environment);
-        for(Map.Entry<String, String> e : environment.entrySet()) {
-            Logger.appendToLog("Added renderer env: " + e.getKey() + '=' + e.getValue());
+        for (Map.Entry<String, String> e : environment.entrySet()) {
+            Logger.appendToLog("Added renderer env: " + e.getKey() + "=" + e.getValue());
             Os.setenv(e.getKey(), e.getValue(), true);
+
+            // Read back the process environment immediately after setenv. This verifies
+            // launcher-side application only; it cannot prove a native library consumes
+            // the variable or that it improves frame rate.
+            String actual = Os.getenv(e.getKey());
+            boolean matches = e.getValue().equals(actual);
+            Log.i(TAG, "Renderer env verification: key=" + e.getKey()
+                    + ", expected=" + e.getValue()
+                    + ", actual=" + (actual == null ? "<unset>" : actual)
+                    + ", matches=" + matches);
+            if (!matches) {
+                Log.w(TAG, "Renderer environment read-back mismatch for " + e.getKey());
+            }
+        }
+
+        String batch = Os.getenv("LIBGL_BATCH");
+        if (GL4ES_RENDERER.equals(currentRenderer.tag()) && ultraEnabled) {
+            Log.i(TAG, "GL4ES Ultra batch setting applied=" + "1".equals(batch)
+                    + "; native GL4ES behavior and FPS effect still require device testing");
         }
         environment.clear();
         environment = null;
     }
 
-    /**
-     * Get current selected renderer in this GameRenderer instance
-     *
-     * @return renderer
-     */
+    /** Get current selected renderer. */
     public RenderSpec getCurrentRenderer() {
         return currentRenderer;
     }
 
-    /**
-     * Set current selected renderer. Call this before {@link GameRenderer#setupEnvironment} or bad things may happen
-     *
-     * @param spec renderer
-     */
+    /** Set renderer before setupEnvironment. */
     public void setCurrentRenderer(RenderSpec spec) {
         Log.i(TAG, "Replacing default renderer with the new: " + spec.name());
         currentRenderer = spec;
     }
 
-    /**
-     * Set current selected renderer. Call this before {@link GameRenderer#setupEnvironment} or bad things may happen
-     *
-     * @param renderer renderer string
-     * @throws IllegalArgumentException if incorrect renderer string is given
-     */
+    /** Set renderer before setupEnvironment. */
     public void setCurrentRenderer(String renderer) throws IllegalArgumentException {
         RenderSpec spec = getKnownRenderer(renderer);
-        if(spec == null) throw new IllegalArgumentException("Invalid renderer string" + renderer + "!");
+        if (spec == null) throw new IllegalArgumentException("Invalid renderer string" + renderer + "!");
         this.setCurrentRenderer(spec);
     }
 
-    /**
-     * Set up the current renderer or fallback to {@link GameRenderer#FALLBACK_RENDERER} if failed
-     *
-     * @return whether the renderer setup was successful
-     */
+    /** Set up current renderer or fall back to GL4ES if setup fails. */
     public boolean maybeSetupRenderer() {
         final String requestedBackend = currentRenderer.name();
         final long setupStartedAt = SystemClock.elapsedRealtime();
@@ -184,7 +164,6 @@ public class GameRenderer {
                 return false;
             }
 
-            // Keep the Ultra integration layer active while safely falling back to GL4ES.
             if (currentRenderer instanceof UrinthUltraWrapperRenderSpec) {
                 currentRenderer = new UrinthUltraWrapperRenderSpec(fallback);
             } else {
@@ -207,13 +186,10 @@ public class GameRenderer {
         return true;
     }
 
-    /**
-     * Enable custom Vulkan driver (Turnip) usage
-     */
+    /** Enable custom Vulkan driver (Turnip) usage. */
     public void overrideVulkanDriver() {
-        // In most cases we load Turnip so use Turnip environment variables
-        if(LauncherPreferences.PREF_FREEDRENO_SYSMEM) environment.put("TU_DEBUG", "sysmem");
-        if(LauncherPreferences.PREF_UBWC_WORKAROUND) environment.put("FD_DEV_FEATURES", "enable_tp_ubwc_flag_hint=1");
+        if (LauncherPreferences.PREF_FREEDRENO_SYSMEM) environment.put("TU_DEBUG", "sysmem");
+        if (LauncherPreferences.PREF_UBWC_WORKAROUND) environment.put("FD_DEV_FEATURES", "enable_tp_ubwc_flag_hint=1");
         MojoExec.setUseTurnip(true);
     }
 }
