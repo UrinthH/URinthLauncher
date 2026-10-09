@@ -55,8 +55,15 @@ public final class RendererFrameTimeStats {
         double p50Ms = percentileMs(sorted, 0.50);
         double p95Ms = percentileMs(sorted, 0.95);
         double p99Ms = percentileMs(sorted, 0.99);
-        // Approximate 1% low FPS from the 99th-percentile frame time.
-        double onePercentLowFps = p99Ms > 0 ? 1000.0 / p99Ms : 0;
+        // Average instantaneous FPS of the slowest 1% of sampled frames. For
+        // short windows, use at least the single slowest frame rather than
+        // reporting a misleading percentile-derived proxy.
+        int slowCount = Math.max(1, (int) Math.ceil(sampleCount * 0.01));
+        double slowFpsTotal = 0;
+        for (int i = sorted.length - slowCount; i < sorted.length; i++) {
+            if (sorted[i] > 0) slowFpsTotal += 1_000_000_000.0 / sorted[i];
+        }
+        double onePercentLowFps = slowFpsTotal / slowCount;
 
         long spikes = 0;
         for (long sample : sorted) {
