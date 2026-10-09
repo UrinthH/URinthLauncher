@@ -73,6 +73,9 @@ public final class ModrinthLauncherView extends View {
     private final Bitmap forgeIcon;
     private final Bitmap neoforgeIcon;
     private Bitmap backgroundArtwork;
+    private Bitmap heroBannerArtwork;
+    private float skinRotationDegrees;
+    private boolean draggingSkinViewer;
     private final Bitmap[] versionBiomeArtworks = new Bitmap[5];
     private final mcVersionSpinner versionSpinner;
     private final AccountSpinner accountSpinner;
@@ -134,6 +137,12 @@ public final class ModrinthLauncherView extends View {
         loadRemoteArtwork(
                 "https://www.minecraft.net/content/dam/minecraftnet/games/minecraft/screenshots/vv_Tundra_AG_02_1280x720.jpg",
                 bitmap -> { backgroundArtwork = bitmap; invalidate(); }
+        );
+        // The hero banner has its own single, continuous ocean scene; it is not
+        // cropped from the full-screen launcher background or composed from halves.
+        loadRemoteArtwork(
+                "https://www.minecraft.net/content/dam/minecraftnet/games/minecraft/screenshots/ATB_WarmOcean_header.jpg",
+                bitmap -> { heroBannerArtwork = bitmap; invalidate(); }
         );
 
         // Verified official Minecraft biome artwork. Each card gets a different biome
@@ -360,6 +369,7 @@ public final class ModrinthLauncherView extends View {
         }
         drawHero(c,left,75,width,170);
         drawInstances(c,left,258,width);
+        if (selectedPage == 0) drawUltraMode(c, left, 435, Math.min(width, 420), 66);
     }
 
     private void drawInstancesPage(Canvas c, float x, float y, float w, float h) {
@@ -518,8 +528,10 @@ public final class ModrinthLauncherView extends View {
     }
 
     private void drawRealisticHeroImage(Canvas c,float x,float y,float w,float h) {
-        // Use one complete image, never a split comparison or a second image overlay.
-        Bitmap artwork = isUsableArtwork(backgroundArtwork) ? backgroundArtwork : heroArtwork;
+        // Use one complete dedicated banner image, never a split comparison or
+        // the full-screen launcher background as a substitute unless offline.
+        Bitmap artwork = isUsableArtwork(heroBannerArtwork) ? heroBannerArtwork
+                : isUsableArtwork(heroArtwork) ? heroArtwork : backgroundArtwork;
         if (artwork != null) {
             android.graphics.ColorMatrix shaderTextureGrade = new android.graphics.ColorMatrix(new float[]{
                     1.18f, 0.02f, 0, 0, 5,
@@ -712,17 +724,100 @@ public final class ModrinthLauncherView extends View {
         text(c,"Check for new versions and fixes",x+67,245,10,MUTED,false);
         text(c,"›",x+w-25,233,24,TEXT,true);
 
-        panel(c,x,274,w,78);
-        drawBitmap(c,ultraIcon,x+16,290,40,40);
-        text(c,"UrinthUltra Mode",x+67,302,14,TEXT,true);
-        text(c,"Enable ultra performance mode",x+67,323,10,MUTED,false);
-        // Single persistent ON/OFF switch.
-        round(c,x+w-88,289,x+w-16,325,18,
+        drawSkinViewer(c, x, 274, w, 270);
+    }
+
+    private void drawUltraMode(Canvas c, float x, float y, float w, float h) {
+        panel(c, x, y, w, h);
+        drawBitmap(c, ultraIcon, x+16, y+13, 40, 40);
+        text(c, "UrinthUltra Mode", x+68, y+27, 15, TEXT, true);
+        text(c, "Enhanced performance mode", x+68, y+47, 11, MUTED, false);
+        round(c, x+w-88, y+15, x+w-16, y+51, 18,
                 ultraOn ? Color.rgb(7,126,105) : Color.rgb(34,51,61),
                 ultraOn ? ACCENT : Color.rgb(87,108,118), 1.5f);
         p.setColor(ultraOn ? ACCENT : Color.rgb(142,161,169));
-        c.drawCircle(ultraOn ? x+w-34 : x+w-70, 307, 12, p);
-        
+        c.drawCircle(ultraOn ? x+w-34 : x+w-70, y+33, 12, p);
+    }
+
+    private void drawSkinViewer(Canvas c, float x, float y, float w, float h) {
+        panel(c, x, y, w, h);
+        text(c, "Skin Viewer", x+16, y+25, 15, TEXT, true);
+        text(c, currentAccount != null && Tools.isValidString(currentAccount.username)
+                ? currentAccount.username : "Steve", x+16, y+44, 10, MUTED, false);
+        float cx = x+w*0.5f;
+        drawRotatingSkinModel(c, cx, y+58, 1.45f, skinRotationDegrees);
+        round(c, x+14, y+h-37, x+w-14, y+h-12, 12,
+                Color.argb(100,0,230,170), Color.rgb(0,174,148), 1f);
+        text(c, "↔  DRAG TO ROTATE  ·  360°", x+31, y+h-21, 10, ACCENT, true);
+    }
+
+    private void drawRotatingSkinModel(Canvas c, float cx, float top, float scale, float angle) {
+        float radians = (float) Math.toRadians(angle);
+        float projectedWidth = 0.30f + 0.70f * Math.abs((float)Math.cos(radians));
+        boolean frontFacing = (float)Math.cos(radians) >= 0;
+        c.save();
+        c.translate(cx, top);
+        c.scale(projectedWidth, 1f);
+        c.scale(scale, scale);
+
+        // Simple block-model proportions matching Minecraft's classic Steve skin.
+        float headL=-18, headR=18, headT=0, headB=36;
+        float torsoL=-13, torsoR=13, torsoT=39, torsoB=73;
+        float legT=76, legB=112;
+        p.setColor(Color.rgb(52, 37, 28));
+        c.drawRect(headL-1, headT-1, headR+1, headB+1, p);
+        p.setColor(Color.rgb(115, 76, 48));
+        c.drawRect(headL, headT, headR, headB, p);
+        if (frontFacing) {
+            Bitmap face = currentAccount == null ? null : currentAccount.getSkinFace();
+            if (face != null && !face.isRecycled()) {
+                drawBitmap(c, face, headL, headT, headR-headL, headB-headT);
+            } else {
+                drawSteveFaceOnModel(c, headL, headT, headR, headB);
+            }
+        } else {
+            p.setColor(Color.rgb(87, 55, 36));
+            c.drawRect(headL+2, headT+2, headR-2, headB-2, p);
+            p.setColor(Color.rgb(43, 29, 23));
+            c.drawRect(headL+2, headT+2, headR-2, headT+10, p);
+        }
+
+        // Arms and torso receive subtle shading to read as a rotating 3D model.
+        p.setShader(new LinearGradient(torsoL, torsoT, torsoR, torsoT,
+                Color.rgb(65, 145, 205), Color.rgb(28, 72, 139), Shader.TileMode.CLAMP));
+        c.drawRect(torsoL, torsoT, torsoR, torsoB, p);
+        p.setShader(null);
+        p.setColor(Color.rgb(177, 123, 86));
+        c.drawRect(-21, torsoT+2, torsoL-2, torsoB-2, p);
+        c.drawRect(torsoR+2, torsoT+2, 21, torsoB-2, p);
+        p.setColor(Color.rgb(38, 67, 151));
+        c.drawRect(-13, legT, -1, legB, p);
+        c.drawRect(1, legT, 13, legB, p);
+        p.setColor(Color.rgb(30, 43, 67));
+        c.drawRect(-13, legB-6, -1, legB, p);
+        c.drawRect(1, legB-6, 13, legB, p);
+        // Rotate the torso/limbs' visible lighting with the user's drag angle.
+        int shade = (int)(25 * (1f - Math.abs((float)Math.cos(radians))));
+        p.setColor(Color.argb(shade, 0, 0, 0));
+        c.drawRect(-22, 0, 22, legB, p);
+        c.restore();
+    }
+
+    private void drawSteveFaceOnModel(Canvas c, float l, float t, float r, float b) {
+        p.setColor(Color.rgb(198,142,103));
+        c.drawRect(l,t,r,b,p);
+        p.setColor(Color.rgb(53,35,26));
+        c.drawRect(l,t,r,t+8,p);
+        p.setColor(Color.WHITE);
+        c.drawRect(l+5,t+14,l+13,t+21,p);
+        c.drawRect(r-13,t+14,r-5,t+21,p);
+        p.setColor(Color.rgb(50,100,177));
+        c.drawRect(l+7,t+15,l+11,t+21,p);
+        c.drawRect(r-11,t+15,r-7,t+21,p);
+        p.setColor(Color.rgb(87,47,34));
+        c.drawRect(l+7,b-8,r-7,b-3,p);
+    }
+
 
     }
 
@@ -870,11 +965,19 @@ public final class ModrinthLauncherView extends View {
         if (e.getAction() == MotionEvent.ACTION_DOWN) {
             touchDownX = x;
             lastTouchX = x;
+            draggingSkinViewer = x >= 1230 && x < 1536 && y >= 274 && y < 544;
             draggingInstances = selectedPage == 0 && x >= 242 && x < 1215 && y >= 258 && y < 418;
             return true;
         }
 
         if (e.getAction() == MotionEvent.ACTION_MOVE) {
+            if (draggingSkinViewer) {
+                skinRotationDegrees = (skinRotationDegrees + (x - lastTouchX) * 1.35f) % 360f;
+                if (skinRotationDegrees < 0) skinRotationDegrees += 360f;
+                lastTouchX = x;
+                invalidate();
+                return true;
+            }
             if (draggingInstances && selectedPage == 0) {
                 float delta = x - lastTouchX;
                 float gap = 12f, cw = (1215f-242f-gap*2f)/3f;
@@ -888,6 +991,10 @@ public final class ModrinthLauncherView extends View {
         }
 
         if (e.getAction() != MotionEvent.ACTION_UP) return true;
+        if (draggingSkinViewer) {
+            draggingSkinViewer = false;
+            return true;
+        }
 
         if (authChooserOpen) {
             if (x >= 488 && x <= 1048 && y >= 178 && y < 550) {
@@ -1009,8 +1116,13 @@ public final class ModrinthLauncherView extends View {
             invalidate();
             return true;
         }
-        if(x>=1230 && y>=274 && y<352){
-            ultraOn=!ultraOn;c.getSharedPreferences("urinth_ui",Context.MODE_PRIVATE).edit().putBoolean("ultra",ultraOn).apply();invalidate();return true;
+        float mainLeft = menuOpen ? 242f : 18f;
+        if(selectedPage == 0 && x >= mainLeft && x < mainLeft + Math.min(1215f-mainLeft, 420f)
+                && y >= 435f && y < 501f) {
+            ultraOn=!ultraOn;
+            c.getSharedPreferences("urinth_ui",Context.MODE_PRIVATE).edit().putBoolean("ultra",ultraOn).apply();
+            invalidate();
+            return true;
         }
         return true;
     }
