@@ -42,7 +42,7 @@ public class RendererCache {
                 android.util.Log.e("Renderer", "No RenderSpec registered for renderer ID: " + renderer);
                 continue;
             }
-            if (!spec.compatibleDevice(context)) continue;
+            if (!isCompatibleSafely(spec, context)) continue;
             rendererIds.add(renderer);
             rendererNames.add(resources.getString(spec.displayName()));
         }
@@ -50,6 +50,26 @@ public class RendererCache {
         rendererNames.trimToSize();
         return (sCompatibleRenderers = new RendererCache(
                 rendererIds, rendererNames.toArray(new String[0])));
+    }
+
+    /**
+     * A broken optional renderer/plugin must not crash the Settings screen or hide
+     * every other backend. Treat probe exceptions and native linkage failures as
+     * an incompatible renderer and leave a diagnostic in the log.
+     */
+    static boolean isCompatibleSafely(RenderSpec spec, Context context) {
+        if (spec == null) return false;
+        try {
+            return spec.compatibleDevice(context);
+        } catch (RuntimeException error) {
+            android.util.Log.e("Renderer", "Renderer compatibility probe failed: "
+                    + spec.name(), error);
+            return false;
+        } catch (LinkageError error) {
+            android.util.Log.e("Renderer", "Renderer compatibility probe hit a native linkage error: "
+                    + spec.name(), error);
+            return false;
+        }
     }
 
     /** Destroy compatible renderers cache. Safe to call repeatedly. */
