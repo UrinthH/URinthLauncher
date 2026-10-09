@@ -143,9 +143,17 @@ public class SearchModFragment extends Fragment implements ModItemAdapter.Search
 
         mRecyclerview.addOnScrollListener(mOverlayPositionListener);
 
+        mSearchEditText.setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH);
+        mSearchEditText.setSingleLine(true);
         mSearchEditText.setOnEditorActionListener((v, actionId, event) -> {
-            searchMods(mSearchEditText.getText().toString());
-            mSearchEditText.clearFocus();
+            boolean enterPressed = event != null && event.getKeyCode() == android.view.KeyEvent.KEYCODE_ENTER && event.getAction() == android.view.KeyEvent.ACTION_DOWN;
+            if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH || actionId == android.view.inputmethod.EditorInfo.IME_ACTION_DONE || actionId == android.view.inputmethod.EditorInfo.IME_ACTION_GO || enterPressed) {
+                android.view.inputmethod.InputMethodManager imm = (android.view.inputmethod.InputMethodManager) requireContext().getSystemService(android.content.Context.INPUT_METHOD_SERVICE);
+                if (imm != null) imm.hideSoftInputFromWindow(mSearchEditText.getWindowToken(), 0);
+                mSearchEditText.clearFocus();
+                searchMods(mSearchEditText.getText().toString());
+                return true;
+            }
             return false;
         });
 
