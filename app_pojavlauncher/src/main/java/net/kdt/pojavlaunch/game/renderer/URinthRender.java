@@ -337,17 +337,13 @@ public final class URinthRender {
         if (!hasParallelRefProcessing) javaArgs.add("-XX:+ParallelRefProcEnabled");
     }
 
-    /** Apply JVM defaults only when the player's Ultra toggle is enabled. */
+    /**
+     * JVM flags are intentionally not injected by Ultra Mode until validated on-device.
+     * Unsupported or runtime-specific GC flags can prevent Minecraft from starting;
+     * keep the user's configured Java arguments unchanged for reliable launch testing.
+     */
     public static void applyJvmOptimizationProfile(Context context, List<String> javaArgs) {
-        if (!isUltraEnabled(context)) {
-            Log.i(TAG, "URinthUltra Mode OFF; leaving JVM arguments unchanged");
-            return;
-        }
-        int before = javaArgs == null ? 0 : javaArgs.size();
-        addJvmOptimizationArgs(javaArgs);
-        int added = javaArgs == null ? 0 : javaArgs.size() - before;
-        Log.i(TAG, "URinthUltra JVM profile applied; added " + added
-                + " conservative GC argument(s); user GC choices and heap size preserved");
+        Log.i(TAG, "URinthUltra JVM argument injection disabled pending per-runtime validation; user Java arguments preserved");
     }
 
 }
