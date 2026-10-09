@@ -62,6 +62,7 @@ public class RendererRegistryTest {
         assertFalse(GameRenderer.setupRendererSafely(new FailingRenderSpec(false, false)));
         assertFalse(GameRenderer.setupRendererSafely(new FailingRenderSpec(true, false)));
         assertFalse(GameRenderer.setupRendererSafely(null));
+        assertFalse(GameRenderer.prepareRendererSafely(new FailingRenderSpec(false, false, true)));
     }
 
     @Test
@@ -90,7 +91,7 @@ public class RendererRegistryTest {
         @Override public String name() { return "test-failing-renderer"; }
         @Override public int displayName() { return 0; }
         @Override public String tag() { return "test-failing-renderer"; }
-        @Override public String library() { return "libtest.so"; }
+        @Override public String library() { return "libtest.so"; }\n        @Override public String librarySearchPath() {\n            if (failLibraryPath) throw new IllegalStateException("test stale plugin path");\n            return null;\n        }
         @Override public void setupEnvironment(Context context, Map<String, String> envMap) { }
 
         @Override
