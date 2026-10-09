@@ -46,6 +46,19 @@ public class RendererFrameTimeStatsTest {
     }
 
     @Test
+    public void onePercentLowAveragesSlowestOnePercentRatherThanUsingP99Proxy() {
+        RendererFrameTimeStats stats = new RendererFrameTimeStats(200);
+        for (int i = 0; i < 198; i++) {
+            stats.recordFrameTimeNanos(10_000_000L); // 100 FPS
+        }
+        stats.recordFrameTimeNanos(50_000_000L); // 20 FPS
+        stats.recordFrameTimeNanos(100_000_000L); // 10 FPS
+
+        // Slowest 1% of 200 samples is two frames: average(20, 10) = 15 FPS.
+        assertEquals(15.0, stats.snapshot().onePercentLowFps, EPSILON);
+    }
+
+    @Test
     public void evictsOldestSampleWhenWindowIsFull() {
         RendererFrameTimeStats stats = new RendererFrameTimeStats(2);
         stats.recordFrameTimeNanos(10_000_000L);
