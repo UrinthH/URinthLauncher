@@ -2,7 +2,7 @@
 set -Eeuo pipefail
 
 usage() {
-  echo "Usage: $0 /path/to/VulkanMod.jar [arm64 arm32 x64 x86]" >&2
+  echo "Usage: $0 /path/to/VulkanMod.jar [--check | arm64 arm32 x64 x86]" >&2
   echo "Valid architectures: arm64 arm32 x64 x86" >&2
 }
 
@@ -13,6 +13,11 @@ fi
 
 jar_arg=$1
 shift
+check_only=false
+if [ "$#" -eq 1 ] && [ "$1" = "--check" ]; then
+  check_only=true
+  shift
+fi
 case "$jar_arg" in
   /*) jar_path=$jar_arg ;;
   *) jar_path="$PWD/$jar_arg" ;;
@@ -64,6 +69,10 @@ case "$lwjgl_version" in
     ;;
 esac
 echo "Detected LWJGL $lwjgl_version; selecting matching Android modules and natives."
+if [ "$check_only" = true ]; then
+  echo "Version check passed for LWJGL $lwjgl_version. No files were changed."
+  exit 0
+fi
 
 tmp_base=${TMPDIR:-/tmp}
 workdir=$(mktemp "${tmp_base%/}/vkmodpatch.XXXXXX")
