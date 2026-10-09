@@ -52,6 +52,17 @@ public class RendererRegistryTest {
     }
 
     @Test
+    public void replacingRendererWithNullIsRejectedClearly() {
+        GameRenderer renderer = new GameRenderer(Renderers.GL4ES_RENDERER);
+        try {
+            renderer.setCurrentRenderer(null);
+            org.junit.Assert.fail("Expected null renderer replacement to be rejected");
+        } catch (IllegalArgumentException expected) {
+            assertEquals("Renderer spec must not be null", expected.getMessage());
+        }
+    }
+
+    @Test
     public void setupFailuresBecomeFallbackEligibleResults() {
         assertFalse(GameRenderer.setupRendererSafely(new FailingRenderSpec(false, false, false)));
         assertFalse(GameRenderer.setupRendererSafely(new FailingRenderSpec(true, false, false)));
