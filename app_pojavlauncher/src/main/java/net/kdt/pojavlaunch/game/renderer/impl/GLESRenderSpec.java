@@ -100,6 +100,14 @@ public abstract class GLESRenderSpec implements RenderSpec {
         }
     }
 
+    /** Legacy LTW native backend, supplied by an installed compatible renderer plugin. */
+    public static class LTWLegacyRenderSpec extends LTWRenderSpec {
+        @Override public String name() { return "OpenLTW Legacy"; }
+        @Override public int displayName() { return R.string.mcl_setting_renderer_ltw_legacy; }
+        @Override public String tag() { return Renderers.LTW_LEGACY_RENDERER; }
+        @Override public String library() { return "libltwlegacy.so"; }
+    }
+
     public static class GL4ESRenderSpec extends GLESRenderSpec {
         private LibraryPlugin externalProvider;
 
