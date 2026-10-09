@@ -186,7 +186,10 @@ public final class URinthRender {
             // A worker thread can help throughput but adds queues/allocations. Prefer
             // a lower-memory profile on phones that Android identifies as low-RAM.
             if (isMemoryConstrainedDevice(context)) {
-                Log.i(TAG, "Memory-constrained device detected; leaving mesa_glthread unset to avoid extra worker-thread pressure");
+                // Explicit false is important: restoreNormalEnvironment() may have restored
+                // an inherited true value, so merely omitting this key would not disable it.
+                env.put("mesa_glthread", "false");
+                Log.i(TAG, "Memory-constrained device detected; explicitly disabled mesa_glthread to limit worker-thread pressure");
             } else {
                 env.put("mesa_glthread", "true");
                 Log.i(TAG, "Enabled Mesa GL worker-thread profile on non-low-RAM device");
