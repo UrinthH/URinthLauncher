@@ -122,7 +122,7 @@ public final class ModrinthLauncherView extends View {
         neoforgeIcon = bitmap(R.drawable.ic_neoforge);
         loadBackgroundArtwork();
         SharedPreferences prefs = activity.getSharedPreferences("urinth_ui", Context.MODE_PRIVATE);
-        ultraOn = prefs.getBoolean("ultra", true);
+        ultraOn = prefs.getBoolean("ultra", false);
         p.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
         p.setFilterBitmap(true);
         p.setDither(true);
@@ -732,13 +732,13 @@ public final class ModrinthLauncherView extends View {
     }
 
     /**
-     * Full-screen status frame: green while Ultra is idle/off, animated red while active.
+     * Full-screen status frame: animated green while Ultra is enabled, subdued green while off.
      * Drawn over the launcher UI only; it does not affect the game surface or resolution.
      */
     private void drawUltraEdgeGlow(Canvas c) {
         long now = SystemClock.uptimeMillis();
         float pulse = ultraOn ? (0.5f + 0.5f * (float) Math.sin(now / 360.0)) : 0.55f;
-        int rgb = ultraOn ? Color.rgb(255, 42, 58) : Color.rgb(0, 255, 132);
+        int rgb = Color.rgb(0, 255, 132);
         int glowAlpha = ultraOn ? (int) (80 + 100 * pulse) : 115;
 
         edgeGlowPaint.setStyle(Paint.Style.STROKE);
