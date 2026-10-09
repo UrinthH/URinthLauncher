@@ -90,7 +90,8 @@ public class MesaRenderSpec implements RenderSpec {
             return Renderers.FREEDRENO_RENDERER;
         }
         public boolean compatibleDevice(Context context) {
-            return hasMesa() && GpuUtils.getGlInfo().isAdreno();
+            GpuUtils.GLInfo info = GpuUtils.getGlInfo();
+            return hasMesa() && info != null && info.isAdreno();
         }
         public void setupEnvironment(Context context, Map<String, String> envMap) {
             if (LauncherPreferences.PREF_FREEDRENO_SYSMEM) envMap.put("FD_MESA_DEBUG", "sysmem");
@@ -98,7 +99,8 @@ public class MesaRenderSpec implements RenderSpec {
             envMap.put("MESA_LOADER_DRIVER_OVERRIDE", "kgsl");
             // On Adreno 5XX and lower only Core 3.1 is exposed by default due to missing hardware extensions.
             // 3.3 is required for modern games so let's force 3.3 if running on such GPU - it's known to be working.
-            if (GpuUtils.getGlInfo().isAdreno500Lower()) {
+            GpuUtils.GLInfo info = GpuUtils.getGlInfo();
+            if (info != null && info.isAdreno500Lower()) {
                 envMap.put("MESA_GL_VERSION_OVERRIDE", "3.3");
                 envMap.put("MESA_GLSL_VERSION_OVERRIDE", "330");
             }
@@ -114,7 +116,9 @@ public class MesaRenderSpec implements RenderSpec {
             return "Mesa (external)";
         }
         public String librarySearchPath() {
-            return provider.getLibraryPath();
+            // A plugin can be removed after the Settings list was populated.
+            // Keep launch setup null-safe so the normal GL4ES fallback can run.
+            return provider == null ? null : provider.getLibraryPath();
         }
         public String tag() {
             return Renderers.MESA_RENDERER_EXT;
@@ -208,7 +212,8 @@ public class MesaRenderSpec implements RenderSpec {
         @Override public int displayName() { return R.string.mcl_setting_renderer_panfrost; }
         @Override public String library() { return "libOSMesa_2300d.so"; }
         @Override public boolean compatibleDevice(Context context) {
-            return GpuUtils.getGlInfo().isArm() && super.compatibleDevice(context);
+            GpuUtils.GLInfo info = GpuUtils.getGlInfo();
+            return info != null && info.isArm() && super.compatibleDevice(context);
         }
         @Override public void setupEnvironment(Context context, Map<String, String> envMap) {
             super.setupEnvironment(context, envMap);
