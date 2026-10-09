@@ -1,6 +1,7 @@
 package net.kdt.pojavlaunch.game.renderer;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
@@ -8,6 +9,8 @@ import org.junit.Test;
 
 import java.util.HashSet;
 import java.util.Set;
+import java.util.Map;
+import android.content.Context;
 
 import net.kdt.pojavlaunch.game.renderer.def.Renderers;
 
