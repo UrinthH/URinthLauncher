@@ -1,97 +1,22 @@
 # URinthRender implementation status
 
-This document distinguishes code that exists from work that still needs device validation.
+## Current architecture
 
-## Implemented in the launcher
-
-- URinthUltra Mode is an opt-in launch profile; the existing selected RenderSpec remains the native graphics backend.
-- The Ultra wrapper delegates renderer compatibility checks, library paths, environment setup, and renderer setup to the selected backend.
-- Mesa/Zink-family profiles configure shader-cache environment variables; on memory-constrained devices they explicitly disable the Mesa GL worker thread, while other devices retain the backend default until repeatable benchmarks justify forcing it.
-- No GL4ES-specific performance override is enabled until a repeatable device benchmark demonstrates a benefit and compatibility.
-- Launch diagnostics record device/ABI/RAM information, the selected backend, setup duration, and fallback outcomes.
-- Renderer environment application reads each configured value back with `Os.getenv` and logs expected/actual values. This is launcher-process diagnostics only.
-- Renderer-cache cleanup is safe when called before a compatibility scan and can be repeated.
-- The launcher must not change the player's resolution or edit `options.txt`.
+- **URinthUltra Mode and its wrapper have been removed.** There is no separate Ultra ON/OFF launch profile.
+- The player selects the graphics backend directly from **Settings → Video and renderer → Renderer**.
+- The launcher uses the selected renderer's own compatibility checks, environment setup, native library, and initialization path. If setup fails, the existing GL4ES fallback remains available.
+- External renderer plugin discovery supports the package IDs explicitly listed in the launcher, including compatible FCL/MIO ANGLE, LTW, GL4ES, Mesa, and MobileGlues packages.
+- Device thermal monitoring is diagnostic only. It does not select a renderer or change graphics options.
+- The launcher must never force the player's resolution or modify `options.txt`.
 
 ## Important limitations
 
-- The wrapper is not a new native OpenGL or Vulkan driver. It does not replace GL4ES, LTW, Zink, Mesa, or Turnip.
-- Environment read-back only verifies the launcher process environment immediately after `setenv`; it does not prove a backend reads or honors a variable.
-- Environment overrides are not proof of improved performance. The effect depends on backend build, GPU/driver, Minecraft version, mods, and workload.
-- `RendererFrameTimeStats` is a tested bounded statistics accumulator, but it is not currently connected to Minecraft's live render loop. Its unit tests are not live FPS tests.
-- A successful Android build confirms compilation and packaging only; it does not prove game startup, rendering correctness, stability, or FPS gains.
-- **Sodium support is a required target**, but it is not guaranteed by the URinthUltra wrapper alone. Sodium runs inside Minecraft and depends on the exact Minecraft version, mod loader, Java/runtime setup, and graphics capabilities exposed by the selected backend. Validate it per combination; do not claim that GL4ES or every OpenGL translation path satisfies Sodium's requirements.
-- **VulkanMod support is a separate required target**, not an automatic consequence of enabling Ultra Mode. It requires a working Vulkan path with the Vulkan capabilities the mod expects, compatible LWJGL Vulkan bindings/native libraries for the device ABI, and a compatible Minecraft/mod-loader/mod version. An OpenGL-only backend such as GL4ES cannot be treated as a Vulkan backend. Keep unsupported combinations explicitly marked unsupported instead of silently forcing them.
-- Neither mod is made compatible merely by setting URinthUltra environment variables. The wrapper must preserve the user's selected backend and avoid injecting backend-specific overrides unless that exact combination has passed validation.
-- The current launcher-side code does not by itself implement Minecraft's in-game chunk scheduling or mod-level rendering optimizations.
+- Adding a renderer entry or finding a plugin does not create a new native graphics driver. A true custom URinthRender backend would require its own native implementation and build integration; that is not currently implemented.
+- A successful Android build proves compilation and packaging only. It does not prove game startup, rendering correctness, stability, or FPS gains.
+- **Sodium compatibility is not guaranteed.** It depends on the exact Minecraft version, mod loader, Sodium version, runtime, selected backend, and exposed graphics capabilities. Validate each combination and mark unsupported combinations clearly.
+- **VulkanMod compatibility is separate.** It requires a working Vulkan path, compatible LWJGL Vulkan bindings/native libraries for the device ABI, and the required Vulkan features. An OpenGL-only backend must not be treated as a Vulkan backend.
+- Do not claim FPS improvements without repeatable frame-time measurements on the target device. Launcher startup timing and Android view callbacks are not measurements of Minecraft's live render loop.
 
-## Next engineering gates
+## Validation checklist
 
-1. Confirm the environment verification logs on a real GL4ES launch with Ultra OFF and ON. The supplied Minecraft 1.8.9 test measured 391 FPS in both modes, so it showed no gain; do not re-enable GL4ES overrides without repeatable evidence.
-2. The native frame-presentation candidate has been located in the pinned GLFW submodule at `glfw/src/egl_context.c`, in `swapBuffersEGL()` immediately around `eglSwapBuffers()`. A real implementation must patch/build the native submodule and measure consecutive swap timestamps (frame intervals), while labeling these as presentation intervals rather than GPU execution time. Do not fake FPS with Android `View` callbacks or label launcher startup timing as game FPS.
-3. Keep backend defaults where no benefit is measured. Implement and validate one backend-specific change only after instrumentation identifies a bottleneck; keep it reversible and compare repeated frame-time runs.
-4. Avoid unsupported assumptions about native hooks or variables. If a variable is accepted by `setenv`, that alone is not proof the backend implements it.
-
-## Required validation matrix
-
-Record the exact values for every run; do not infer capability from a GPU name alone.
-
-| Field | Record |
-|---|---|
-| Device | Manufacturer, model, Android version, RAM |
-| Graphics | GPU vendor/renderer and actual game-context OpenGL/Vulkan capabilities |
-| Software | Launcher commit, Minecraft version, Java runtime, backend and backend version |
-| Mods | Sodium/VulkanMod version, dependencies, other rendering mods |
-| Workload | Same world/scene, render distance, shader pack, resource pack, warm-up and run duration |
-| Results | Average FPS, 1% low if available, frame-time percentiles/spikes, memory pressure, crashes/visual defects |
-
-## Acceptance gates
-
-1. Install and launch the APK on the target device with Ultra Mode both OFF and ON.
-2. Confirm the selected backend and fallback messages in logs; verify the game actually reaches a world.
-3. Repeat the same workload several times with Ultra OFF/ON. Compare frame times as well as average FPS; do not claim a gain from a single run.
-4. Test Sodium and VulkanMod separately for each supported Minecraft/backend combination. Mark unsupported combinations explicitly.
-5. Verify player resolution and `options.txt` remain unchanged.
-6. Only promote a profile from experimental after repeatable results and visual/stability checks.
-
-
-## Broad mod compatibility goal (LTW-class target)
-
-The project goal is broad compatibility with Minecraft mods, including rendering mods, comparable to established backends such as LTW where the device and game version permit it. This is a **target**, not a claim that every mod already works.
-
-### Architecture rules
-- URinthUltra must remain a backend-preserving integration/profile layer. It must not impersonate an OpenGL/Vulkan driver or replace the user's selected renderer.
-- Prefer making the existing backend selection, native libraries, and capability reporting work correctly over adding global environment-variable tweaks.
-- Do not assume that a mod is compatible just because the base game launches. Validate mod initialization, world rendering, chunk rebuilds, shaders/resource packs where relevant, and long-session stability.
-- Keep a compatibility matrix by Minecraft version, loader, Java runtime, mod version/dependencies, renderer/backend version, device ABI/GPU, and required graphics API features.
-- When a mod requires capabilities a backend does not implement, report that limitation clearly and recommend a compatible backend only when that pairing is actually validated. Never silently force a backend or alter the player's resolution or `options.txt`.
-- Do not promise universal compatibility. The goal is to maximize compatibility and clearly identify tested, experimental, and unsupported combinations.
-
-### Compatibility validation priorities
-1. Common gameplay/content mods that use standard Minecraft APIs.
-2. Rendering and performance mods (including Sodium and its related ecosystem), tested against the selected backend's actual OpenGL feature support.
-3. Vulkan-dependent mods such as VulkanMod, only on a genuinely working Vulkan path with compatible bindings/native libraries and required device capabilities.
-4. Shader, graphics, map, and portal mods, recording visual glitches and capability-specific limitations.
-5. Mod-loader and version coverage, with startup/crash regressions caught before marking any combination supported.
-
-## Required Sodium and VulkanMod support plan
-
-These are explicit project targets, not claims of current universal compatibility.
-
-### Sodium
-- Test exact Minecraft version, supported mod loader (Fabric or NeoForge as appropriate for that Sodium release), required dependencies, Java runtime, and selected renderer/backend.
-- Confirm startup, Sodium's video-settings UI, world rendering, chunk rebuilds/updates, and stability.
-- Treat Android graphics translation paths as experimental until tested on the actual device/backend. Do not assume that a backend meets Sodium's OpenGL feature requirements from its name alone.
-
-### VulkanMod
-- Test the exact Minecraft version, Fabric/Quilt loader, VulkanMod release, Java runtime, device ABI, Vulkan driver/API version, and required Vulkan features.
-- The current `scripts/patch_vulkanmod.sh` targets the specific LWJGL 3.3.1 jar layout; it is not a universal patcher for every VulkanMod release. Verify each target release's packaged LWJGL version/layout before patching.
-- Verify that Vulkan is actually initialized and used, and that the required LWJGL Vulkan bindings and native libraries are present for the target ABI.
-- Do not claim VulkanMod support on an OpenGL-only backend such as GL4ES. If required Vulkan capabilities are missing, report the combination as unsupported rather than silently forcing it.
-- Verify startup failure and fallback behavior on devices that do not meet VulkanMod's requirements.
-
-### Shared acceptance gate
-- Test each mod independently with URinthUltra OFF and ON for each candidate supported combination.
-- Record game startup, visual correctness, frame-time stability, memory use, crashes, Minecraft/mod/backend versions, and device graphics capabilities.
-- A successful Android APK build or one successful launch is not sufficient evidence. Mark only tested combinations as supported; label the rest experimental or unsupported.
-- Never change the player's resolution or edit `options.txt` as a compatibility workaround.
+For each test, record device/GPU, Android version, ABI, Minecraft version, mod loader and versions, Java runtime, selected renderer and plugin version, launch result, renderer reported in-game, crashes/logs, and repeatable frame-time results. Keep resolution and player graphics options unchanged during comparisons.
