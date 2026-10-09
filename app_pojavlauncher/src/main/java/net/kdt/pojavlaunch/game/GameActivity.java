@@ -47,6 +47,7 @@ import com.kdt.LoggerView;
 import net.kdt.pojavlaunch.BaseActivity;
 import net.kdt.pojavlaunch.CallbackBridge;
 import net.kdt.pojavlaunch.game.renderer.GameRenderer;
+import net.kdt.pojavlaunch.game.renderer.URinthRender;
 import net.kdt.pojavlaunch.utils.GpuUtils;
 import net.kdt.pojavlaunch.utils.KeycodeUtils;
 import net.kdt.pojavlaunch.Logger;
@@ -125,6 +126,7 @@ public class GameActivity extends BaseActivity implements ControlButtonMenuListe
             return;
         }
         mGameRenderer = new GameRenderer(instance.getLaunchRenderer());
+        URinthRender.startThermalMonitoring(getApplicationContext());
 
         if(GpuUtils.getGlInfo().isAdreno() && !PREF_ZINK_PREFER_SYSTEM_DRIVER) {
             mGameRenderer.overrideVulkanDriver();
@@ -362,6 +364,7 @@ public class GameActivity extends BaseActivity implements ControlButtonMenuListe
 
     @Override
     protected void onDestroy() {
+        URinthRender.stopThermalMonitoring();
         super.onDestroy();
         ContextExecutor.clearActivity();
     }
