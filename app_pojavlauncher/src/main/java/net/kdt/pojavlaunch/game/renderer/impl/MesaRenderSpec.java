@@ -123,8 +123,27 @@ public class MesaRenderSpec implements RenderSpec {
             return R.string.mcl_setting_renderer_mesa_desktop_ext;
         }
         private boolean discover(Context context) {
-            if(provider == null) provider = LibraryPlugin.discoverPlugin(context, plugin());
-            return provider != null;
+            if (provider != null && provider.checkLibraries(library())) return true;
+            provider = LibraryPlugin.discoverPlugin(context, plugin());
+            if (provider != null && provider.checkLibraries(library())) return true;
+            if (!LibraryPlugin.ID_MESA_PLUGIN.equals(plugin())) return false;
+            String[] alternatives = {
+                    LibraryPlugin.ID_MESA_PLUGIN_FCL,
+                    LibraryPlugin.ID_MESA_PLUGIN_MIO_2319,
+                    LibraryPlugin.ID_MESA_PLUGIN_MIO_2427,
+                    LibraryPlugin.ID_MESA_PLUGIN_MIO_2434,
+                    LibraryPlugin.ID_MESA_PLUGIN_MIO_2500,
+                    LibraryPlugin.ID_MESA_PLUGIN_MIO_2500_RC1
+            };
+            for (String packageName : alternatives) {
+                LibraryPlugin candidate = LibraryPlugin.discoverPlugin(context, packageName);
+                if (candidate != null && candidate.checkLibraries(library())) {
+                    provider = candidate;
+                    return true;
+                }
+            }
+            provider = null;
+            return false;
         }
         public boolean compatibleDevice(Context context) {
             return discover(context) && provider.checkLibraries(library());
@@ -166,6 +185,35 @@ public class MesaRenderSpec implements RenderSpec {
         }
         public String library() {
             return "libEGL_legacy.so";
+        }
+    }
+    /** VirGL backend; only exposed if an installed Mesa package provides its library. */
+    public static class VirGLRenderSpec extends ExtMesaRenderSpec {
+        @Override public String name() { return "VirGL"; }
+        @Override public String tag() { return Renderers.VIRGL_RENDERER; }
+        @Override public int displayName() { return R.string.mcl_setting_renderer_virgl; }
+        @Override public String library() { return "libOSMesa_2121.so"; }
+        @Override public void setupEnvironment(Context context, Map<String, String> envMap) {
+            super.setupEnvironment(context, envMap);
+            envMap.put("GALLIUM_DRIVER", "virpipe");
+            envMap.put("MESA_LOADER_DRIVER_OVERRIDE", "virpipe");
+            envMap.put("VTEST_SOCKET_NAME", new File(Tools.DIR_CACHE, ".virgl_test").getAbsolutePath());
+        }
+    }
+
+    /** Panfrost backend; restricted to ARM/Mali-class devices with the matching library. */
+    public static class PanfrostRenderSpec extends ExtMesaRenderSpec {
+        @Override public String name() { return "Panfrost (Mali)"; }
+        @Override public String tag() { return Renderers.PANFROST_RENDERER; }
+        @Override public int displayName() { return R.string.mcl_setting_renderer_panfrost; }
+        @Override public String library() { return "libOSMesa_2300d.so"; }
+        @Override public boolean compatibleDevice(Context context) {
+            return GpuUtils.getGlInfo().isArm() && super.compatibleDevice(context);
+        }
+        @Override public void setupEnvironment(Context context, Map<String, String> envMap) {
+            super.setupEnvironment(context, envMap);
+            envMap.put("GALLIUM_DRIVER", "panfrost");
+            envMap.put("MESA_LOADER_DRIVER_OVERRIDE", "panfrost");
         }
     }
 }
