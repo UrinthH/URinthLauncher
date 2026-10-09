@@ -1,7 +1,5 @@
 package net.kdt.pojavlaunch.utils;
 
-import android.util.Log;
-
 public class GameOptionsUtils {
     /**
      * Parse an integer. If the input value is null or not a valid integer, return the default value.
@@ -19,51 +17,14 @@ public class GameOptionsUtils {
     }
 
     /**
-     * Decrease cloud rendering distance in order to avoid the Mali cloud rendering slowdown bug
+     * Legacy compatibility hook retained for callers from older launcher code.
+     * It deliberately does not write options.txt: the player owns render distance,
+     * cloud range, narrator, fullscreen and resolution settings.
+     *
+     * @deprecated Renderer compatibility must not silently mutate player options.
      */
-    private static void fixDeathCloud() {
-        GpuUtils.GLInfo info = GpuUtils.getGlInfo();
-        if(!info.isArm()) return; // Not an affected GPU
-        int cloudRange = parseIntDefault(MCOptionUtils.get("cloudRange"), 128);
-        if(cloudRange <= 64) return; // Not affected below 117 (but let's err on the safe side)
-        MCOptionUtils.set("cloudRange", "64");
-    }
-
-    /**
-     * Disable the Narrator. Clicking on the button, even though it says "Not Supported", turns it
-     * on and causes MC to generate insanely large log files when starting again
-     */
-    private static void disableNarrator() {
-        if(parseIntDefault(MCOptionUtils.get("narrator"), 0) == 0) return;
-        MCOptionUtils.set("narrator", "0");
-    }
-
-    /**
-     * Disable fullscreen. The launcher runs always in fullscreen anyway, and this
-     * helps with some mods that can't tolerate an empty video mode list
-     */
-    private static void disableFullscreen() {
-        String fullscreen = MCOptionUtils.get("fullscreen");
-        if(fullscreen == null) return;
-        if(fullscreen.equals("true")) MCOptionUtils.set("fullscreen", "false");
-        else if(fullscreen.equals("1")) MCOptionUtils.set("fullscreen","0");
-    }
-
+    @Deprecated
     public static void fixOptions(boolean isLtw) {
-        try {
-            MCOptionUtils.load();
-        }catch (Exception e) {
-            Log.e("Tools", "Failed to load config", e);
-        }
-
-        if(isLtw) fixDeathCloud();
-        disableFullscreen();
-        disableNarrator();
-
-        try {
-            MCOptionUtils.save();
-        }catch (Exception e) {
-            Log.e("Tools", "Failed to save config", e);
-        }
+        // Intentionally no-op. Read-only compatibility checks live in GameRunner.
     }
 }
