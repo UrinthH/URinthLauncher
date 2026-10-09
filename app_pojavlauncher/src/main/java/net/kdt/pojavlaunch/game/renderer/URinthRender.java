@@ -10,6 +10,7 @@ import android.util.Log;
 
 import net.kdt.pojavlaunch.Tools;
 import net.kdt.pojavlaunch.game.renderer.def.Renderers;
+import net.kdt.pojavlaunch.utils.GpuUtils;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -72,6 +73,20 @@ public final class URinthRender {
             Log.w(TAG, "Unable to read device memory information", e);
         }
 
+        String gpuVendor = "unknown";
+        String gpuRenderer = "unknown";
+        int glesMajor = -1;
+        try {
+            GpuUtils.GLInfo glInfo = GpuUtils.getGlInfo();
+            if (glInfo != null) {
+                gpuVendor = glInfo.vendor;
+                gpuRenderer = glInfo.renderer;
+                glesMajor = glInfo.glesMajorVersion;
+            }
+        } catch (Throwable error) {
+            Log.w(TAG, "GPU capability snapshot failed; leaving graphics details unknown", error);
+        }
+
         Log.i(TAG, "Device snapshot: manufacturer=" + Build.MANUFACTURER
                 + ", model=" + Build.MODEL
                 + ", device=" + Build.DEVICE
@@ -79,6 +94,9 @@ public final class URinthRender {
                 + ", SDK=" + Build.VERSION.SDK_INT
                 + ", ABI=" + abi
                 + ", RAM_MB=" + totalRamMb
+                + ", GPU_vendor=" + gpuVendor
+                + ", GPU_renderer=" + gpuRenderer
+                + ", GLES_major=" + glesMajor
                 + ", ultra=" + ultraEnabled
                 + ", selectedRenderer=" + renderer.name()
                 + ", rendererTag=" + renderer.tag()
