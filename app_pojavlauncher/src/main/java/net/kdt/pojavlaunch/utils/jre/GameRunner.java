@@ -39,6 +39,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 import git.artdeell.mojo.R;
@@ -55,7 +56,7 @@ public class GameRunner {
         File[] mods = modsDir.listFiles(file -> file.isFile() && file.getName().endsWith(".jar"));
         if(mods == null) return false;
         for(File file : mods) {
-            String name = file.getName();
+            String name = file.getName().toLowerCase(Locale.ROOT);
             if(name.contains("sodium") ||
                     name.contains("embeddium") ||
                     name.contains("rubidium")) return true;
@@ -73,8 +74,24 @@ public class GameRunner {
         File[] mods = modsDir.listFiles(file -> file.isFile() && file.getName().endsWith(".jar"));
         if(mods == null) return false;
         for(File file : mods) {
-            String name = file.getName();
+            String name = file.getName().toLowerCase(Locale.ROOT);
             if(name.contains("angelica")) return true;
+        }
+        return false;
+    }
+
+    /**
+     * Detect VulkanMod only to produce a compatibility diagnostic. Its requirements vary by
+     * Minecraft/mod version and the actual Vulkan implementation, so detection must not silently
+     * change the user's selected renderer or claim that a backend is universally compatible.
+     */
+    private static boolean hasVulkanMod(File gameDir) {
+        File modsDir = new File(gameDir, "mods");
+        File[] mods = modsDir.listFiles(file -> file.isFile()
+                && file.getName().toLowerCase(Locale.ROOT).endsWith(".jar"));
+        if (mods == null) return false;
+        for (File file : mods) {
+            if (file.getName().toLowerCase(Locale.ROOT).contains("vulkanmod")) return true;
         }
         return false;
     }
@@ -222,6 +239,7 @@ public class GameRunner {
         // Switch renderer to GL4ES when running a compat context version on LTW
         if(isCompatContext(versionInfo) && !hasAngelica(gamedir) && renderer instanceof GLESRenderSpec.LTWRenderSpec) {
             switchRendererIfSupported(true, GameRenderer.getKnownRenderer(Renderers.GL4ES_RENDERER), gameRenderer, instance, activity, 0);
+            renderer = gameRenderer.getCurrentRenderer();
         }
 
         boolean isGl4es = renderer instanceof GLESRenderSpec.GL4ESRenderSpec;
@@ -230,14 +248,25 @@ public class GameRunner {
         // Block Sodium from running with GL4ES on 1.17+
         if(!isCompatContext(versionInfo) && isGl4es && hasSodium(gamedir)) {
             switchRendererIfSupported(ltwSupported, ltw, gameRenderer, instance, activity, R.string.compat_sodium_not_supported);
+            renderer = gameRenderer.getCurrentRenderer();
+            isGl4es = renderer instanceof GLESRenderSpec.GL4ESRenderSpec;
         }
 
-        // Switch renderer to LTW when running 1.21.5
+        // Switch renderer to LTW when running versions beyond GL4ES' supported range.
         if(!isGl4esCompatible(versionInfo) && isGl4es) {
             switchRendererIfSupported(ltwSupported, ltw, gameRenderer, instance, activity, R.string.compat_sodium_not_supported);
+            renderer = gameRenderer.getCurrentRenderer();
+            isGl4es = renderer instanceof GLESRenderSpec.GL4ESRenderSpec;
         }
 
         boolean isLtw = renderer instanceof GLESRenderSpec.LTWRenderSpec;
+
+        if (hasVulkanMod(gamedir)) {
+            Log.i("GameRunner", "VulkanMod detected; selected renderer=" + renderer.name()
+                    + " (" + renderer.tag() + "). Compatibility depends on Minecraft version, "
+                    + "VulkanMod version, mod loader, Vulkan driver and required graphics features; "
+                    + "no renderer was forced automatically.");
+        }
 
         if(isLtw && checkRenderDistance(versionInfo, gamedir)) {
             if(showDialog(activity, R.string.ltw_render_distance_warning_msg)) return;
