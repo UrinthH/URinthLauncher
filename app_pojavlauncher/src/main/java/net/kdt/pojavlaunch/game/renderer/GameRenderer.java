@@ -9,6 +9,7 @@ import static net.kdt.pojavlaunch.game.renderer.def.Renderers.MESA_RENDERER_EXT;
 import static net.kdt.pojavlaunch.game.renderer.def.Renderers.ZINK_RENDERER;
 
 import android.content.Context;
+import android.os.SystemClock;
 import android.system.ErrnoException;
 import android.system.Os;
 import android.util.Log;
@@ -159,14 +160,18 @@ public class GameRenderer {
      * @return whether the renderer setup was successful
      */
     public boolean maybeSetupRenderer() {
+        final String requestedBackend = currentRenderer.name();
+        final long setupStartedAt = SystemClock.elapsedRealtime();
         setRendererLibraryPath(Tools.NATIVE_LIB_DIR, currentRenderer.librarySearchPath());
         if (!currentRenderer.setupRenderer()) {
-            Log.e(TAG, "Failed to setup renderer " + currentRenderer.name()
+            final long primarySetupMs = SystemClock.elapsedRealtime() - setupStartedAt;
+            Log.e(TAG, "Renderer setup failed: backend=" + requestedBackend
+                    + ", elapsedMs=" + primarySetupMs
                     + ", falling back to " + FALLBACK_RENDERER);
 
             RenderSpec fallback = getKnownRenderer(FALLBACK_RENDERER);
             if (fallback == null) {
-                Log.e(TAG, "Renderer fallback is unavailable");
+                Log.e(TAG, "Renderer fallback is unavailable; primarySetupMs=" + primarySetupMs);
                 return false;
             }
 
@@ -177,11 +182,19 @@ public class GameRenderer {
                 currentRenderer = fallback;
             }
             setRendererLibraryPath(Tools.NATIVE_LIB_DIR, currentRenderer.librarySearchPath());
+            final long fallbackStartedAt = SystemClock.elapsedRealtime();
             boolean fallbackReady = currentRenderer.setupRenderer();
-            Log.i(TAG, "Fallback renderer setup result: backend=" + currentRenderer.name()
-                    + ", ready=" + fallbackReady);
+            final long fallbackSetupMs = SystemClock.elapsedRealtime() - fallbackStartedAt;
+            Log.i(TAG, "Renderer fallback result: backend=" + currentRenderer.name()
+                    + ", ready=" + fallbackReady
+                    + ", primarySetupMs=" + primarySetupMs
+                    + ", fallbackSetupMs=" + fallbackSetupMs
+                    + ", totalSetupMs=" + (SystemClock.elapsedRealtime() - setupStartedAt));
             return fallbackReady;
         }
+
+        Log.i(TAG, "Renderer setup succeeded: backend=" + currentRenderer.name()
+                + ", setupMs=" + (SystemClock.elapsedRealtime() - setupStartedAt));
         return true;
     }
 
