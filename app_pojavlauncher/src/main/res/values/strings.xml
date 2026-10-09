@@ -66,6 +66,7 @@
     <string name="mcl_setting_renderer_gles2_4">GL4ES (OpenGL ES 2) - 1.21.4 and lower</string>
     <string name="mcl_setting_renderer_krypton">Krypton Wrapper (NG GL4ES) - requires renderer plugin</string>
     <string name="mcl_setting_renderer_ltw">LTW (OpenGL ES 3) - 1.17+ only</string>
+    <string name="mcl_setting_renderer_ltw_legacy">LTW Legacy (OpenGL ES 3) - requires legacy renderer plugin</string>
     <string name="mcl_setting_renderer_mobileglues">MobileGlues (external plugin, GLES 3+)</string>
     <string name="compat_mobileglues_version">MobileGlues requires Minecraft 1.17 or newer in this launcher. Change the renderer in Settings to launch this Minecraft version.</string>
     <string name="mcl_setting_renderer_virgl">VirGL (external Mesa plugin required)</string>
