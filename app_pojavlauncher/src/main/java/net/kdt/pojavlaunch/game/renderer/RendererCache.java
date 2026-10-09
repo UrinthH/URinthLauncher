@@ -57,16 +57,23 @@ public class RendererCache {
      * every other backend. Treat probe exceptions and native linkage failures as
      * an incompatible renderer and leave a diagnostic in the log.
      */
+    private static void logProbeFailure(String message, Throwable error) {
+        try {
+            android.util.Log.e("Renderer", message, error);
+        } catch (RuntimeException ignored) {
+            // Platform logging is unavailable in plain JVM unit tests.
+        }
+    }
+
     static boolean isCompatibleSafely(RenderSpec spec, Context context) {
         if (spec == null) return false;
         try {
             return spec.compatibleDevice(context);
         } catch (RuntimeException error) {
-            android.util.Log.e("Renderer", "Renderer compatibility probe failed: "
-                    + spec.name(), error);
+            logProbeFailure("Renderer compatibility probe failed: " + spec.name(), error);
             return false;
         } catch (LinkageError error) {
-            android.util.Log.e("Renderer", "Renderer compatibility probe hit a native linkage error: "
+            logProbeFailure("Renderer compatibility probe hit a native linkage error: "
                     + spec.name(), error);
             return false;
         }
