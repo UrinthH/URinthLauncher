@@ -15,13 +15,13 @@
         android:key="force_english"
         android:summary="@string/preference_force_english_description"
         android:icon="@drawable/ic_modrinth_language"
-        android:icon="@drawable/ic_modrinth_setting"/>
+        android:icon="@drawable/ic_modrinth_language"/>
 
     <Preference
         android:title="@string/preference_ask_for_notification_title"
         android:summary="@string/preference_ask_for_notification_description"
         android:key="notification_permission_request"
-        android:icon="@drawable/ic_modrinth_setting"
+        android:icon="@drawable/ic_modrinth_bell"
         />
 
 <PreferenceCategory android:layout="@layout/preference_category_modrinth" android:title="@string/preference_category_video" >
@@ -87,7 +87,7 @@
 <Preference
         android:title="@string/preference_edit_controls_title"
         android:summary="@string/preference_edit_controls_summary"
-        app2:icon="@drawable/ic_modrinth_setting">
+        app2:icon="@drawable/ic_modrinth_controls">
         <intent android:targetPackage="@string/application_package" android:targetClass="net.kdt.pojavlaunch.CustomControlsActivity" android:action=".CustomControlsActivity"/>
     </Preference>
 
