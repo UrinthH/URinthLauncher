@@ -208,8 +208,25 @@ public class GpuUtils {
          * Check if this GLInfo belongs to a ARM Mali/Immortalis graphics adapter
          * @return
          */
+        /**
+         * Check whether the reported graphics adapter is an ARM Mali/Immortalis GPU.
+         * This is a GPU-vendor check, not a CPU-architecture check; Panfrost depends
+         * on the GPU family and must not be offered merely because the phone uses ARM CPU cores.
+         */
+        public boolean isMali() {
+            return renderer != null
+                    && vendor != null
+                    && (renderer.contains("Mali") || renderer.contains("Immortalis"))
+                    && vendor.equalsIgnoreCase("ARM");
+        }
+
+        /**
+         * @deprecated Use {@link #isMali()}; the old method name incorrectly suggested
+         * that this tested CPU architecture.
+         */
+        @Deprecated
         public boolean isArm() {
-            return (renderer.contains("Mali") || renderer.contains("Immortalis")) && vendor.equals("ARM");
+            return isMali();
         }
     }
 }
