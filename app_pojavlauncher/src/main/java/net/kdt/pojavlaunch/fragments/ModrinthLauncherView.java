@@ -819,8 +819,6 @@ public final class ModrinthLauncherView extends View {
     }
 
 
-    }
-
     public void showAuthChooser() {
         accountChooserOpen = false;
         authChooserOpen = true;
