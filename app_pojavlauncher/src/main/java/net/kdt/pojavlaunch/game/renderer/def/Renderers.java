@@ -13,4 +13,31 @@ public final class Renderers {
     public static final String MESA_RENDERER_EXT = "mesa_desktop_ext";
     public static final String LEGACYZINK_RENDERER = "vulkan_legacyzink";
     public static final String MOBILEGLUES_RENDERER = "mobileglues";
+
+    /**
+     * Canonical renderer registry. Keep UI enumeration and registry tests tied to
+     * this list so a renderer cannot be implemented but accidentally omitted in Settings.
+     */
+    private static final String[] ALL_RENDERERS = {
+            GL4ES_RENDERER,
+            KRYPTON_RENDERER,
+            LTW_RENDERER,
+            ZINK_RENDERER,
+            VIRGL_RENDERER,
+            FREEDRENO_RENDERER,
+            PANFROST_RENDERER,
+            MESA_RENDERER,
+            MESA_RENDERER_EXT,
+            LEGACYZINK_RENDERER,
+            MOBILEGLUES_RENDERER
+    };
+
+    /** Return a copy so callers cannot mutate the canonical renderer registry. */
+    public static String[] allRendererIds() {
+        return ALL_RENDERERS.clone();
+    }
+
+    private Renderers() {
+        // Constants-only registry.
+    }
 }
