@@ -24,12 +24,10 @@ public class RendererRegistryTest {
         Set<String> uniqueIds = new HashSet<>();
 
         for (String rendererId : rendererIds) {
-            assertTrue("Duplicate renderer ID in registry: " + rendererId,
-                    uniqueIds.add(rendererId));
+            assertTrue("Duplicate renderer ID in registry: " + rendererId, uniqueIds.add(rendererId));
             RenderSpec spec = GameRenderer.getKnownRenderer(rendererId);
             assertNotNull("Missing RenderSpec for renderer ID: " + rendererId, spec);
-            assertEquals("Renderer tag does not match registry ID: " + rendererId,
-                    rendererId, spec.tag());
+            assertEquals("Renderer tag does not match registry ID: " + rendererId, rendererId, spec.tag());
         }
     }
 
@@ -38,17 +36,13 @@ public class RendererRegistryTest {
         String[] rendererIds = Renderers.allRendererIds();
         String originalFirstId = rendererIds[0];
         rendererIds[0] = "not-a-real-renderer";
-
-        assertEquals("Mutating a returned list must not alter the canonical registry",
-                originalFirstId, Renderers.allRendererIds()[0]);
+        assertEquals(originalFirstId, Renderers.allRendererIds()[0]);
     }
 
     @Test
     public void legacyGl4esIdsStillResolveToGl4es() {
-        assertEquals(Renderers.GL4ES_RENDERER,
-                GameRenderer.getKnownRenderer("opengles2_4").tag());
-        assertEquals(Renderers.GL4ES_RENDERER,
-                GameRenderer.getKnownRenderer("opengles2_5").tag());
+        assertEquals(Renderers.GL4ES_RENDERER, GameRenderer.getKnownRenderer("opengles2_4").tag());
+        assertEquals(Renderers.GL4ES_RENDERER, GameRenderer.getKnownRenderer("opengles2_5").tag());
     }
 
     @Test
@@ -59,26 +53,28 @@ public class RendererRegistryTest {
 
     @Test
     public void setupFailuresBecomeFallbackEligibleResults() {
-        assertFalse(GameRenderer.setupRendererSafely(new FailingRenderSpec(false, false)));
-        assertFalse(GameRenderer.setupRendererSafely(new FailingRenderSpec(true, false)));
+        assertFalse(GameRenderer.setupRendererSafely(new FailingRenderSpec(false, false, false)));
+        assertFalse(GameRenderer.setupRendererSafely(new FailingRenderSpec(true, false, false)));
         assertFalse(GameRenderer.setupRendererSafely(null));
         assertFalse(GameRenderer.prepareRendererSafely(new FailingRenderSpec(false, false, true)));
     }
 
     @Test
     public void compatibilityProbeFailuresOnlyHideTheBrokenRenderer() {
-        assertFalse(RendererCache.isCompatibleSafely(new FailingRenderSpec(false, true), null));
-        assertFalse(RendererCache.isCompatibleSafely(new FailingRenderSpec(true, true), null));
+        assertFalse(RendererCache.isCompatibleSafely(new FailingRenderSpec(false, true, false), null));
+        assertFalse(RendererCache.isCompatibleSafely(new FailingRenderSpec(true, true, false), null));
         assertFalse(RendererCache.isCompatibleSafely(null, null));
     }
 
     private static final class FailingRenderSpec implements RenderSpec {
         private final boolean linkageFailure;
         private final boolean failCompatibility;
+        private final boolean failLibraryPath;
 
-        FailingRenderSpec(boolean linkageFailure, boolean failCompatibility) {
+        FailingRenderSpec(boolean linkageFailure, boolean failCompatibility, boolean failLibraryPath) {
             this.linkageFailure = linkageFailure;
             this.failCompatibility = failCompatibility;
+            this.failLibraryPath = failLibraryPath;
         }
 
         @Override
@@ -91,7 +87,14 @@ public class RendererRegistryTest {
         @Override public String name() { return "test-failing-renderer"; }
         @Override public int displayName() { return 0; }
         @Override public String tag() { return "test-failing-renderer"; }
-        @Override public String library() { return "libtest.so"; }\n        @Override public String librarySearchPath() {\n            if (failLibraryPath) throw new IllegalStateException("test stale plugin path");\n            return null;\n        }
+        @Override public String library() { return "libtest.so"; }
+
+        @Override
+        public String librarySearchPath() {
+            if (failLibraryPath) throw new IllegalStateException("test stale plugin path");
+            return null;
+        }
+
         @Override public void setupEnvironment(Context context, Map<String, String> envMap) { }
 
         @Override
