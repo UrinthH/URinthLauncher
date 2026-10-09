@@ -161,9 +161,26 @@ public class GameRenderer {
     public boolean maybeSetupRenderer() {
         setRendererLibraryPath(Tools.NATIVE_LIB_DIR, currentRenderer.librarySearchPath());
         if (!currentRenderer.setupRenderer()) {
-            Log.e(TAG, "Failed to setup renderer " + currentRenderer.name() + ", falling back to " + FALLBACK_RENDERER);
-            // Hopefully (yes, it's going to be fun if it returns null for the fallback renderer. Shouldn't happen though)
-            return getKnownRenderer(FALLBACK_RENDERER).setupRenderer();
+            Log.e(TAG, "Failed to setup renderer " + currentRenderer.name()
+                    + ", falling back to " + FALLBACK_RENDERER);
+
+            RenderSpec fallback = getKnownRenderer(FALLBACK_RENDERER);
+            if (fallback == null) {
+                Log.e(TAG, "Renderer fallback is unavailable");
+                return false;
+            }
+
+            // Keep the Ultra integration layer active while safely falling back to GL4ES.
+            if (currentRenderer instanceof UrinthUltraWrapperRenderSpec) {
+                currentRenderer = new UrinthUltraWrapperRenderSpec(fallback);
+            } else {
+                currentRenderer = fallback;
+            }
+            setRendererLibraryPath(Tools.NATIVE_LIB_DIR, currentRenderer.librarySearchPath());
+            boolean fallbackReady = currentRenderer.setupRenderer();
+            Log.i(TAG, "Fallback renderer setup result: backend=" + currentRenderer.name()
+                    + ", ready=" + fallbackReady);
+            return fallbackReady;
         }
         return true;
     }
