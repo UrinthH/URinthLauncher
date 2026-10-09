@@ -65,7 +65,12 @@ public final class URinthRender {
     private static boolean isMemoryConstrainedDevice(Context context) {
         try {
             ActivityManager manager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
-            if (manager == null) return false;
+            // If Android cannot provide ActivityManager, do not assume the device has
+            // enough headroom for an extra Mesa worker thread.
+            if (manager == null) {
+                Log.w(TAG, "ActivityManager unavailable; treating memory budget as constrained");
+                return true;
+            }
             if (manager.isLowRamDevice()) return true;
             ActivityManager.MemoryInfo memoryInfo = new ActivityManager.MemoryInfo();
             manager.getMemoryInfo(memoryInfo);
