@@ -26,9 +26,19 @@ public final class MobileGluesRenderSpec implements RenderSpec {
     private LibraryPlugin provider;
 
     private LibraryPlugin discover(Context context) {
-        if (provider == null) {
-            provider = LibraryPlugin.discoverPlugin(
-                    context, LibraryPlugin.ID_MOBILEGLUES_PLUGIN);
+        if (provider != null && provider.checkLibraries(LIBRARY)) return provider;
+        provider = null;
+        String[] packages = {
+                LibraryPlugin.ID_MOBILEGLUES_PLUGIN,
+                LibraryPlugin.ID_MOBILEGLUES_PLUGIN_FCL,
+                LibraryPlugin.ID_MOBILEGLUES_PLUGIN_MIO
+        };
+        for (String packageName : packages) {
+            LibraryPlugin candidate = LibraryPlugin.discoverPlugin(context, packageName);
+            if (candidate != null && candidate.checkLibraries(LIBRARY)) {
+                provider = candidate;
+                break;
+            }
         }
         return provider;
     }
@@ -66,7 +76,7 @@ public final class MobileGluesRenderSpec implements RenderSpec {
 
     @Override
     public int displayName() {
-        return R.string.mcl_setting_renderer_ltw;
+        return R.string.mcl_setting_renderer_mobileglues;
     }
 
     @Override
