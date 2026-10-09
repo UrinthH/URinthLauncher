@@ -1,53 +1,99 @@
-#!/bin/bash
-set -e
+#!/usr/bin/env bash
+set -Eeuo pipefail
 
-copy_libs() {
-  echo "# Copying libraries for $1"
-
-  # Extract natives
-  mkdir -p linux/$1/org/lwjgl/{shaderc,vma}
-  wget -q https://nightly.link/PojavLauncherTeam/lwjgl3/workflows/build-android/3.3.1/lwjgl3-android-natives-$1.zip
-  unzip lwjgl3-android-natives-$1.zip libshaderc.so liblwjgl_vma.so; rm lwjgl3-android-natives-$1.zip
-  mv libshaderc.so linux/$1/org/lwjgl/shaderc/
-  mv liblwjgl_vma.so linux/$1/org/lwjgl/vma/
-
-  # Overwrite natives
-  zip -gr META-INF/jars/lwjgl-shaderc-3.3.1-natives-linux.jar linux/$1/org/lwjgl/shaderc
-  zip -gr META-INF/jars/lwjgl-vma-3.3.1-natives-linux.jar linux/$1/org/lwjgl/vma
-
-  # Cleanup
-  rm -r linux
+usage() {
+  echo "Usage: $0 /path/to/VulkanMod.jar [arm64 arm32 x64 x86]" >&2
+  echo "Valid architectures: arm64 arm32 x64 x86" >&2
 }
 
-if [ -z "$1" ]  || [ -z "$2" ] ; then
-  echo "Usage: $0 /path/to/VulkanMod.jar [architectures...]"
-  echo "Valid architectures: arm64 arm32 x64 x86"
+if [ "$#" -lt 2 ]; then
+  usage
+  exit 2
+fi
+
+jar_arg=$1
+shift
+case "$jar_arg" in
+  /*) jar_path=$jar_arg ;;
+  *) jar_path="$PWD/$jar_arg" ;;
+esac
+
+if [ ! -f "$jar_path" ]; then
+  echo "VulkanMod jar not found: $jar_path" >&2
   exit 1
 fi
 
-export TMPDIR=$TMPDIR/vkmodpatch
-rm -rf $TMPDIR; mkdir $TMPDIR; cd $TMPDIR
-unzip $1 'META-INF/jars/lwjgl-*-3.3.1-natives-linux.jar' META-INF/jars/lwjgl-vulkan-3.3.1.jar
+# Validate every requested architecture before modifying any files.
+for arch in "$@"; do
+  case "$arch" in
+    arm64|arm32|x64|x86) ;;
+    *)
+      echo "Unsupported architecture: $arch" >&2
+      usage
+      exit 2
+      ;;
+  esac
+done
 
-# Overwrite lwjgl-vulkan.jar
-unzip META-INF/jars/lwjgl-vulkan-3.3.1.jar 'META-INF/*' fabric.mod.json -d lwjgl-vulkan
-wget -q https://nightly.link/PojavLauncherTeam/lwjgl3/workflows/build-android/3.3.1/lwjgl3-android-modules.zip
-unzip lwjgl3-android-modules.zip lwjgl-vulkan/lwjgl-vulkan.jar; rm lwjgl3-android-modules.zip
-mv lwjgl-vulkan/lwjgl-vulkan.jar META-INF/jars/lwjgl-vulkan-3.3.1.jar
-(cd lwjgl-vulkan && zip -r ../META-INF/jars/lwjgl-vulkan-3.3.1.jar META-INF fabric.mod.json)
-rm -r lwjgl-vulkan
-
-# Process every arch
-for arg in "$@"; do
-  if [ "$arg" != "$1" ]; then
-    copy_libs $arg
+for tool in unzip zip wget mktemp; do
+  if ! command -v "$tool" >/dev/null 2>&1; then
+    echo "Required command not found: $tool" >&2
+    exit 1
   fi
 done
 
-# Package everything back
-zip -gr $1 META-INF
+tmp_base=${TMPDIR:-/tmp}
+workdir=$(mktemp -d "${tmp_base%/}/vkmodpatch.XXXXXX")
+patch_tmp=""
+cleanup() {
+  if [ -n "$patch_tmp" ] && [ -e "$patch_tmp" ]; then
+    rm -f "$patch_tmp"
+  fi
+  rm -rf "$workdir"
+}
+trap cleanup EXIT
 
-# Cleanup
-rm -rf $TMPDIR
+cd "$workdir"
 
-echo "Done"
+echo "Extracting VulkanMod libraries from $jar_path"
+unzip -q "$jar_path" 'META-INF/jars/lwjgl-*-3.3.1-natives-linux.jar' META-INF/jars/lwjgl-vulkan-3.3.1.jar
+
+# Replace LWJGL Vulkan bindings with the Android-compatible Pojav module.
+mkdir -p lwjgl-vulkan
+unzip -q META-INF/jars/lwjgl-vulkan-3.3.1.jar 'META-INF/*' fabric.mod.json -d lwjgl-vulkan
+wget -q -O lwjgl3-android-modules.zip https://nightly.link/PojavLauncherTeam/lwjgl3/workflows/build-android/3.3.1/lwjgl3-android-modules.zip
+unzip -q lwjgl3-android-modules.zip lwjgl-vulkan/lwjgl-vulkan.jar
+rm -f lwjgl3-android-modules.zip
+mv lwjgl-vulkan/lwjgl-vulkan.jar META-INF/jars/lwjgl-vulkan-3.3.1.jar
+(cd lwjgl-vulkan && zip -qr ../META-INF/jars/lwjgl-vulkan-3.3.1.jar META-INF fabric.mod.json)
+rm -rf lwjgl-vulkan
+
+copy_libs() {
+  local arch=$1
+  echo "Copying Android native libraries for $arch"
+
+  mkdir -p "linux/$arch/org/lwjgl/shaderc" "linux/$arch/org/lwjgl/vma"
+  wget -q -O "lwjgl3-android-natives-$arch.zip" "https://nightly.link/PojavLauncherTeam/lwjgl3/workflows/build-android/3.3.1/lwjgl3-android-natives-$arch.zip"
+  unzip -q "lwjgl3-android-natives-$arch.zip" libshaderc.so liblwjgl_vma.so
+  rm -f "lwjgl3-android-natives-$arch.zip"
+
+  mv libshaderc.so "linux/$arch/org/lwjgl/shaderc/"
+  mv liblwjgl_vma.so "linux/$arch/org/lwjgl/vma/"
+  zip -q -gr "META-INF/jars/lwjgl-shaderc-3.3.1-natives-linux.jar" "linux/$arch/org/lwjgl/shaderc"
+  zip -q -gr "META-INF/jars/lwjgl-vma-3.3.1-natives-linux.jar" "linux/$arch/org/lwjgl/vma"
+  rm -rf linux
+}
+
+for arch in "$@"; do
+  copy_libs "$arch"
+done
+
+# Patch a temporary copy first. Keep the source jar intact if extraction,
+# download, or repackaging fails; replace it only after the archive is ready.
+patch_tmp=$(mktemp "${jar_path}.tmp.XXXXXX")
+cp "$jar_path" "$patch_tmp"
+zip -q -gr "$patch_tmp" META-INF
+mv -f "$patch_tmp" "$jar_path"
+patch_tmp=""
+
+echo "Done: patched $jar_path"
