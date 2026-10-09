@@ -425,10 +425,15 @@ public final class ModrinthLauncherView extends View {
     }
 
     private void openContentCategory(String category) {
+        openContentCategory(category, "");
+    }
+
+    private void openContentCategory(String category, String initialQuery) {
         MainMenuFragment host = getMainMenuHost();
         if (host != null) {
             android.os.Bundle args = new android.os.Bundle();
             args.putString(ModrinthBrowserFragment.ARG_CATEGORY, category);
+            args.putString(ModrinthBrowserFragment.ARG_QUERY, initialQuery);
             host.showCenterFragment(ModrinthBrowserFragment.class, ModrinthBrowserFragment.TAG, args);
         } else {
             Toast.makeText(getContext(), "Launcher panel is not ready yet", Toast.LENGTH_SHORT).show();
@@ -542,6 +547,11 @@ public final class ModrinthLauncherView extends View {
             p.setShader(vignette);
             c.drawRect(x,y,x+w,y+h,p);
             p.setShader(null);
+        } else if (heroArtwork != null) {
+            // Keep the wide top banner visible even when remote artwork cannot load.
+            drawCoverBitmap(c, heroArtwork, x, y, w, h);
+            p.setColor(Color.argb(52, 2, 12, 22));
+            c.drawRect(x, y, x + w, y + h, p);
         } else {
             round(c,x,y,x+w,y+h,24,Color.rgb(24,52,60),Color.TRANSPARENT,0);
         }
@@ -1028,7 +1038,7 @@ public final class ModrinthLauncherView extends View {
             float gap=10f, cw=(1215f-242f-gap*4f)/5f;
             int mod=(int)((x-242f)/(cw+gap));
             if(mod==2){ selectedPage=7; openContentCategory("shader"); }
-            else if(mod==3){ selectedPage=3; openContentCategory("resourcepack"); }
+            else if(mod==3){ selectedPage=3; openContentCategory("resourcepack", "realistic 4k"); }
             else if(mod>=0 && mod<5){ modInstaller.run(); }
             return true;
         }
