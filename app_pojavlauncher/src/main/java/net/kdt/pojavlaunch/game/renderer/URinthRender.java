@@ -6,6 +6,7 @@ import android.content.SharedPreferences;
 import android.system.ErrnoException;
 import android.system.Os;
 import android.os.Build;
+import android.os.PowerManager;
 import android.util.Log;
 
 import net.kdt.pojavlaunch.Tools;
@@ -110,6 +111,32 @@ public final class URinthRender {
             Log.w(TAG, "GPU capability snapshot failed; leaving graphics details unknown", error);
         }
 
+        String thermalStatus = "unavailable";
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            try {
+                PowerManager powerManager = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
+                if (powerManager != null) {
+                    int status = powerManager.getCurrentThermalStatus();
+                    switch (status) {
+                        case PowerManager.THERMAL_STATUS_NONE: thermalStatus = "none"; break;
+                        case PowerManager.THERMAL_STATUS_LIGHT: thermalStatus = "light"; break;
+                        case PowerManager.THERMAL_STATUS_MODERATE: thermalStatus = "moderate"; break;
+                        case PowerManager.THERMAL_STATUS_SEVERE: thermalStatus = "severe"; break;
+                        case PowerManager.THERMAL_STATUS_CRITICAL: thermalStatus = "critical"; break;
+                        case PowerManager.THERMAL_STATUS_EMERGENCY: thermalStatus = "emergency"; break;
+                        case PowerManager.THERMAL_STATUS_SHUTDOWN: thermalStatus = "shutdown"; break;
+                        default: thermalStatus = "unknown(" + status + ")";
+                    }
+                    if (status >= PowerManager.THERMAL_STATUS_MODERATE) {
+                        Log.w(TAG, "Thermal pressure is " + thermalStatus
+                                + "; expect possible clock throttling. URinthRender will not change resolution or user graphics settings.");
+                    }
+                }
+            } catch (RuntimeException e) {
+                Log.w(TAG, "Thermal status query failed; continuing without thermal diagnostics", e);
+            }
+        }
+
         Log.i(TAG, "Device snapshot: manufacturer=" + Build.MANUFACTURER
                 + ", model=" + Build.MODEL
                 + ", device=" + Build.DEVICE
@@ -117,6 +144,7 @@ public final class URinthRender {
                 + ", SDK=" + Build.VERSION.SDK_INT
                 + ", ABI=" + abi
                 + ", RAM_MB=" + totalRamMb
+                + ", thermalStatus=" + thermalStatus
                 + ", systemProbe_GPU_vendor=" + gpuVendor
                 + ", systemProbe_GPU_renderer=" + gpuRenderer
                 + ", systemProbe_GLES_major=" + glesMajor
