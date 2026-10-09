@@ -72,7 +72,6 @@ public final class ModrinthLauncherView extends View {
     private Bitmap backgroundArtwork;
     private Bitmap heroRealisticArtwork;
     private final Bitmap[] versionBiomeArtworks = new Bitmap[5];
-    private final Map<String, Bitmap> modIcons = new HashMap<>();
     private final mcVersionSpinner versionSpinner;
     private final AccountSpinner accountSpinner;
     private final FragmentActivity activity;
@@ -110,7 +109,6 @@ public final class ModrinthLauncherView extends View {
         updateIcon = bitmap(R.drawable.ic_px_verify_hash);
         ultraIcon = bitmap(R.drawable.ic_px_speed);
         loadBackgroundArtwork();
-        loadRealModIcons();
         SharedPreferences prefs = activity.getSharedPreferences("urinth_ui", Context.MODE_PRIVATE);
         ultraOn = prefs.getBoolean("ultra", true);
         p.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
@@ -182,52 +180,6 @@ public final class ModrinthLauncherView extends View {
                 if (connection != null) connection.disconnect();
             }
         });
-    }
-
-    private void loadRealModIcons() {
-        final String[] slugs = {"sodium","lithium","complementary-reimagined","ruidskin-ultimate","modernfix"};
-        for (String slug : slugs) {
-            PojavApplication.sExecutorService.execute(() -> {
-                try {
-                    HttpURLConnection api = (HttpURLConnection) new URL("https://api.modrinth.com/v2/project/" + slug).openConnection();
-                    api.setInstanceFollowRedirects(true);
-                    api.setConnectTimeout(8000); api.setReadTimeout(8000);
-                    api.setRequestProperty("User-Agent", "URinthLauncher/1.0 (Android)");
-                    api.setRequestProperty("Accept", "application/json");
-                    String json;
-                    try (java.io.InputStream stream = api.getInputStream();
-                         java.util.Scanner scanner = new java.util.Scanner(stream, "UTF-8").useDelimiter("\\A")) {
-                        json = scanner.hasNext() ? scanner.next() : "";
-                    } finally {
-                        api.disconnect();
-                    }
-                    String iconUrl = new JSONObject(json).optString("icon_url", "");
-                    if (iconUrl.isEmpty()) return;
-                    HttpURLConnection img = null;
-                    try {
-                        img = (HttpURLConnection) new URL(iconUrl).openConnection();
-                        img.setInstanceFollowRedirects(true);
-                        img.setConnectTimeout(12000);
-                        img.setReadTimeout(12000);
-                        img.setRequestProperty("User-Agent", "URinthLauncher/1.0 (Android)");
-                        img.setRequestProperty("Accept", "image/avif,image/webp,image/apng,image/*,*/*;q=0.8");
-                        int imageStatus = img.getResponseCode();
-                        if (imageStatus < 200 || imageStatus >= 300) throw new IOException("Mod icon HTTP " + imageStatus);
-                        try (java.io.InputStream imageStream = img.getInputStream()) {
-                            Bitmap b = BitmapFactory.decodeStream(imageStream);
-                            if (b != null) Tools.runOnUiThread(() -> {
-                                modIcons.put(slug, b);
-                                invalidate();
-                            });
-                        }
-                    } finally {
-                        if (img != null) img.disconnect();
-                    }
-                } catch (Exception ignored) {
-                    // Keep the card visible if Modrinth is temporarily unreachable.
-                }
-            });
-        }
     }
 
     private void reloadLauncherData() {
@@ -388,7 +340,6 @@ public final class ModrinthLauncherView extends View {
         }
         drawHero(c,left,75,width,170);
         drawInstances(c,left,258,width);
-        drawMods(c,left,505,width);
     }
 
     private void drawInstancesPage(Canvas c, float x, float y, float w, float h) {
@@ -515,64 +466,98 @@ public final class ModrinthLauncherView extends View {
         c.drawCircle(x+72*scale,y+17*scale,16*scale,p);
     }
 
-    private void drawRealisticHeroImage(Canvas c,float x,float y,float w,float h) {
-        if (heroRealisticArtwork != null) {
-            // Shader-style hero treatment: richer highlights, cooler shadows,
-            // cinematic contrast, atmospheric haze and a soft vignette.
-            android.graphics.ColorMatrix cm = new android.graphics.ColorMatrix(new float[]{
-                    1.18f, 0.02f, 0, 0, 2,
-                    0.01f, 1.14f, 0.01f, 0, 2,
-                    0, 0.03f, 1.22f, 0, 5,
-                    0, 0, 0, 1, 0
-            });
-            p.setColorFilter(new android.graphics.ColorMatrixColorFilter(cm));
-            drawCoverBitmap(c, heroRealisticArtwork, x, y, w, h);
-            p.setColorFilter(null);
-
-            // Warm sunset light across the upper horizon.
-            LinearGradient sunset = new LinearGradient(
-                    x, y, x, y + h * 0.78f,
-                    Color.argb(105, 255, 185, 105),
-                    Color.argb(0, 255, 185, 105),
-                    Shader.TileMode.CLAMP
-            );
-            p.setShader(sunset);
-            c.drawRect(x, y, x+w, y+h, p);
-            p.setShader(null);
-
-            // Cool atmospheric depth toward the lower frame.
-            LinearGradient atmosphere = new LinearGradient(
-                    x, y, x, y+h,
-                    Color.argb(0, 30, 190, 215),
-                    Color.argb(78, 0, 24, 42),
-                    Shader.TileMode.CLAMP
-            );
-            p.setShader(atmosphere);
-            c.drawRect(x, y, x+w, y+h, p);
-            p.setShader(null);
-
-            RadialGradient vignette = new RadialGradient(
-                    x+w*0.52f, y+h*0.40f, Math.max(w,h)*0.76f,
-                    new int[]{Color.TRANSPARENT, Color.argb(115,0,0,0)},
-                    new float[]{0.45f, 1f},
-                    Shader.TileMode.CLAMP
-            );
-            p.setShader(vignette);
-            c.drawRect(x,y,x+w,y+h,p);
-            p.setShader(null);
-        } else {
-            // Prefer an actual Minecraft biome screenshot if the featured hero URL
-            // is unavailable; use bundled artwork only as the final offline fallback.
-            Bitmap fallback = versionBiomeArtworks[4] != null ? versionBiomeArtworks[4]
-                    : versionBiomeArtworks[0] != null ? versionBiomeArtworks[0] : heroArtwork;
-            if (fallback != null) {
-                drawCoverBitmap(c, fallback, x, y, w, h);
-                p.setColor(Color.argb(42, 2, 12, 22));
-                c.drawRect(x, y, x + w, y + h, p);
-            } else {
-                round(c,x,y,x+w,y+h,24,Color.rgb(24,52,60),Color.TRANSPARENT,0);
+    private boolean isUsableArtwork(Bitmap bitmap) {
+        if (bitmap == null || bitmap.isRecycled() || bitmap.getWidth() < 2 || bitmap.getHeight() < 2) {
+            return false;
+        }
+        long luminanceTotal = 0;
+        int minLuminance = 255;
+        int maxLuminance = 0;
+        int samples = 0;
+        for (int row = 1; row <= 4; row++) {
+            int py = Math.min(bitmap.getHeight() - 1, row * bitmap.getHeight() / 5);
+            for (int col = 1; col <= 6; col++) {
+                int px = Math.min(bitmap.getWidth() - 1, col * bitmap.getWidth() / 7);
+                int color = bitmap.getPixel(px, py);
+                int luminance = (Color.red(color) * 299 + Color.green(color) * 587
+                        + Color.blue(color) * 114) / 1000;
+                luminanceTotal += luminance;
+                minLuminance = Math.min(minLuminance, luminance);
+                maxLuminance = Math.max(maxLuminance, luminance);
+                samples++;
             }
         }
+        long averageLuminance = samples == 0 ? 0 : luminanceTotal / samples;
+        return averageLuminance > 18 && maxLuminance - minLuminance > 12;
+    }
+
+    private void drawRealisticHeroImage(Canvas c,float x,float y,float w,float h) {
+        // Always establish a bundled, offline-safe image first. A failed or black
+        // remote response must never leave the Play / Explore / Create banner black.
+        p.setStyle(Paint.Style.FILL);
+        p.setShader(null);
+        p.setColorFilter(null);
+        p.setAlpha(255);
+
+        Bitmap fallback = isUsableArtwork(backgroundArtwork) ? backgroundArtwork
+                : isUsableArtwork(versionBiomeArtworks[4]) ? versionBiomeArtworks[4]
+                : isUsableArtwork(versionBiomeArtworks[0]) ? versionBiomeArtworks[0]
+                : heroArtwork;
+        if (fallback != null) {
+            drawCoverBitmap(c, fallback, x, y, w, h);
+        } else {
+            p.setColor(Color.rgb(24, 52, 60));
+            c.drawRect(x, y, x + w, y + h, p);
+        }
+
+        // Only overlay the featured Minecraft screenshot when it decoded into
+        // visibly varied artwork; reject blank/black responses from the server.
+        if (!isUsableArtwork(heroRealisticArtwork)) {
+            p.setColorFilter(null);
+            p.setShader(null);
+            return;
+        }
+
+        android.graphics.ColorMatrix cm = new android.graphics.ColorMatrix(new float[]{
+                1.18f, 0.02f, 0, 0, 2,
+                0.01f, 1.14f, 0.01f, 0, 2,
+                0, 0.03f, 1.22f, 0, 5,
+                0, 0, 0, 1, 0
+        });
+        p.setColorFilter(new android.graphics.ColorMatrixColorFilter(cm));
+        drawCoverBitmap(c, heroRealisticArtwork, x, y, w, h);
+        p.setColorFilter(null);
+
+        LinearGradient sunset = new LinearGradient(
+                x, y, x, y + h * 0.78f,
+                Color.argb(105, 255, 185, 105),
+                Color.argb(0, 255, 185, 105),
+                Shader.TileMode.CLAMP
+        );
+        p.setShader(sunset);
+        c.drawRect(x, y, x + w, y + h, p);
+        p.setShader(null);
+
+        LinearGradient atmosphere = new LinearGradient(
+                x, y, x, y + h,
+                Color.argb(0, 30, 190, 215),
+                Color.argb(78, 0, 24, 42),
+                Shader.TileMode.CLAMP
+        );
+        p.setShader(atmosphere);
+        c.drawRect(x, y, x + w, y + h, p);
+        p.setShader(null);
+
+        RadialGradient vignette = new RadialGradient(
+                x + w * 0.52f, y + h * 0.40f, Math.max(w, h) * 0.76f,
+                new int[]{Color.TRANSPARENT, Color.argb(115, 0, 0, 0)},
+                new float[]{0.45f, 1f},
+                Shader.TileMode.CLAMP
+        );
+        p.setShader(vignette);
+        c.drawRect(x, y, x + w, y + h, p);
+        p.setShader(null);
+        p.setColorFilter(null);
     }
 
     private void drawRealisticInstanceImage(Canvas c,float x,float y,float w,float h,int index) {
@@ -721,41 +706,6 @@ public final class ModrinthLauncherView extends View {
         p.setColor(Color.rgb(25,78,63));
         Path q=new Path(); q.moveTo(x,y-28*scale); q.lineTo(x-17*scale,y+7*scale); q.lineTo(x+17*scale,y+7*scale); q.close(); c.drawPath(q,p);
         q.reset(); q.moveTo(x,y-16*scale); q.lineTo(x-21*scale,y+17*scale); q.lineTo(x+21*scale,y+17*scale); q.close(); c.drawPath(q,p);
-    }
-
-    private void drawMods(Canvas c,float x,float y,float w) {
-        text(c,"★",x+3,y+30,31,TEXT,true);
-        text(c,"Featured Mods & Visuals",x+52,y+28,21,TEXT,true);
-        pillOutline(c,x+w-95,y+2,x+w,y+40,"▦  View All");
-        String[][] mods={{"Sodium","High-FPS rendering"},{"Lithium","Game logic optimization"},{"Complementary Shaders","Realistic lighting"},{"Realistic Texture 4K","High-detail textures"},{"ModernFix","Memory optimization"}};
-        float gap=10,cw=(w-gap*4)/5f;
-        for(int i=0;i<5;i++) {
-            float xx=x+i*(cw+gap);
-            p.setShader(new LinearGradient(xx,y+48,xx+cw,y+130,Color.rgb(12,48,64),Color.rgb(6,30,46),Shader.TileMode.CLAMP));
-            c.drawRoundRect(xx,y+48,xx+cw,y+130,14,14,p); p.setShader(null);
-            round(c,xx,y+48,xx+cw,y+130,14,Color.TRANSPARENT,Color.rgb(28,91,112),1.0f);
-            drawModIcon(c,xx+13,y+59,i);
-            text(c,mods[i][0],xx+57,y+73,12,TEXT,true);
-            text(c,mods[i][1],xx+57,y+94,10,MUTED,false);
-            pill(c,xx+cw-63,y+101,xx+cw-12,y+125,"Add");
-        }
-    }
-
-    private void drawModIcon(Canvas c,float x,float y,int i) {
-        String[] slugs={"sodium","lithium","complementary-reimagined","ruidskin-ultimate","modernfix"};
-        Bitmap b=modIcons.get(slugs[i]);
-        if(b!=null) { drawBitmap(c,b,x,y,39,39); return; }
-        p.setShader(new LinearGradient(x,y,x+39,y+39,Color.rgb(10,91,91),Color.rgb(8,38,58),Shader.TileMode.CLAMP));
-        c.drawRoundRect(x,y,x+39,y+39,10,10,p);
-        p.setShader(null);
-        p.setColor(Color.rgb(0,230,170));
-        p.setTextAlign(Paint.Align.CENTER);
-        p.setTypeface(Typeface.create("sans-serif-black", Typeface.BOLD));
-        p.setTextSize(i==2?17:21);
-        String[] marks={"S","L","C","4","M"};
-        c.drawText(marks[i],x+19.5f,y+26,p);
-        p.setTextAlign(Paint.Align.LEFT);
-        p.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
     }
 
     private void drawRight(Canvas c) {
