@@ -316,7 +316,8 @@ public final class URinthRender {
      * keep the user's configured Java arguments unchanged for reliable launch testing.
      */
     public static void applyJvmOptimizationProfile(Context context, List<String> javaArgs) {
-        Log.i(TAG, "URinthUltra JVM argument injection disabled pending per-runtime validation; user Java arguments preserved");
+        // Deliberately a no-op: preserve all caller-provided Java arguments. Keep this
+        // method free of Android logging so its no-op contract can be tested in local JVM tests.
     }
 
 }
