@@ -60,7 +60,11 @@ public class RendererCache {
      * Destroy compatible renderers cache
      */
     public static void releaseRendererCache() {
-        sCompatibleRenderers.rendererIds.clear();
-        sCompatibleRenderers = null;
+        // Cache cleanup can be requested before the first compatibility scan.
+        // Make release idempotent so lifecycle cleanup cannot throw a NullPointerException.
+        if (sCompatibleRenderers != null) {
+            sCompatibleRenderers.rendererIds.clear();
+            sCompatibleRenderers = null;
+        }
     }
 }
