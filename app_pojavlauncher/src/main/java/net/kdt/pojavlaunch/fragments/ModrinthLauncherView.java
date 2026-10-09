@@ -942,7 +942,7 @@ public final class ModrinthLauncherView extends View {
             else if(idx==2){selectedPage=2;openContentCategory("mod");}
             else if(idx==3){selectedPage=3;openContentCategory("resourcepack");}
             else if(idx==4){selectedPage=4;}
-            else if(idx==5){Tools.swapFragment(activity,LauncherPreferenceFragment.class,LauncherActivity.SETTING_FRAGMENT_TAG,null);}
+            else if(idx==5){MainMenuFragment host = getMainMenuHost(); if (host != null) host.showCenterFragment(LauncherPreferenceFragment.class, LauncherActivity.SETTING_FRAGMENT_TAG, null);}
             invalidate(); return true;
         }
         if(menuOpen && x<228 && y>=378 && y<522){
