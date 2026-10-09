@@ -7,23 +7,12 @@ import org.junit.Test;
 
 import net.kdt.pojavlaunch.game.renderer.def.Renderers;
 
-/** Guards against adding a renderer to the Settings list without wiring its implementation. */
+/** Guards against renderer IDs being listed without a matching implementation. */
 public class RendererRegistryTest {
     @Test
     public void everyListedRendererHasAnImplementation() {
-        String[] rendererIds = {
-                Renderers.GL4ES_RENDERER,
-                Renderers.KRYPTON_RENDERER,
-                Renderers.LTW_RENDERER,
-                Renderers.ZINK_RENDERER,
-                Renderers.VIRGL_RENDERER,
-                Renderers.FREEDRENO_RENDERER,
-                Renderers.PANFROST_RENDERER,
-                Renderers.MESA_RENDERER,
-                Renderers.MESA_RENDERER_EXT,
-                Renderers.LEGACYZINK_RENDERER,
-                Renderers.MOBILEGLUES_RENDERER
-        };
+        String[] rendererIds = Renderers.allRendererIds();
+        assertEquals("Unexpected renderer registry size", 11, rendererIds.length);
 
         for (String rendererId : rendererIds) {
             RenderSpec spec = GameRenderer.getKnownRenderer(rendererId);
@@ -31,6 +20,16 @@ public class RendererRegistryTest {
             assertEquals("Renderer tag does not match registry ID: " + rendererId,
                     rendererId, spec.tag());
         }
+    }
+
+    @Test
+    public void registryReturnsDefensiveCopy() {
+        String[] rendererIds = Renderers.allRendererIds();
+        String originalFirstId = rendererIds[0];
+        rendererIds[0] = "not-a-real-renderer";
+
+        assertEquals("Mutating a returned list must not alter the canonical registry",
+                originalFirstId, Renderers.allRendererIds()[0]);
     }
 
     @Test
