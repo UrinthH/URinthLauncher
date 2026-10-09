@@ -8,6 +8,7 @@ import net.kdt.pojavlaunch.game.renderer.def.Renderers;
 import net.kdt.pojavlaunch.game.renderer.extra.GLESProvider;
 import net.kdt.pojavlaunch.plugins.LibraryPlugin;
 import net.kdt.pojavlaunch.prefs.LauncherPreferences;
+import net.kdt.pojavlaunch.utils.GpuUtils;
 
 import java.io.File;
 import java.util.Map;
@@ -38,8 +39,24 @@ public final class MobileGluesRenderSpec implements RenderSpec {
         boolean available = plugin != null && plugin.checkLibraries(LIBRARY);
         if (!available) {
             Log.i(TAG, "Official MobileGlues plugin or native library is unavailable");
+            return false;
         }
-        return available;
+
+        // MobileGlues requires a device EGL/GLES stack capable of creating GLES 3.
+        // Do not auto-select it when the launcher's capability probe only confirms GLES 2.
+        try {
+            GpuUtils.GLInfo info = GpuUtils.getGlInfo();
+            boolean supportsGles3 = info != null && info.glesMajorVersion >= 3;
+            if (!supportsGles3) {
+                Log.w(TAG, "MobileGlues not selected: device GLES major version is "
+                        + (info == null ? "unknown" : info.glesMajorVersion)
+                        + "; GLES 3 or newer is required");
+            }
+            return supportsGles3;
+        } catch (RuntimeException error) {
+            Log.w(TAG, "MobileGlues not selected because GLES capability could not be verified", error);
+            return false;
+        }
     }
 
     @Override
