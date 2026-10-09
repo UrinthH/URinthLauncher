@@ -206,6 +206,8 @@ public class AccountSpinner extends AppCompatSpinner implements LoginListener, A
         Toast.makeText(getContext(), R.string.main_login_done, Toast.LENGTH_SHORT).show();
         Accounts.setCurrent(account);
         reload();
+        // Refresh the custom launcher profile panel immediately after OAuth/local login.
+        ExtraCore.setValue(ExtraConstants.REFRESH_ACCOUNT_SPINNER, true);
     }
 
 
