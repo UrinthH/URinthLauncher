@@ -9,7 +9,7 @@ fake_jar="$tmpdir/fake.jar"
 : > "$fake_jar"
 
 set +e
-"$patcher" >/dev/null 2>&1
+bash "$patcher" >/dev/null 2>&1
 status=$?
 set -e
 if [ "$status" -ne 2 ]; then
@@ -18,7 +18,7 @@ if [ "$status" -ne 2 ]; then
 fi
 
 set +e
-"$patcher" "$fake_jar" invalid-architecture >/dev/null 2>&1
+bash "$patcher" "$fake_jar" invalid-architecture >/dev/null 2>&1
 status=$?
 set -e
 if [ "$status" -ne 2 ]; then
