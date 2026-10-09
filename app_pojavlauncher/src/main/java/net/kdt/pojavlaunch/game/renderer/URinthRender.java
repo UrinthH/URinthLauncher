@@ -113,9 +113,9 @@ public final class URinthRender {
                 + ", SDK=" + Build.VERSION.SDK_INT
                 + ", ABI=" + abi
                 + ", RAM_MB=" + totalRamMb
-                + ", GPU_vendor=" + gpuVendor
-                + ", GPU_renderer=" + gpuRenderer
-                + ", GLES_major=" + glesMajor
+                + ", systemProbe_GPU_vendor=" + gpuVendor
+                + ", systemProbe_GPU_renderer=" + gpuRenderer
+                + ", systemProbe_GLES_major=" + glesMajor
                 + ", ultra=" + ultraEnabled
                 + ", selectedRenderer=" + renderer.name()
                 + ", rendererTag=" + renderer.tag()
