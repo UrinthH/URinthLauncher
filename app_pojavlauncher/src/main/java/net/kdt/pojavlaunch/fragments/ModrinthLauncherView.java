@@ -123,10 +123,9 @@ public final class ModrinthLauncherView extends View {
     }
 
     private void loadBackgroundArtwork() {
-        // Nostalgic Overworld night: Minecraft's own 25w44a night screenshot,
-        // replacing the previous Sift background.
+        // Overworld mountain landscape with cherry-grove trees, replacing the ocean background.
         loadRemoteArtwork(
-                "https://www.minecraft.net/content/dam/minecraftnet/games/minecraft/screenshots/MCV_ChaseTheSkies_Ocean01_VV_.net_1280x720.jpg",
+                "https://www.minecraft.net/content/dam/minecraftnet/games/minecraft/screenshots/MCV_VibrantVisuals_MCL_comparison_03_cherrygrove.jpg",
                 bitmap -> { backgroundArtwork = bitmap; invalidate(); }
         );
         loadRemoteArtwork(
@@ -186,19 +185,34 @@ public final class ModrinthLauncherView extends View {
                     HttpURLConnection api = (HttpURLConnection) new URL("https://api.modrinth.com/v2/project/" + slug).openConnection();
                     api.setConnectTimeout(5000); api.setReadTimeout(5000);
                     api.setRequestProperty("User-Agent", "URinthLauncher/1.0");
-                    java.io.InputStream stream = api.getInputStream();
-                    java.util.Scanner scanner = new java.util.Scanner(stream, "UTF-8").useDelimiter("\\\\A");
-                    String json = scanner.hasNext() ? scanner.next() : "";
-                    scanner.close(); api.disconnect();
+                    String json;
+                    try (java.io.InputStream stream = api.getInputStream();
+                         java.util.Scanner scanner = new java.util.Scanner(stream, "UTF-8").useDelimiter("\\A")) {
+                        json = scanner.hasNext() ? scanner.next() : "";
+                    } finally {
+                        api.disconnect();
+                    }
                     String iconUrl = new JSONObject(json).optString("icon_url", "");
-                    if (iconUrl.isEmpty()) return;
-                    HttpURLConnection img = (HttpURLConnection) new URL(iconUrl).openConnection();
-                    img.setConnectTimeout(5000); img.setReadTimeout(5000);
-                    img.setRequestProperty("User-Agent", "URinthLauncher/1.0");
-                    Bitmap b = BitmapFactory.decodeStream(img.getInputStream());
-                    img.disconnect();
-                    if (b != null) Tools.runOnUiThread(() -> { modIcons.put(slug, b); invalidate(); });
-                } catch (Exception ignored) { }
+                    if (iconUrl.isEmpty()) continue;
+                    HttpURLConnection img = null;
+                    try {
+                        img = (HttpURLConnection) new URL(iconUrl).openConnection();
+                        img.setConnectTimeout(10000);
+                        img.setReadTimeout(10000);
+                        img.setRequestProperty("User-Agent", "URinthLauncher/1.0");
+                        try (java.io.InputStream imageStream = img.getInputStream()) {
+                            Bitmap b = BitmapFactory.decodeStream(imageStream);
+                            if (b != null) Tools.runOnUiThread(() -> {
+                                modIcons.put(slug, b);
+                                invalidate();
+                            });
+                        }
+                    } finally {
+                        if (img != null) img.disconnect();
+                    }
+                } catch (Exception ignored) {
+                    // Keep the card visible if Modrinth is temporarily unreachable.
+                }
             });
         }
     }
