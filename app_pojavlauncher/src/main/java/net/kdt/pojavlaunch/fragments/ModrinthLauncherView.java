@@ -975,7 +975,7 @@ public final class ModrinthLauncherView extends View {
             else if(idx==2){selectedPage=2;openContentCategory("mod");}
             else if(idx==3){selectedPage=3;openContentCategory("resourcepack");}
             else if(idx==4){selectedPage=4;}
-            else if(idx==5){MainMenuFragment host = getMainMenuHost(); if (host != null) host.showCenterFragment(LauncherPreferenceFragment.class, LauncherActivity.SETTING_FRAGMENT_TAG, null);}
+            else if(idx==5){selectedPage=5; MainMenuFragment host = getMainMenuHost(); if (host != null) host.showCenterFragment(LauncherPreferenceFragment.class, LauncherActivity.SETTING_FRAGMENT_TAG, null);}
             invalidate(); return true;
         }
         if(menuOpen && x<228 && y>=378 && y<522){
@@ -983,6 +983,7 @@ public final class ModrinthLauncherView extends View {
             if(idx==0){selectedPage=6;openContentCategory("modpack");}
             else if(idx==1){selectedPage=7;openContentCategory("shader");}
             else if(idx==2){selectedPage=8;openContentCategory("world");}
+            invalidate();
             return true;
         }
         if (selectedPage == 1 && x >= 242 && x < 1215 && y >= 75 && y < 660) {
@@ -1004,31 +1005,6 @@ public final class ModrinthLauncherView extends View {
             float row3=row2+cardH+rowGap;
             if (y >= row3 && y < row3+cardH && x >= startX && x < startX+cardW) {
                 launchInstanceOption(6); return true;
-            }
-            return true;
-        }
-        if(x>242 && x<1215 && y>=505 && y<545){
-            float left = menuOpen ? 242f : 18f;
-            float width = 1215f - left;
-            if (x >= left + width - 95f && y <= 545f) {
-                selectedPage = 2;
-                openContentCategory("mod");
-                invalidate();
-            }
-            return true;
-        }
-        if(x>242 && x<1215 && y>=553 && y<650){
-            float left = menuOpen ? 242f : 18f;
-            float gap=10f, cw=(1215f-left-gap*4f)/5f;
-            int mod=(int)((x-left)/(cw+gap));
-            if (mod >= 0 && mod < 5) {
-                float cardX = left + mod * (cw + gap);
-                // Only the visible Add pill is actionable; blank card space is inert.
-                if (x >= cardX + cw - 63f && x <= cardX + cw - 12f && y >= 601f && y <= 630f) {
-                    if(mod==2){ selectedPage=7; openContentCategory("shader"); }
-                    else if(mod==3){ selectedPage=3; openContentCategory("resourcepack", "realistic 4k"); }
-                    else { modInstaller.run(); }
-                }
             }
             return true;
         }
