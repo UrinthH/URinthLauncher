@@ -14,6 +14,7 @@
         android:title="@string/preference_force_english_title"
         android:key="force_english"
         android:summary="@string/preference_force_english_description"
+        android:icon="@drawable/ic_modrinth_language"
         android:icon="@drawable/ic_modrinth_setting"/>
 
     <Preference
@@ -28,7 +29,7 @@
             android:title="@string/mcl_setting_category_renderer"
             android:key="renderer"
             android:defaultValue="opengles2"
-            android:icon="@drawable/ic_modrinth_setting"
+            android:icon="@drawable/ic_modrinth_video"
             app2:useSimpleSummaryProvider="true"/>
 
         <androidx.preference.SwitchPreferenceCompat
@@ -36,7 +37,7 @@
             android:key="ignoreNotch"
             android:summary="@string/mcl_setting_subtitle_ignore_notch"
             android:title="@string/mcl_setting_title_ignore_notch"
-            android:icon="@drawable/ic_modrinth_setting"
+            android:icon="@drawable/ic_modrinth_video"
             />
 
         <net.kdt.pojavlaunch.prefs.CustomSeekBarPreference
@@ -47,7 +48,7 @@
             app2:selectable="false"
             app2:min="@integer/resolution_seekbar_min"
             app2:seekBarIncrement="@integer/resolution_seekbar_increment"
-            android:icon="@drawable/ic_modrinth_setting"
+            android:icon="@drawable/ic_modrinth_video"
             />
 
         <androidx.preference.SwitchPreferenceCompat
@@ -77,7 +78,7 @@
             />
         <SwitchPreferenceCompat
             android:defaultValue="false"
-            android:icon="@drawable/ic_modrinth_setting"
+            android:icon="@drawable/ic_modrinth_video"
             android:key="zinkPreferSystemDriver"
             android:summary="@string/preference_vulkan_driver_system_description"
             android:title="@string/preference_vulkan_driver_system_title"/>
@@ -95,7 +96,7 @@
 
         <androidx.preference.SwitchPreferenceCompat
             android:defaultValue="false"
-            android:icon="@drawable/ic_modrinth_setting"
+            android:icon="@drawable/ic_modrinth_controls"
             android:key="disableGestures"
             android:summary="@string/mcl_disable_gestures_subtitle"
             android:title="@string/mcl_disable_gestures" />
@@ -105,7 +106,7 @@
             android:key="disableDoubleTap"
             android:summary="@string/mcl_disable_swap_hand_subtitle"
             android:title="@string/mcl_disable_swap_hand"
-            android:icon="@drawable/ic_modrinth_setting"/>
+            android:icon="@drawable/ic_modrinth_controls"/>
 
         <net.kdt.pojavlaunch.prefs.CustomSeekBarPreference
             android:key="timeLongPressTrigger"
@@ -116,7 +117,7 @@
             app2:min="@integer/gesture_delay_seekbar_min"
             android:max="@integer/gesture_delay_seekbar_max"
             app2:seekBarIncrement="@integer/gesture_delay_seekbar_increment"
-            android:icon="@drawable/ic_modrinth_setting"
+            android:icon="@drawable/ic_modrinth_controls"
             />
 
     </PreferenceCategory>
@@ -133,7 +134,7 @@
             app2:min="@integer/button_scale_seekbar_min"
             android:max="@integer/button_scale_seekbar_max"
             app2:seekBarIncrement="@integer/button_scale_seekbar_increment"
-            android:icon="@drawable/ic_modrinth_setting"
+            android:icon="@drawable/ic_modrinth_controls"
             />
         <net.kdt.pojavlaunch.prefs.CustomSeekBarPreference
             android:key="buttonTransparency"
@@ -150,7 +151,7 @@
             android:defaultValue="true"
             android:title="@string/mcl_setting_title_buttonallcaps"
             android:summary="@string/mcl_setting_subtitle_buttonallcaps"
-            android:icon="@drawable/ic_modrinth_setting"
+            android:icon="@drawable/ic_modrinth_controls"
             />
 
     </PreferenceCategory>
@@ -168,14 +169,14 @@
             android:max="@integer/mouse_scale_seekbar_max"
             app2:seekBarIncrement="@integer/mouse_scale_seekbar_increment"
             app2:showSeekBarValue="true"
-            android:icon="@drawable/ic_modrinth_setting"
+            android:icon="@drawable/ic_modrinth_sliders"
             />
 
         <net.kdt.pojavlaunch.prefs.CustomSeekBarPreference
             android:key="mousespeed"
             android:summary="@string/mcl_setting_subtitle_mousespeed"
             android:title="@string/mcl_setting_title_mousespeed"
-            android:icon="@drawable/ic_modrinth_setting"
+            android:icon="@drawable/ic_modrinth_sliders"
             app2:selectable="false"
             app2:min="@integer/mouse_speed_seekbar_min"
             android:max="@integer/mouse_speed_seekbar_max"
@@ -185,7 +186,7 @@
             android:key="mouse_start"
             android:title="@string/preference_mouse_start_title"
             android:summary="@string/preference_mouse_start_description"
-            android:icon="@drawable/ic_modrinth_setting"/>
+            android:icon="@drawable/ic_modrinth_sliders"/>
     </PreferenceCategory>
 
     <PreferenceCategory android:layout="@layout/preference_category_modrinth"
@@ -264,14 +265,14 @@
 <PreferenceCategory android:layout="@layout/preference_category_modrinth" android:title="@string/preference_category_java_tweaks">
         <Preference
             android:key="install_jre"
-            android:icon="@drawable/ic_modrinth_setting"
+            android:icon="@drawable/ic_modrinth_java"
             android:persistent="false"
             android:summary="@string/multirt_subtitle"
             android:title="@string/multirt_title"/>
 
         <androidx.preference.EditTextPreference
             android:dialogTitle="@string/mcl_setting_title_javaargs"
-            android:icon="@drawable/ic_modrinth_setting"
+            android:icon="@drawable/ic_modrinth_java"
             android:key="javaArgs"
             android:singleLine="true"
             android:summary="@string/mcl_setting_subtitle_javaargs"
@@ -279,7 +280,7 @@
 
         <net.kdt.pojavlaunch.prefs.CustomSeekBarPreference
             android:key="allocation"
-            android:icon="@drawable/ic_modrinth_setting"
+            android:icon="@drawable/ic_modrinth_java"
             android:summary="@string/mcl_memory_allocation_subtitle"
             android:title="@string/mcl_memory_allocation"
             app2:showSeekBarValue="true"
@@ -289,7 +290,7 @@
 
         <SwitchPreferenceCompat
             android:defaultValue="true"
-            android:icon="@drawable/ic_modrinth_setting"
+            android:icon="@drawable/ic_modrinth_java"
             android:key="java_sandbox"
             android:summary="@string/mcl_setting_java_sandbox_subtitle"
             android:title="@string/mcl_setting_java_sandbox" />
@@ -299,20 +300,20 @@
 <PreferenceCategory android:layout="@layout/preference_category_modrinth" android:title="@string/preference_category_miscellaneous">
         <SwitchPreferenceCompat
             android:defaultValue="true"
-            android:icon="@drawable/ic_modrinth_setting"
+            android:icon="@drawable/ic_modrinth_sliders"
             android:key="checkGameFiles"
             android:summary="@string/preference_verify_game_files_description"
             android:title="@string/preference_verify_game_files_title" />
 
         <SwitchPreferenceCompat
             android:defaultValue="true"
-            android:icon="@drawable/ic_modrinth_setting"
+            android:icon="@drawable/ic_modrinth_sliders"
             android:key="fastStartupCheck"
             android:summary="@string/preference_go_vroom_description"
             android:title="@string/preference_go_vroom_title" />
         <androidx.preference.ListPreference
             android:defaultValue="default"
-            android:icon="@drawable/ic_modrinth_setting"
+            android:icon="@drawable/ic_modrinth_sliders"
             android:key="downloadSource"
             android:entries="@array/download_source_names"
             android:entryValues="@array/download_source_values"
@@ -321,18 +322,18 @@
             app2:useSimpleSummaryProvider="true"/>
         <SwitchPreferenceCompat
             android:defaultValue="true"
-            android:icon="@drawable/ic_modrinth_setting"
+            android:icon="@drawable/ic_modrinth_sliders"
             android:key="verifyManifest"
             android:title="@string/preference_verify_manifest_title"
             android:summary="@string/preference_verify_manifest_description"/>
         <Preference
             android:key="microphoneAccessRequest"
-            android:icon="@drawable/ic_modrinth_setting"
+            android:icon="@drawable/ic_modrinth_sliders"
             android:title="@string/preference_microphone_access_title"
             android:summary="@string/preference_microphone_access_description" />
         <Preference
             android:key="runDataMigration"
-            android:icon="@drawable/ic_modrinth_setting"
+            android:icon="@drawable/ic_modrinth_sliders"
             android:title="@string/preference_data_migration_title"
             android:summary="@string/preference_data_migration_summary" />
         <Preference
@@ -341,7 +342,7 @@
             android:summary="@string/preference_metadata_clear_summary" />
         <SwitchPreferenceCompat
             android:defaultValue="true"
-            android:icon="@drawable/ic_modrinth_setting"
+            android:icon="@drawable/ic_modrinth_sliders"
             android:key="showMemoryWarning"
             android:title="@string/preference_show_memory_warning_title"
             android:summary="@string/preference_show_memory_warning_summary"/>
@@ -369,7 +370,7 @@
         <SwitchPreferenceCompat
             android:defaultValue="false"
             android:key="alsoftForceOpenSL"
-            android:icon="@drawable/ic_modrinth_setting"
+            android:icon="@drawable/ic_modrinth_experimental"
             android:title="@string/preference_alsoft_opensl_title"
             android:summary="@string/preference_alsoft_opensl_summary"
             />
