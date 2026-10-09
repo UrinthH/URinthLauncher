@@ -150,14 +150,14 @@ public class ModrinthBrowserFragment extends Fragment {
     @Override
     public View onCreateView(@NonNull android.view.LayoutInflater inflater, @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
-        LinearLayout root = new LinearLayout(requireContext());
+        LinearLayout root = new LinearLayout(context);
         root.setOrientation(LinearLayout.VERTICAL);
         GradientDrawable pageBackground = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
                 new int[]{Color.rgb(6, 27, 42), Color.rgb(3, 17, 29)});
         root.setBackground(pageBackground);
         root.setPadding(dp(22), dp(20), dp(22), dp(14));
 
-        TextView heading = new TextView(requireContext());
+        TextView heading = new TextView(context);
         heading.setText(categoryTitle());
         heading.setTextColor(TEXT);
         heading.setTextSize(26);
@@ -170,7 +170,7 @@ public class ModrinthBrowserFragment extends Fragment {
         ruleParams.topMargin = dp(7);
         root.addView(accentRule, ruleParams);
 
-        TextView sub = new TextView(requireContext());
+        TextView sub = new TextView(context);
         sub.setText("Browse real Modrinth projects. Install only versions compatible with your selected profile.");
         sub.setTextColor(MUTED);
         sub.setTextSize(13);
@@ -179,7 +179,7 @@ public class ModrinthBrowserFragment extends Fragment {
         subParams.bottomMargin = dp(12);
         root.addView(sub, subParams);
 
-        LinearLayout searchRow = new LinearLayout(requireContext());
+        LinearLayout searchRow = new LinearLayout(context);
         searchRow.setOrientation(LinearLayout.HORIZONTAL);
         searchRow.setGravity(Gravity.CENTER_VERTICAL);
         searchRow.setPadding(dp(8), dp(8), dp(8), dp(8));
@@ -218,7 +218,7 @@ public class ModrinthBrowserFragment extends Fragment {
         progressParams.gravity = Gravity.CENTER_HORIZONTAL;
         progressParams.topMargin = dp(12);
         root.addView(progress, progressParams);
-        status = new TextView(requireContext());
+        status = new TextView(context);
         status.setTextColor(MUTED);
         status.setTextSize(13);
         status.setGravity(Gravity.CENTER);
@@ -227,7 +227,7 @@ public class ModrinthBrowserFragment extends Fragment {
         root.addView(status, statusParams);
 
         ScrollView scroll = new ScrollView(requireContext());
-        resultList = new LinearLayout(requireContext());
+        resultList = new LinearLayout(context);
         resultList.setOrientation(LinearLayout.VERTICAL);
         LinearLayout.LayoutParams listParams = new LinearLayout.LayoutParams(-1, -2);
         listParams.topMargin = dp(10);
@@ -295,14 +295,19 @@ public class ModrinthBrowserFragment extends Fragment {
                 List<Project> found = new ArrayList<>();
                 for (int i=0; i<hits.size(); i++) found.add(new Project(hits.get(i).getAsJsonObject()));
                 Tools.runOnUiThread(() -> {
+                    if (!isAdded() || getView() == null || progress == null || status == null || resultList == null) return;
                     progress.setVisibility(View.GONE);
                     projects.addAll(found);
                     if (found.isEmpty()) status.setText("No projects found. Try another search.");
                     else status.setText(found.size() + " projects found");
-                    for (Project project : found) addProjectCard(project);
+                    for (Project project : found) {
+                        if (!isAdded() || getView() == null || resultList == null) return;
+                        addProjectCard(project);
+                    }
                 });
             } catch (Exception e) {
                 Tools.runOnUiThread(() -> {
+                    if (!isAdded() || getView() == null || progress == null || status == null) return;
                     progress.setVisibility(View.GONE);
                     status.setText("Couldn't load Modrinth. Check your connection and try again.");
                 });
@@ -345,7 +350,9 @@ public class ModrinthBrowserFragment extends Fragment {
     }
 
     private void addProjectCard(Project project) {
-        LinearLayout card = new LinearLayout(requireContext());
+        android.content.Context context = getContext();
+        if (!isAdded() || context == null || resultList == null) return;
+        LinearLayout card = new LinearLayout(context);
         card.setOrientation(LinearLayout.HORIZONTAL);
         card.setGravity(Gravity.CENTER_VERTICAL);
         card.setPadding(dp(16), dp(14), dp(16), dp(14));
@@ -359,7 +366,7 @@ public class ModrinthBrowserFragment extends Fragment {
         params.bottomMargin = dp(12);
         resultList.addView(card, params);
 
-        ImageView icon = new ImageView(requireContext());
+        ImageView icon = new ImageView(context);
         icon.setScaleType(ImageView.ScaleType.CENTER_CROP);
         icon.setBackground(rounded(Color.rgb(6, 57, 67), 14, Color.rgb(25, 126, 132), 1));
         icon.setClipToOutline(true);
@@ -369,11 +376,11 @@ public class ModrinthBrowserFragment extends Fragment {
         card.addView(icon, iconParams);
         loadProjectIcon(project, icon);
 
-        LinearLayout details = new LinearLayout(requireContext());
+        LinearLayout details = new LinearLayout(context);
         details.setOrientation(LinearLayout.VERTICAL);
         card.addView(details, new LinearLayout.LayoutParams(0, -2, 1f));
 
-        TextView title = new TextView(requireContext());
+        TextView title = new TextView(context);
         title.setText(project.title);
         title.setTextColor(TEXT);
         title.setTextSize(16);
@@ -381,7 +388,7 @@ public class ModrinthBrowserFragment extends Fragment {
         title.setTypeface(null, android.graphics.Typeface.BOLD);
         details.addView(title);
 
-        TextView description = new TextView(requireContext());
+        TextView description = new TextView(context);
         description.setText(project.description);
         description.setTextColor(MUTED);
         description.setTextSize(12);
@@ -391,7 +398,7 @@ public class ModrinthBrowserFragment extends Fragment {
         descParams.topMargin = dp(4);
         details.addView(description, descParams);
 
-        TextView metadata = new TextView(requireContext());
+        TextView metadata = new TextView(context);
         metadata.setText(categoryTitle() + "  ·  Modrinth");
         metadata.setTextColor(ACCENT);
         metadata.setTextSize(11);
@@ -468,17 +475,17 @@ public class ModrinthBrowserFragment extends Fragment {
             return;
         }
 
-        LinearLayout layout = new LinearLayout(requireContext());
+        LinearLayout layout = new LinearLayout(context);
         layout.setOrientation(LinearLayout.VERTICAL);
         layout.setPadding(dp(18), dp(8), dp(18), dp(8));
         layout.setBackgroundColor(Color.rgb(6, 25, 38));
 
-        LinearLayout projectHeader = new LinearLayout(requireContext());
+        LinearLayout projectHeader = new LinearLayout(context);
         projectHeader.setGravity(Gravity.CENTER_VERTICAL);
         projectHeader.setPadding(0, 0, 0, dp(10));
         layout.addView(projectHeader);
 
-        ImageView projectIcon = new ImageView(requireContext());
+        ImageView projectIcon = new ImageView(context);
         projectIcon.setScaleType(ImageView.ScaleType.CENTER_CROP);
         projectIcon.setBackground(rounded(Color.rgb(0, 70, 72), 10, ACCENT, 1));
         projectIcon.setClipToOutline(true);
@@ -487,22 +494,22 @@ public class ModrinthBrowserFragment extends Fragment {
         projectHeader.addView(projectIcon, projectIconParams);
         loadProjectIcon(project, projectIcon);
 
-        LinearLayout projectTitles = new LinearLayout(requireContext());
+        LinearLayout projectTitles = new LinearLayout(context);
         projectTitles.setOrientation(LinearLayout.VERTICAL);
         projectHeader.addView(projectTitles, new LinearLayout.LayoutParams(0, -2, 1f));
-        TextView title = new TextView(requireContext());
+        TextView title = new TextView(context);
         title.setText("Install " + project.title);
         title.setTextColor(TEXT);
         title.setTextSize(18);
         title.setTypeface(null, android.graphics.Typeface.BOLD);
         projectTitles.addView(title);
-        TextView subtitle = new TextView(requireContext());
+        TextView subtitle = new TextView(context);
         subtitle.setText("Choose a profile and check version compatibility");
         subtitle.setTextColor(MUTED);
         subtitle.setTextSize(11);
         projectTitles.addView(subtitle);
 
-        TextView profileLabel = new TextView(requireContext());
+        TextView profileLabel = new TextView(context);
         profileLabel.setText("TARGET PROFILE");
         profileLabel.setTextColor(ACCENT);
         profileLabel.setTextSize(10);
@@ -524,16 +531,16 @@ public class ModrinthBrowserFragment extends Fragment {
         profileParams.bottomMargin = dp(12);
         layout.addView(profileSpinner, profileParams);
 
-        LinearLayout legend = new LinearLayout(requireContext());
+        LinearLayout legend = new LinearLayout(context);
         legend.setGravity(Gravity.CENTER_VERTICAL);
         legend.setPadding(0, 0, 0, dp(6));
         layout.addView(legend);
-        TextView compatibleLegend = new TextView(requireContext());
+        TextView compatibleLegend = new TextView(context);
         compatibleLegend.setText("● Compatible");
         compatibleLegend.setTextColor(Color.rgb(54, 232, 167));
         compatibleLegend.setTextSize(11);
         legend.addView(compatibleLegend);
-        TextView incompatibleLegend = new TextView(requireContext());
+        TextView incompatibleLegend = new TextView(context);
         incompatibleLegend.setText("    ● Incompatible");
         incompatibleLegend.setTextColor(Color.rgb(255, 112, 122));
         incompatibleLegend.setTextSize(11);
@@ -541,12 +548,12 @@ public class ModrinthBrowserFragment extends Fragment {
 
         ScrollView versionScroll = new ScrollView(requireContext());
         versionScroll.setFillViewport(false);
-        LinearLayout versionList = new LinearLayout(requireContext());
+        LinearLayout versionList = new LinearLayout(context);
         versionList.setOrientation(LinearLayout.VERTICAL);
         versionScroll.addView(versionList);
         layout.addView(versionScroll, new LinearLayout.LayoutParams(-1, dp(210)));
 
-        TextView compatibility = new TextView(requireContext());
+        TextView compatibility = new TextView(context);
         compatibility.setTextColor(MUTED);
         compatibility.setTextSize(11);
         compatibility.setPadding(0, dp(8), 0, dp(2));
@@ -576,7 +583,7 @@ public class ModrinthBrowserFragment extends Fragment {
             visibleVersions.addAll(incompatibleVersions.subList(0, incompatibleLimit));
             for (Version version : visibleVersions) {
                 boolean matches = isCompatible(version, selected, category);
-                LinearLayout row = new LinearLayout(requireContext());
+                LinearLayout row = new LinearLayout(context);
                 row.setOrientation(LinearLayout.VERTICAL);
                 row.setPadding(dp(12), dp(9), dp(12), dp(9));
                 int fill = matches ? Color.rgb(12, 58, 49) : Color.rgb(61, 32, 39);
@@ -586,14 +593,14 @@ public class ModrinthBrowserFragment extends Fragment {
                 rowParams.bottomMargin = dp(7);
                 versionList.addView(row, rowParams);
 
-                TextView versionName = new TextView(requireContext());
+                TextView versionName = new TextView(context);
                 versionName.setText((matches ? "✓  " : "✕  ") + version.number + "  ·  MC " + version.gameVersion);
                 versionName.setTextColor(matches ? Color.rgb(103, 255, 190) : Color.rgb(255, 142, 150));
                 versionName.setTextSize(13);
                 versionName.setTypeface(null, android.graphics.Typeface.BOLD);
                 row.addView(versionName);
 
-                TextView versionMeta = new TextView(requireContext());
+                TextView versionMeta = new TextView(context);
                 versionMeta.setText("Loader: " + (version.loaders.isEmpty() ? "not specified" : android.text.TextUtils.join(", ", version.loaders)));
                 versionMeta.setTextColor(matches ? Color.rgb(181, 232, 214) : Color.rgb(224, 175, 180));
                 versionMeta.setTextSize(10);
@@ -601,7 +608,7 @@ public class ModrinthBrowserFragment extends Fragment {
                 versionMetaParams.topMargin = dp(3);
                 row.addView(versionMeta, versionMetaParams);
 
-                TextView verdict = new TextView(requireContext());
+                TextView verdict = new TextView(context);
                 verdict.setText(matches ? "COMPATIBLE WITH THIS PROFILE" : compatibilityReason(version, selected, category));
                 verdict.setTextColor(matches ? Color.rgb(103, 255, 190) : Color.rgb(255, 142, 150));
                 verdict.setTextSize(9);
