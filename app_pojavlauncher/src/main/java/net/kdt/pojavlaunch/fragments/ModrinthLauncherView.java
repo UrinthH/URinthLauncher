@@ -73,7 +73,6 @@ public final class ModrinthLauncherView extends View {
     private final Bitmap forgeIcon;
     private final Bitmap neoforgeIcon;
     private Bitmap backgroundArtwork;
-    private Bitmap heroRealisticArtwork;
     private final Bitmap[] versionBiomeArtworks = new Bitmap[5];
     private final mcVersionSpinner versionSpinner;
     private final AccountSpinner accountSpinner;
@@ -140,7 +139,7 @@ public final class ModrinthLauncherView extends View {
         // Verified official Minecraft biome artwork. Each card gets a different biome
         // so the three visible instances never look like duplicate screenshots.
         loadRemoteArtwork(
-                "https://www.minecraft.net/content/dam/minecraftnet/games/minecraft/screenshots/MCV_VibrantVisuals_MCL_comparison_03_cherrygrove.jpg",
+                "https://www.minecraft.net/content/dam/minecraftnet/games/minecraft/screenshots/MCV_ChaseTheSkies_Swamp02_VV_.net_1280x720.jpg",
                 bitmap -> { versionBiomeArtworks[0] = bitmap; invalidate(); }
         );
         loadRemoteArtwork(
@@ -152,13 +151,11 @@ public final class ModrinthLauncherView extends View {
                 bitmap -> { versionBiomeArtworks[2] = bitmap; invalidate(); }
         );
         loadRemoteArtwork(
-                "https://www.minecraft.net/content/dam/minecraftnet/games/minecraft/screenshots/MCV_VibrantVisuals_MCL_comparison_04_tundra.jpg",
+                "https://www.minecraft.net/content/dam/minecraftnet/games/minecraft/screenshots/ATB_WarmOcean_header.jpg",
                 bitmap -> { versionBiomeArtworks[3] = bitmap; invalidate(); }
         );
-        loadRemoteArtwork(
-                "https://www.minecraft.net/content/dam/minecraftnet/games/minecraft/screenshots/ATB_WarmOcean_header.jpg",
-                bitmap -> { versionBiomeArtworks[4] = bitmap; invalidate(); }
-        );
+        // Use the bundled cherry-grove artwork as a fifth distinct, offline-safe biome.
+        versionBiomeArtworks[4] = cherryArtwork;
     }
 
     private void loadRemoteArtwork(String imageUrl, java.util.function.Consumer<Bitmap> onLoaded) {
@@ -819,18 +816,6 @@ public final class ModrinthLauncherView extends View {
     private float measure(String s,float size,boolean bold){p.setTextSize(size);p.setTypeface(Typeface.create("sans-serif",bold?Typeface.BOLD:Typeface.NORMAL));return p.measureText(s);}
 
     private void drawBitmap(Canvas c,Bitmap b,float x,float y,float w,float h){if(b!=null)c.drawBitmap(b,null,new RectF(x,y,x+w,y+h),p);}
-
-    private void drawCoverBitmapRightHalf(Canvas c, Bitmap b, float x, float y, float w, float h) {
-        if (b == null) return;
-        Rect source = new Rect(b.getWidth() / 2, 0, b.getWidth(), b.getHeight());
-        float sourceWidth = source.width();
-        float scale = Math.max(w / sourceWidth, h / source.height());
-        float dw = sourceWidth * scale;
-        float dh = source.height() * scale;
-        float dx = x + (w - dw) * 0.5f;
-        float dy = y + (h - dh) * 0.5f;
-        c.drawBitmap(b, source, new RectF(dx, dy, dx + dw, dy + dh), p);
-    }
 
     private void drawCoverBitmap(Canvas c, Bitmap b, float x, float y, float w, float h) {
         if (b == null) return;
