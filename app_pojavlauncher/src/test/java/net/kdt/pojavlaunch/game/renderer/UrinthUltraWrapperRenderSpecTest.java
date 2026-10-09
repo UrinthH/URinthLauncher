@@ -36,6 +36,22 @@ public class UrinthUltraWrapperRenderSpecTest {
         assertEquals("fake-backend", second.tag());
     }
 
+    @Test
+    public void thermalStatusFormatterCoversAllAndroidStates() {
+        assertEquals("none", URinthRender.thermalStatusName(android.os.PowerManager.THERMAL_STATUS_NONE));
+        assertEquals("light", URinthRender.thermalStatusName(android.os.PowerManager.THERMAL_STATUS_LIGHT));
+        assertEquals("moderate", URinthRender.thermalStatusName(android.os.PowerManager.THERMAL_STATUS_MODERATE));
+        assertEquals("severe", URinthRender.thermalStatusName(android.os.PowerManager.THERMAL_STATUS_SEVERE));
+        assertEquals("critical", URinthRender.thermalStatusName(android.os.PowerManager.THERMAL_STATUS_CRITICAL));
+        assertEquals("emergency", URinthRender.thermalStatusName(android.os.PowerManager.THERMAL_STATUS_EMERGENCY));
+        assertEquals("shutdown", URinthRender.thermalStatusName(android.os.PowerManager.THERMAL_STATUS_SHUTDOWN));
+    }
+
+    @Test
+    public void thermalStatusFormatterLabelsUnknownValues() {
+        assertEquals("unknown(99)", URinthRender.thermalStatusName(99));
+    }
+
     private static final class FakeRenderSpec implements RenderSpec {
         @Override
         public boolean compatibleDevice(Context context) {
