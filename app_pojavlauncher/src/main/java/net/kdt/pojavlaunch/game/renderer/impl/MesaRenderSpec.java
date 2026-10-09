@@ -65,6 +65,9 @@ public class MesaRenderSpec implements RenderSpec {
             // We don't care much about passing CTS hence this is fine
             envMap.put("MESA_GLSL_VERSION_OVERRIDE", "460");
             envMap.put("MESA_GL_VERSION_OVERRIDE", "4.6");
+            // These variables advertise a version to Mesa; they do not add missing
+            // GPU/driver features. Keep that distinction visible in renderer diagnostics.
+            Log.w("Renderer", "Zink requests GL 4.6 / GLSL 4.60 version overrides; actual feature support is device/driver-dependent and must be validated by the game");
             super.setupEnvironment(context, envMap);
         }
         public boolean setupRenderer() {
