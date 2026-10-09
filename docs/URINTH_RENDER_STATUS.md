@@ -9,16 +9,26 @@ This document distinguishes code that exists from work that still needs device v
 - Mesa/Zink-family profiles configure shader-cache environment variables and choose the Mesa worker-thread setting based on Android's low-RAM signal / available memory information.
 - GL4ES batching is opt-in under Ultra Mode.
 - Launch diagnostics record device/ABI/RAM information, the selected backend, setup duration, and fallback outcomes.
+- Renderer environment application now reads each configured value back with `Os.getenv` and logs expected/actual values. For GL4ES Ultra mode, it specifically reports whether `LIBGL_BATCH=1` is present after the launcher applies the environment.
 - Renderer-cache cleanup is safe when called before a compatibility scan and can be repeated.
 - The launcher must not change the player's resolution or edit `options.txt`.
 
 ## Important limitations
 
 - The wrapper is not a new native OpenGL or Vulkan driver. It does not replace GL4ES, LTW, Zink, Mesa, or Turnip.
+- Environment read-back only verifies the launcher process environment immediately after `setenv`; it does not prove a backend reads or honors a variable.
 - Environment overrides are not proof of improved performance. The effect depends on backend build, GPU/driver, Minecraft version, mods, and workload.
+- `RendererFrameTimeStats` is a tested bounded statistics accumulator, but it is not currently connected to Minecraft's live render loop. Its unit tests are not live FPS tests.
 - A successful Android build confirms compilation and packaging only; it does not prove game startup, rendering correctness, stability, or FPS gains.
 - Sodium and VulkanMod compatibility has not been established universally. Treat each version/backend/mod combination as unverified until tested.
 - The current launcher-side code does not by itself implement Minecraft's in-game chunk scheduling or mod-level rendering optimizations.
+
+## Next engineering gates
+
+1. Confirm the environment verification logs on a real GL4ES launch with Ultra OFF and ON.
+2. Identify a reliable frame-presentation or game-loop integration point before connecting frame-time statistics. Do not label launcher startup timing as game FPS.
+3. Implement and validate one backend-specific change only after instrumentation identifies a bottleneck; keep it reversible and compare repeated frame-time runs.
+4. Avoid unsupported assumptions about native hooks or variables. If a variable is accepted by `setenv`, that alone is not proof the backend implements it.
 
 ## Required validation matrix
 
