@@ -732,14 +732,14 @@ public final class ModrinthLauncherView extends View {
     }
 
     /**
-     * Full-screen status frame: animated red while Ultra is enabled, green while off.
+     * Full-screen status frame: animated green while Ultra is enabled, subdued while off.
      * Drawn over the launcher UI only; it does not affect the game surface or resolution.
      */
     private void drawUltraEdgeGlow(Canvas c) {
         long now = SystemClock.uptimeMillis();
         float pulse = ultraOn ? (0.5f + 0.5f * (float) Math.sin(now / 360.0)) : 0.55f;
-        int rgb = ultraOn ? Color.rgb(255, 42, 58) : Color.rgb(0, 255, 132);
-        int glowAlpha = ultraOn ? (int) (80 + 100 * pulse) : 115;
+        int rgb = ultraOn ? Color.rgb(0, 255, 132) : Color.rgb(87, 108, 118);
+        int glowAlpha = ultraOn ? (int) (80 + 100 * pulse) : 70;
 
         edgeGlowPaint.setStyle(Paint.Style.STROKE);
         edgeGlowPaint.setStrokeCap(Paint.Cap.ROUND);
