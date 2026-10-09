@@ -104,10 +104,19 @@ public class GameRenderer {
         // Restore the baseline first so toggling Ultra never leaks overrides between launches.
         URinthRender.restoreNormalEnvironment();
 
-        // Ultra Mode uses the URinthUltra Wrapper integration layer around the user's
-        // selected backend. OFF leaves the normal renderer selection untouched.
-        if (URinthRender.isUltraEnabled(context)
-                && !(currentRenderer instanceof UrinthUltraWrapperRenderSpec)) {
+        // Resolve the wrapper from the current toggle every time this instance is prepared.
+        // This also handles reusing a GameRenderer instance after the user turns Ultra Mode off.
+        boolean ultraEnabled = URinthRender.isUltraEnabled(context);
+        if (currentRenderer instanceof UrinthUltraWrapperRenderSpec) {
+            if (ultraEnabled) {
+                // Rebuild the wrapper around the same real backend to avoid nested wrappers.
+                currentRenderer = new UrinthUltraWrapperRenderSpec(
+                        ((UrinthUltraWrapperRenderSpec) currentRenderer).getDelegate());
+            } else {
+                currentRenderer = ((UrinthUltraWrapperRenderSpec) currentRenderer).getDelegate();
+                Log.i(TAG, "URinthUltra disabled; restored selected backend=" + currentRenderer.tag());
+            }
+        } else if (ultraEnabled) {
             currentRenderer = new UrinthUltraWrapperRenderSpec(currentRenderer);
             Log.i(TAG, "URinthUltra Wrapper selected for this launch; underlying native backend="
                     + currentRenderer.tag());
