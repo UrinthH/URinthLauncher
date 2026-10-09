@@ -96,6 +96,9 @@ public class GameRenderer {
      * that still pass a version compatibility flag; selection itself is controlled by Settings.
      */
     public void setupEnvironment(Context context, boolean allowMobileGlues) throws ErrnoException {
+        if (MOBILEGLUES_RENDERER.equals(currentRenderer.tag()) && !allowMobileGlues) {
+            throw new IllegalStateException("MobileGlues requires Minecraft 1.17 or newer");
+        }
         if (environment == null) {
             Log.w(TAG, "Tried to call setupEnvironment in already initialized environment");
             return;
