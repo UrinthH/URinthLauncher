@@ -17,6 +17,7 @@ public class LibraryPlugin {
     public static final String ID_FFMPEG_PLUGIN = "git.mojo.ffmpeg";
     public static final String ID_ZINK_PLUGIN = "git.mojo.zink";
     public static final String ID_MESA_PLUGIN = "git.mojo.mesa";
+    public static final String ID_MOBILEGLUES_PLUGIN = "com.fcl.plugin.mobileglues";
 
     private String appId;
     private String libraryPath;
