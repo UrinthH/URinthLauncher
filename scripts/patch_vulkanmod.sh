@@ -48,13 +48,13 @@ if ! jar_entries=$(unzip -Z1 "$jar_path" 2>/dev/null); then
   echo "Cannot read VulkanMod jar as a ZIP archive: $jar_path" >&2
   exit 1
 fi
-vulkan_jar=$(printf '%s\\n' "$jar_entries" | grep -E '^META-INF/jars/lwjgl-vulkan-[0-9]+\\.[0-9]+\\.[0-9]+\\.jar$' | head -n 1 || true)
+vulkan_jar=$(printf '%s\n' "$jar_entries" | grep -E '^META-INF/jars/lwjgl-vulkan-[0-9]+\.[0-9]+\.[0-9]+\.jar$' | head -n 1 || true)
 if [ -z "$vulkan_jar" ]; then
   echo "Could not identify the bundled LWJGL Vulkan module version in: $jar_path" >&2
   exit 1
 fi
-lwjgl_version=\${vulkan_jar##*lwjgl-vulkan-}
-lwjgl_version=\${lwjgl_version%.jar}
+lwjgl_version=${vulkan_jar##*lwjgl-vulkan-}
+lwjgl_version=${lwjgl_version%.jar}
 case "$lwjgl_version" in
   3.3.1|3.3.3) ;;
   *)
@@ -65,7 +65,7 @@ case "$lwjgl_version" in
 esac
 echo "Detected LWJGL $lwjgl_version; selecting matching Android modules and natives."
 
-tmp_base=\${TMPDIR:-/tmp}
+tmp_base=${TMPDIR:-/tmp}
 workdir=$(mktemp "${tmp_base%/}/vkmodpatch.XXXXXX")
 patch_tmp=""
 cleanup() {
