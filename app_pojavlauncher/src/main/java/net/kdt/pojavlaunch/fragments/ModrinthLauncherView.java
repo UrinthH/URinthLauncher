@@ -162,10 +162,17 @@ public final class ModrinthLauncherView extends View {
             HttpURLConnection connection = null;
             try {
                 connection = (HttpURLConnection) new URL(imageUrl).openConnection();
-                connection.setConnectTimeout(7000);
-                connection.setReadTimeout(7000);
-                connection.setRequestProperty("User-Agent", "URinthLauncher/1.0");
-                Bitmap loaded = BitmapFactory.decodeStream(connection.getInputStream());
+                connection.setInstanceFollowRedirects(true);
+                connection.setConnectTimeout(12000);
+                connection.setReadTimeout(15000);
+                connection.setRequestProperty("User-Agent", "URinthLauncher/1.0 (Android)");
+                connection.setRequestProperty("Accept", "image/avif,image/webp,image/apng,image/*,*/*;q=0.8");
+                int status = connection.getResponseCode();
+                if (status < 200 || status >= 300) throw new IOException("Artwork HTTP " + status);
+                Bitmap loaded;
+                try (java.io.InputStream stream = connection.getInputStream()) {
+                    loaded = BitmapFactory.decodeStream(stream);
+                }
                 if (loaded != null) {
                     Tools.runOnUiThread(() -> onLoaded.accept(loaded));
                 }
@@ -553,13 +560,18 @@ public final class ModrinthLauncherView extends View {
             p.setShader(vignette);
             c.drawRect(x,y,x+w,y+h,p);
             p.setShader(null);
-        } else if (heroArtwork != null) {
-            // Keep the wide top banner visible even when remote artwork cannot load.
-            drawCoverBitmap(c, heroArtwork, x, y, w, h);
-            p.setColor(Color.argb(52, 2, 12, 22));
-            c.drawRect(x, y, x + w, y + h, p);
         } else {
-            round(c,x,y,x+w,y+h,24,Color.rgb(24,52,60),Color.TRANSPARENT,0);
+            // Prefer an actual Minecraft biome screenshot if the featured hero URL
+            // is unavailable; use bundled artwork only as the final offline fallback.
+            Bitmap fallback = versionBiomeArtworks[4] != null ? versionBiomeArtworks[4]
+                    : versionBiomeArtworks[0] != null ? versionBiomeArtworks[0] : heroArtwork;
+            if (fallback != null) {
+                drawCoverBitmap(c, fallback, x, y, w, h);
+                p.setColor(Color.argb(42, 2, 12, 22));
+                c.drawRect(x, y, x + w, y + h, p);
+            } else {
+                round(c,x,y,x+w,y+h,24,Color.rgb(24,52,60),Color.TRANSPARENT,0);
+            }
         }
     }
 
