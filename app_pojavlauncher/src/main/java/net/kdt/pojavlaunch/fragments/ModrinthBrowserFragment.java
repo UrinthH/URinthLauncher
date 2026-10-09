@@ -46,8 +46,10 @@ import java.net.HttpURLConnection;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 public class ModrinthBrowserFragment extends Fragment {
     public static final String TAG = "ModrinthBrowserFragment";
@@ -77,10 +79,20 @@ public class ModrinthBrowserFragment extends Fragment {
         }
     }
 
+    private static class Dependency {
+        String projectId = "", versionId = "", type = "";
+        Dependency(JsonObject json) {
+            projectId = string(json, "project_id");
+            versionId = string(json, "version_id");
+            type = string(json, "dependency_type");
+        }
+    }
+
     private static class Version {
         String id = "", name = "", number = "", gameVersion = "", loader = "", url = "", filename = "", sha1 = "", type = "";
         final List<String> gameVersions = new ArrayList<>();
         final List<String> loaders = new ArrayList<>();
+        final List<Dependency> dependencies = new ArrayList<>();
         long size;
         Version(JsonObject json) {
             id = string(json, "id");
@@ -95,6 +107,11 @@ public class ModrinthBrowserFragment extends Fragment {
                     ? json.getAsJsonArray("loaders") : new JsonArray();
             for (int i = 0; i < supportedLoaders.size(); i++) loaders.add(supportedLoaders.get(i).getAsString());
             loader = loaders.isEmpty() ? "" : loaders.get(0);
+            JsonArray deps = json.has("dependencies") && json.get("dependencies").isJsonArray()
+                    ? json.getAsJsonArray("dependencies") : new JsonArray();
+            for (int i = 0; i < deps.size(); i++) {
+                if (deps.get(i).isJsonObject()) dependencies.add(new Dependency(deps.get(i).getAsJsonObject()));
+            }
             JsonArray files = json.has("files") && json.get("files").isJsonArray()
                     ? json.getAsJsonArray("files") : new JsonArray();
             if (files.size() > 0) {
@@ -723,14 +740,15 @@ public class ModrinthBrowserFragment extends Fragment {
     }
 
     private void downloadIntoProfile(Project project, Version version, Instance instance) {
-        ProgressDialog dialog = new ProgressDialog(requireContext());
+        android.content.Context context = getContext();
+        if (!isAdded() || context == null) return;
+        ProgressDialog dialog = new ProgressDialog(context);
         dialog.setTitle("Installing " + project.title);
-        dialog.setMessage("Downloading " + version.filename + "…");
+        dialog.setMessage("Checking required dependencies…");
         dialog.setIndeterminate(true);
         dialog.setCancelable(false);
         dialog.show();
         Thread installThread = new Thread(() -> {
-            File destination = null;
             try {
                 File gameDir = instance.getGameDirectory();
                 String folder = "mods";
@@ -739,39 +757,36 @@ public class ModrinthBrowserFragment extends Fragment {
                 else if ("world".equals(category)) folder = "saves";
                 File targetDir = new File(gameDir, folder);
                 if (!targetDir.exists() && !targetDir.mkdirs()) throw new java.io.IOException("Couldn't create " + folder + " folder");
-                String filename = version.filename;
-                if (filename.isEmpty()) filename = project.title.replaceAll("[^A-Za-z0-9._-]", "_") + ".jar";
-                destination = new File(targetDir, filename);
-                HttpURLConnection connection = (HttpURLConnection) new java.net.URL(version.url).openConnection();
-                connection.setConnectTimeout(10000);
-                connection.setReadTimeout(30000);
-                connection.setRequestProperty("User-Agent", "URinthLauncher/1.0 (Android)");
-                try (InputStream in = connection.getInputStream(); FileOutputStream out = new FileOutputStream(destination)) {
-                    byte[] buffer = new byte[8192];
-                    int read;
-                    while ((read = in.read(buffer)) != -1) out.write(buffer, 0, read);
-                    out.flush();
-                } finally {
-                    connection.disconnect();
+
+                List<Version> installQueue = new ArrayList<>();
+                if ("mod".equals(category)) {
+                    collectRequiredDependencies(version, instance, new HashSet<>(), installQueue, 0);
                 }
-                if (!version.sha1.isEmpty()) {
-                    String actual = sha1(destination);
-                    if (!actual.equalsIgnoreCase(version.sha1)) {
-                        destination.delete();
-                        throw new java.io.IOException("Downloaded file failed its SHA-1 check.");
-                    }
+                installQueue.add(version);
+
+                int installedCount = 0;
+                for (Version item : installQueue) {
+                    downloadVersionAtomically(item, targetDir, project.id);
+                    installedCount++;
                 }
-                File finalDestination = destination;
+                final int totalInstalled = installedCount;
                 Tools.runOnUiThread(() -> {
+                    if (!isAdded() || getContext() == null) {
+                        dialog.dismiss();
+                        return;
+                    }
                     dialog.dismiss();
-                    Toast.makeText(requireContext(), "Installed to " + finalDestination.getParentFile().getName() + "/", Toast.LENGTH_LONG).show();
-                    status.setText(project.title + " installed into " + (instance.name == null ? "selected profile" : instance.name));
+                    Toast.makeText(getContext(), "Installed " + totalInstalled + " file(s) into " + folder + "/", Toast.LENGTH_LONG).show();
+                    if (status != null) status.setText(project.title + " and required dependencies installed into " + (instance.name == null ? "selected profile" : instance.name));
                 });
             } catch (Exception e) {
-                if (destination != null && destination.exists()) destination.delete();
                 Tools.runOnUiThread(() -> {
+                    if (!isAdded() || getContext() == null) {
+                        dialog.dismiss();
+                        return;
+                    }
                     dialog.dismiss();
-                    new AlertDialog.Builder(requireContext()).setTitle("Install failed")
+                    new AlertDialog.Builder(getContext()).setTitle("Install failed")
                             .setMessage(e.getMessage() == null ? "The download couldn't be completed." : e.getMessage())
                             .setPositiveButton("OK", null).show();
                 });
@@ -779,6 +794,111 @@ public class ModrinthBrowserFragment extends Fragment {
         }, "urinth-modrinth-install");
         installThread.setPriority(Thread.NORM_PRIORITY);
         installThread.start();
+    }
+
+    private JsonObject fetchVersionJson(String endpoint) throws Exception {
+        HttpURLConnection connection = null;
+        try {
+            connection = (HttpURLConnection) new java.net.URL("https://api.modrinth.com/v2/" + endpoint).openConnection();
+            connection.setConnectTimeout(10000);
+            connection.setReadTimeout(15000);
+            connection.setRequestProperty("User-Agent", "URinthLauncher/1.0 (Android)");
+            try (InputStream in = connection.getInputStream()) {
+                return JsonParser.parseString(readResponse(in)).getAsJsonObject();
+            }
+        } finally {
+            if (connection != null) connection.disconnect();
+        }
+    }
+
+    private JsonArray fetchProjectVersions(String projectId) throws Exception {
+        HttpURLConnection connection = null;
+        try {
+            connection = (HttpURLConnection) new java.net.URL("https://api.modrinth.com/v2/project/" + projectId + "/version").openConnection();
+            connection.setConnectTimeout(10000);
+            connection.setReadTimeout(15000);
+            connection.setRequestProperty("User-Agent", "URinthLauncher/1.0 (Android)");
+            try (InputStream in = connection.getInputStream()) {
+                return JsonParser.parseString(readResponse(in)).getAsJsonArray();
+            }
+        } finally {
+            if (connection != null) connection.disconnect();
+        }
+    }
+
+    private void collectRequiredDependencies(Version version, Instance instance, Set<String> visited,
+                                             List<Version> installQueue, int depth) throws Exception {
+        if (depth > 12) throw new java.io.IOException("Too many nested required dependencies; installation stopped safely.");
+        if (version.id.isEmpty() || !visited.add(version.id)) return;
+        for (Dependency dependency : version.dependencies) {
+            if (!"required".equalsIgnoreCase(dependency.type)) continue;
+            Version required = null;
+            if (!dependency.versionId.isEmpty()) {
+                JsonObject json = fetchVersionJson("version/" + dependency.versionId);
+                Version candidate = new Version(json);
+                if (isCompatible(candidate, instance, "mod")) required = candidate;
+            } else if (!dependency.projectId.isEmpty()) {
+                JsonArray candidates = fetchProjectVersions(dependency.projectId);
+                for (int i = 0; i < candidates.size(); i++) {
+                    Version candidate = new Version(candidates.get(i).getAsJsonObject());
+                    if (isCompatible(candidate, instance, "mod") && !candidate.url.isEmpty()) {
+                        required = candidate;
+                        break;
+                    }
+                }
+            }
+            if (required == null) {
+                String dependencyName = dependency.projectId.isEmpty() ? dependency.versionId : dependency.projectId;
+                throw new java.io.IOException("A required dependency (" + dependencyName + ") has no compatible release for this profile. Install was stopped before adding the main mod.");
+            }
+            collectRequiredDependencies(required, instance, visited, installQueue, depth + 1);
+            if (!containsVersion(installQueue, required.id)) installQueue.add(required);
+        }
+    }
+
+    private boolean containsVersion(List<Version> versions, String versionId) {
+        for (Version item : versions) if (item.id.equals(versionId)) return true;
+        return false;
+    }
+
+    private void downloadVersionAtomically(Version version, File targetDir, String fallbackName) throws Exception {
+        String filename = version.filename;
+        if (filename == null || filename.isEmpty()) filename = fallbackName.replaceAll("[^A-Za-z0-9._-]", "_") + ".jar";
+        File destination = new File(targetDir, filename);
+        File temporary = new File(targetDir, filename + ".part");
+        HttpURLConnection connection = null;
+        try {
+            connection = (HttpURLConnection) new java.net.URL(version.url).openConnection();
+            connection.setConnectTimeout(10000);
+            connection.setReadTimeout(30000);
+            connection.setRequestProperty("User-Agent", "URinthLauncher/1.0 (Android)");
+            try (InputStream in = connection.getInputStream(); FileOutputStream out = new FileOutputStream(temporary)) {
+                byte[] buffer = new byte[8192];
+                int read;
+                while ((read = in.read(buffer)) != -1) out.write(buffer, 0, read);
+                out.flush();
+            }
+        } catch (Exception e) {
+            if (temporary.exists()) temporary.delete();
+            throw e;
+        } finally {
+            if (connection != null) connection.disconnect();
+        }
+        if (!version.sha1.isEmpty()) {
+            String actual = sha1(temporary);
+            if (!actual.equalsIgnoreCase(version.sha1)) {
+                temporary.delete();
+                throw new java.io.IOException("Downloaded file failed its SHA-1 check: " + filename);
+            }
+        }
+        if (destination.exists() && !destination.delete()) {
+            temporary.delete();
+            throw new java.io.IOException("Couldn't replace existing file: " + filename);
+        }
+        if (!temporary.renameTo(destination)) {
+            temporary.delete();
+            throw new java.io.IOException("Couldn't finalize downloaded file: " + filename);
+        }
     }
 
     private void showModpackVersionDialog(Project project, List<Version> versions) {
