@@ -141,6 +141,8 @@
     <queries>
         <package android:name="git.mojo.ffmpeg"/>
         <package android:name="git.mojo.angle"/>
+        <package android:name="com.fcl.plugin.renderer.angle"/>
+        <package android:name="com.mio.plugin.renderer.angle"/>
         <package android:name="git.mojo.zink"/>
         <package android:name="git.mojo.mesa"/>
         <package android:name="com.fcl.plugin.mobileglues"/>
