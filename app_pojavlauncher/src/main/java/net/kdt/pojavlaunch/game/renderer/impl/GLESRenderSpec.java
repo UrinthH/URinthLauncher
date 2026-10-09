@@ -117,6 +117,8 @@ public abstract class GLESRenderSpec implements RenderSpec {
         }
         @Override protected int glesVersion() { return 3; }
         @Override public void setupEnvironment(Context context, Map<String, String> envMap) {
+            // Resolve the external native library again for the actual launch instance.
+            discover(context);
             super.setupEnvironment(context, envMap);
             envMap.put("LIBGL_USE_MC_COLOR", "1");
             envMap.put("LIBGL_GL", "31");
