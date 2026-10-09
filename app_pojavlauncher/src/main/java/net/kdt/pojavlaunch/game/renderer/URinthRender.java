@@ -39,8 +39,7 @@ public final class URinthRender {
             "MESA_SHADER_CACHE_MAX_SIZE",
             "MESA_SHADER_CACHE_DIR",
             "mesa_glthread",
-            "MESA_GLSL_CACHE_DIR",
-            "LIBGL_BATCH"
+            "MESA_GLSL_CACHE_DIR"
     };
 
     // Snapshot the launcher's original process environment before we change it.
@@ -202,12 +201,10 @@ public final class URinthRender {
             // Retain the legacy cache key used elsewhere in this launcher fork.
             env.put("MESA_GLSL_CACHE_DIR", Tools.DIR_CACHE.getAbsolutePath());
             Log.i(TAG, "Enabled Mesa shader cache sizing; worker-thread decision is memory-aware");
-        } else if (Renderers.GL4ES_RENDERER.equals(tag)) {
-            // GL4ES supports draw batching. Keep it opt-in behind Ultra Mode because
-            // some games/mods may render differently; compare frame-time results on-device.
-            env.put("LIBGL_BATCH", "1");
-            Log.i(TAG, "Enabled opt-in GL4ES draw batching (LIBGL_BATCH=1); verify visual and FPS results");
         } else {
+            // No GL4ES override is enabled until a device benchmark demonstrates a
+            // repeatable benefit and visual compatibility. The wrapper alone is not
+            // a performance optimization.
             Log.i(TAG, "No backend-specific Ultra optimization is implemented for " + tag
                     + "; this profile does not replace the selected renderer");
         }
