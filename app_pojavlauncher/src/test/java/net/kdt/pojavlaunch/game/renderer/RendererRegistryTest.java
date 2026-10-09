@@ -55,7 +55,7 @@ public class RendererRegistryTest {
     public void replacingRendererWithNullIsRejectedClearly() {
         GameRenderer renderer = new GameRenderer(Renderers.GL4ES_RENDERER);
         try {
-            renderer.setCurrentRenderer(null);
+            renderer.setCurrentRenderer((RenderSpec) null);
             org.junit.Assert.fail("Expected null renderer replacement to be rejected");
         } catch (IllegalArgumentException expected) {
             assertEquals("Renderer spec must not be null", expected.getMessage());
