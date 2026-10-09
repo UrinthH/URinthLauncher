@@ -269,17 +269,13 @@ public class GameRunner {
         }
 
         if(isLtw && checkRenderDistance(versionInfo, gamedir)) {
+            // Warn about the known LTW/Adreno buffer limit, but never rewrite options.txt.
+            // The user retains control of render distance and all other Minecraft settings.
             if(showDialog(activity, R.string.ltw_render_distance_warning_msg)) return;
-            // If the code goes here, it means that the user clicked "OK". Fix the render distance.
-            try {
-                MCOptionUtils.set("renderDistance", "7");
-                MCOptionUtils.save();
-            }catch (Exception e) {
-                Log.e("Tools", "Failed to fix render distance setting", e);
-            }
         }
 
-        GameOptionsUtils.fixOptions(isLtw);
+        // Do not call GameOptionsUtils.fixOptions(): that legacy helper edits options.txt
+        // (fullscreen, narrator and cloud range). Renderer setup must not mutate player options.
 
         if(isLtw && GpuUtils.getGlInfo().forcedMsaa) {
             if(showDialog(activity, R.string.ltw_4x_msaa_warning_msg)) return;
