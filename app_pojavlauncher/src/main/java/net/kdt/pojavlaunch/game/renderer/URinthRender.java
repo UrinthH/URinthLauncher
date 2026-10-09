@@ -195,8 +195,10 @@ public final class URinthRender {
                 env.put("mesa_glthread", "false");
                 Log.i(TAG, "Memory-constrained device detected; explicitly disabled mesa_glthread to limit worker-thread pressure");
             } else {
-                env.put("mesa_glthread", "true");
-                Log.i(TAG, "Enabled Mesa GL worker-thread profile on non-low-RAM device");
+                // Keep Mesa's own default on other devices until repeatable per-device
+                // benchmarks demonstrate that forcing a worker thread is beneficial.
+                // Do not inject an unvalidated global performance setting.
+                Log.i(TAG, "Non-low-RAM device; leaving mesa_glthread at the backend default pending benchmark evidence");
             }
             // Retain the legacy cache key used elsewhere in this launcher fork.
             env.put("MESA_GLSL_CACHE_DIR", Tools.DIR_CACHE.getAbsolutePath());
