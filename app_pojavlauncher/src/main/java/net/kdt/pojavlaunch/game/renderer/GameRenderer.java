@@ -49,7 +49,7 @@ public class GameRenderer {
     private RenderSpec currentRenderer;
     private Map<String, String> environment = new HashMap<>();
     private Context rendererContext;
-    private final Map<String, String> originalRendererEnvironment = new HashMap<>();
+    private static final Map<String, String> ORIGINAL_RENDERER_ENVIRONMENT = new HashMap<>();
 
     public GameRenderer(String currentRenderer) {
         this.currentRenderer = getKnownRenderer(currentRenderer);
@@ -111,9 +111,10 @@ public class GameRenderer {
             return;
         }
 
-        // A GameRenderer can be reused when the user exits and launches another instance.
-        // Restore only URinth-owned variables before configuring the newly selected backend,
-        // so Ultra OFF cannot inherit overrides from a previous Ultra ON launch.
+        // Renderer env changes are process-wide. Restore the baseline captured on the first
+        // launch before configuring this session, preventing a previous backend from leaking
+        // POJAV_RENDERER/Mesa/GL variables into the next game instance.
+        restorePreviousRendererEnvironment();
         URinthRender.restoreNormalEnvironment();
 
         // Ultra is a launch-time wrapper around the selected backend, not a fake native driver.
@@ -188,8 +189,8 @@ public class GameRenderer {
     private void applyEnvironmentMap(Map<String, String> values) throws ErrnoException {
         for (Map.Entry<String, String> e : values.entrySet()) {
             String key = e.getKey();
-            if (!originalRendererEnvironment.containsKey(key)) {
-                originalRendererEnvironment.put(key, Os.getenv(key));
+            if (!ORIGINAL_RENDERER_ENVIRONMENT.containsKey(key)) {
+                ORIGINAL_RENDERER_ENVIRONMENT.put(key, Os.getenv(key));
             }
             Logger.appendToLog("Added renderer env: " + key + "=" + e.getValue());
             Os.setenv(key, e.getValue(), true);
@@ -209,7 +210,7 @@ public class GameRenderer {
     }
 
     private void restorePreviousRendererEnvironment() {
-        for (Map.Entry<String, String> entry : originalRendererEnvironment.entrySet()) {
+        for (Map.Entry<String, String> entry : ORIGINAL_RENDERER_ENVIRONMENT.entrySet()) {
             try {
                 if (entry.getValue() == null) {
                     Os.unsetenv(entry.getKey());
@@ -220,7 +221,6 @@ public class GameRenderer {
                 logRendererFailure("Could not restore renderer environment key " + entry.getKey(), error);
             }
         }
-        originalRendererEnvironment.clear();
     }
 
     /** Get current selected renderer. */
