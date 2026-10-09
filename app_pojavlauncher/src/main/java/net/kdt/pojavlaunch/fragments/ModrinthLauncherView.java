@@ -50,14 +50,14 @@ import git.artdeell.mojo.R;
 public final class ModrinthLauncherView extends View {
     private static final float W = 1536f;
     private static final float H = 686f;
-    private static final int BG = Color.rgb(3, 18, 29);
-    private static final int PANEL = Color.rgb(5, 28, 43);
-    private static final int PANEL_2 = Color.rgb(7, 37, 54);
+    private static final int BG = Color.rgb(3, 16, 27);
+    private static final int PANEL = Color.rgb(7, 29, 44);
+    private static final int PANEL_2 = Color.rgb(9, 39, 55);
     private static final int TEXT = Color.rgb(242, 248, 250);
-    private static final int MUTED = Color.rgb(163, 184, 195);
-    private static final int ACCENT = Color.rgb(0, 225, 180);
-    private static final int CYAN = Color.rgb(34, 181, 224);
-    private static final int LINE = Color.rgb(18, 112, 139);
+    private static final int MUTED = Color.rgb(171, 192, 203);
+    private static final int ACCENT = Color.rgb(0, 230, 170);
+    private static final int CYAN = Color.rgb(42, 190, 220);
+    private static final int LINE = Color.rgb(24, 94, 118);
 
     private final Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint stroke = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -289,7 +289,7 @@ public final class ModrinthLauncherView extends View {
     }
 
     private void drawHeader(Canvas c) {
-        p.setColor(Color.rgb(3,17,28)); c.drawRect(0,0,W,62,p);
+        p.setShader(new LinearGradient(0,0,W,62,Color.rgb(3,17,28),Color.rgb(5,28,42),Shader.TileMode.CLAMP)); c.drawRect(0,0,W,62,p); p.setShader(null);
         drawHamburger(c,38,31);
         drawBitmap(c,logo,80,10,48,48);
         text(c,"Modrinth",143,39,27,TEXT,true);
@@ -301,11 +301,11 @@ public final class ModrinthLauncherView extends View {
 
     private void drawSidebar(Canvas c) {
         float x=0, y=62, w=228;
-        p.setColor(Color.rgb(4,25,39)); c.drawRect(x,y,w,H,p);
+        p.setShader(new LinearGradient(0,y,w,H,Color.rgb(4,25,39),Color.rgb(3,20,32),Shader.TileMode.CLAMP)); c.drawRect(x,y,w,H,p); p.setShader(null);
         String[] labels={"Home","Instances","Mods","Resource Packs","Servers","Settings"};
         for(int i=0;i<labels.length;i++) {
             float yy=72+i*48;
-            if(i==selectedPage) round(c,19,yy,215,yy+42,12,Color.rgb(7,105,91),ACCENT,1.5f);
+            if(i==selectedPage) { round(c,19,yy,215,yy+42,12,Color.rgb(7,91,81),ACCENT,1.2f); p.setColor(Color.argb(35,0,230,170)); c.drawRoundRect(19,yy,25,yy+42,3,3,p); }
             drawNavIcon(c,43,yy+21,i);
             text(c,labels[i],75,yy+27,14,i==selectedPage?ACCENT:TEXT,true);
         }
@@ -313,7 +313,7 @@ public final class ModrinthLauncherView extends View {
         String[] more={"Modpacks","Shaders","Worlds"};
         for(int i=0;i<3;i++) {
             float yy=378+i*48;
-            if(selectedPage==6+i) round(c,19,yy,215,yy+42,12,Color.rgb(7,105,91),ACCENT,1.5f);
+            if(selectedPage==6+i) { round(c,19,yy,215,yy+42,12,Color.rgb(7,91,81),ACCENT,1.2f); p.setColor(Color.argb(35,0,230,170)); c.drawRoundRect(19,yy,25,yy+42,3,3,p); }
             drawNavIcon(c,43,yy+21,6+i);
             text(c,more[i],75,yy+27,14,selectedPage==6+i?ACCENT:TEXT,true);
         }
@@ -341,7 +341,7 @@ public final class ModrinthLauncherView extends View {
     }
 
     private void drawInstancesPage(Canvas c, float x, float y, float w, float h) {
-        round(c, x, y, x+w, y+h, 16, Color.rgb(4,24,38), LINE, 1.5f);
+        round(c, x, y, x+w, y+h, 18, Color.rgb(5,25,39), Color.rgb(21,82,105), 1.2f);
         text(c, "Instances", x+28, y+42, 27, TEXT, true);
         text(c, "Create and manage your Minecraft profiles", x+28, y+66, 13, MUTED, false);
 
@@ -364,10 +364,10 @@ public final class ModrinthLauncherView extends View {
 
     private void drawInstanceActionCard(Canvas c,float x,float y,float w,float h,String title,
                                         String subtitle,String detail,String action,int option) {
-        round(c,x,y,x+w,y+h,14,Color.rgb(7,37,54),Color.rgb(19,103,128),1.3f);
+        round(c,x,y,x+w,y+h,16,Color.rgb(7,34,50),Color.rgb(25,94,117),1.1f);
         p.setColor(option==2?ACCENT:CYAN);
         c.drawRoundRect(x+1,y+16,x+5,y+h-16,2,2,p);
-        round(c,x+18,y+18,x+58,y+58,11,Color.rgb(8,66,80),Color.TRANSPARENT,0);
+        round(c,x+18,y+18,x+58,y+58,12,Color.rgb(6,56,70),Color.rgb(20,111,129),0.8f);
         String symbol = option==0?"V":option==1?"O":option==2?"F":option==3?"Q":option==4?"Fg":option==5?"N":"LF";
         text(c,symbol,x+25,y+45,option>=4?14:20,ACCENT,true);
         text(c,title,x+72,y+34,19,TEXT,true);
@@ -432,7 +432,7 @@ public final class ModrinthLauncherView extends View {
     }
 
     private void drawHero(Canvas c,float x,float y,float w,float h) {
-        round(c,x,y,x+w,y+h,14,Color.rgb(9,38,57),CYAN,1.5f);
+        round(c,x,y,x+w,y+h,17,Color.rgb(7,32,48),Color.rgb(25,116,139),1.1f);
         c.save();
         c.clipRect(x+1,y+1,x+w-1,y+h-1);
         drawRealisticHeroImage(c,x+1,y+1,w-2,h-2);
@@ -577,7 +577,7 @@ public final class ModrinthLauncherView extends View {
             drawRealisticInstanceImage(c, xx, y, cw, 160, i);
             round(c,xx,y+100,xx+cw,y+160,0,Color.argb(215,3,25,39),Color.TRANSPARENT,0);
             c.restore();
-            round(c,xx,y,xx+cw,y+160,12,Color.TRANSPARENT,Color.rgb(9,156,186),1.5f);
+            round(c,xx,y,xx+cw,y+160,14,Color.TRANSPARENT,Color.rgb(23,111,137),1.1f);
 
             DisplayInstance instance = i < instanceCards.length ? instanceCards[i] : null;
             String name = instance != null && Tools.isValidString(instance.name)
@@ -658,7 +658,7 @@ public final class ModrinthLauncherView extends View {
         float gap=10,cw=(w-gap*4)/5f;
         for(int i=0;i<5;i++) {
             float xx=x+i*(cw+gap);
-            round(c,xx,y+48,xx+cw,y+130,11,PANEL_2,Color.rgb(11,122,154),1.2f);
+            round(c,xx,y+48,xx+cw,y+130,13,PANEL_2,Color.rgb(23,96,119),1.0f);
             drawModIcon(c,xx+13,y+59,i);
             text(c,mods[i][0],xx+57,y+73,12,TEXT,true);
             text(c,mods[i][1],xx+57,y+94,10,MUTED,false);
