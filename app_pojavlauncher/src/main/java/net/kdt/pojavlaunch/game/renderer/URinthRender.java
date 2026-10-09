@@ -2,27 +2,49 @@ package net.kdt.pojavlaunch.game.renderer;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.system.ErrnoException;
+import android.system.Os;
 import android.util.Log;
 
 import net.kdt.pojavlaunch.Tools;
 import net.kdt.pojavlaunch.game.renderer.def.Renderers;
 
+import java.util.HashMap;
 import java.util.Map;
 
 /**
- * URinthRender is an opt-in performance profile layered over the launcher's
- * existing renderer backends. It intentionally does not edit options.txt,
- * resolution, or the user's saved renderer selection.
- *
- * This is the first integration layer, not a replacement native GPU driver.
+ * Reversible opt-in renderer profile. It never edits options.txt, resolution,
+ * or the user's selected renderer. Profile changes are applied at game-launch
+ * environment setup time, so an already-running game must be restarted.
  */
 public final class URinthRender {
     private static final String TAG = "URinthRender";
     private static final String PREFS = "urinth_ui";
     private static final String KEY_ULTRA = "ultra";
     private static final String PROFILE_KEY = "URINTH_RENDER_PROFILE";
+    private static final String ULTRA_KEY = "URINTH_ULTRA_MODE";
+
+    private static final String[] PROFILE_ENV_KEYS = {
+            ULTRA_KEY,
+            PROFILE_KEY,
+            "MESA_SHADER_CACHE_MAX_SIZE",
+            "mesa_glthread",
+            "MESA_GLSL_CACHE_DIR"
+    };
+
+    // Snapshot the launcher's original process environment before we change it.
+    // OFF restores these values (or unsets variables that were originally absent).
+    private static final Map<String, String> ORIGINAL_ENV = captureOriginalEnvironment();
 
     private URinthRender() {}
+
+    private static Map<String, String> captureOriginalEnvironment() {
+        Map<String, String> values = new HashMap<>();
+        for (String key : PROFILE_ENV_KEYS) {
+            values.put(key, System.getenv(key));
+        }
+        return values;
+    }
 
     public static boolean isUltraEnabled(Context context) {
         SharedPreferences prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
@@ -30,14 +52,37 @@ public final class URinthRender {
     }
 
     /**
-     * Add only renderer-level environment settings while Ultra Mode is enabled.
-     * Renderer selection remains owned by the user's existing instance settings.
+     * Restore the launcher's original values before each renderer setup.
+     * The selected RenderSpec then supplies its normal backend environment.
+     */
+    public static void restoreNormalEnvironment() {
+        for (String key : PROFILE_ENV_KEYS) {
+            try {
+                String original = ORIGINAL_ENV.get(key);
+                if (original == null) {
+                    Os.unsetenv(key);
+                } else {
+                    Os.setenv(key, original, true);
+                }
+            } catch (ErrnoException e) {
+                Log.w(TAG, "Could not restore normal environment variable " + key, e);
+            }
+        }
+        Log.i(TAG, "Restored baseline renderer environment before profile selection");
+    }
+
+    /**
+     * Apply only the opt-in environment overrides. If OFF, no Ultra overrides
+     * are added after the normal renderer has configured its environment.
      */
     public static void applyProfile(Context context, RenderSpec renderer, Map<String, String> env) {
-        if (!isUltraEnabled(context) || renderer == null) return;
+        if (!isUltraEnabled(context) || renderer == null) {
+            Log.i(TAG, "Ultra profile OFF; using the selected renderer's normal environment");
+            return;
+        }
 
         String tag = renderer.tag();
-        env.put("URINTH_ULTRA_MODE", "1");
+        env.put(ULTRA_KEY, "1");
         env.put(PROFILE_KEY, "ultra");
         Log.i(TAG, "Ultra profile enabled for backend: " + renderer.name());
 
