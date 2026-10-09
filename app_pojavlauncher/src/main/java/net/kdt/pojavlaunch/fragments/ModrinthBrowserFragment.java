@@ -53,11 +53,11 @@ public class ModrinthBrowserFragment extends Fragment {
     public static final String TAG = "ModrinthBrowserFragment";
     public static final String ARG_CATEGORY = "modrinth_category";
 
-    private static final int BG = Color.rgb(4, 24, 38);
-    private static final int CARD = Color.rgb(7, 37, 54);
-    private static final int TEXT = Color.rgb(242, 248, 250);
-    private static final int MUTED = Color.rgb(163, 184, 195);
-    private static final int ACCENT = Color.rgb(0, 225, 180);
+    private static final int BG = Color.rgb(4, 20, 32);
+    private static final int CARD = Color.rgb(8, 32, 47);
+    private static final int TEXT = Color.rgb(245, 250, 252);
+    private static final int MUTED = Color.rgb(171, 192, 203);
+    private static final int ACCENT = Color.rgb(0, 230, 170);
 
     private String category = "mod";
     private String searchQuery = "";
@@ -153,19 +153,19 @@ public class ModrinthBrowserFragment extends Fragment {
         LinearLayout root = new LinearLayout(requireContext());
         root.setOrientation(LinearLayout.VERTICAL);
         root.setBackgroundColor(BG);
-        root.setPadding(dp(18), dp(16), dp(18), dp(10));
+        root.setPadding(dp(22), dp(20), dp(22), dp(14));
 
         TextView heading = new TextView(requireContext());
         heading.setText(categoryTitle());
         heading.setTextColor(TEXT);
-        heading.setTextSize(23);
+        heading.setTextSize(25);
         heading.setTypeface(null, android.graphics.Typeface.BOLD);
         root.addView(heading, new LinearLayout.LayoutParams(-1, -2));
 
         TextView sub = new TextView(requireContext());
         sub.setText("Browse real Modrinth projects. Install only versions compatible with your selected profile.");
         sub.setTextColor(MUTED);
-        sub.setTextSize(12);
+        sub.setTextSize(13);
         LinearLayout.LayoutParams subParams = new LinearLayout.LayoutParams(-1, -2);
         subParams.topMargin = dp(4);
         subParams.bottomMargin = dp(12);
@@ -178,11 +178,11 @@ public class ModrinthBrowserFragment extends Fragment {
         search.setTextColor(TEXT);
         search.setHintTextColor(MUTED);
         search.setHint("Search " + categoryTitle().toLowerCase(Locale.ROOT));
-        search.setBackgroundColor(CARD);
-        search.setPadding(dp(12), 0, dp(12), 0);
+        search.setBackground(rounded(Color.rgb(7, 31, 46), 12, Color.rgb(25, 94, 112), 1));
+        search.setPadding(dp(14), 0, dp(14), 0);
         searchRow.addView(search, new LinearLayout.LayoutParams(0, dp(44), 1f));
         Button searchButton = button("Search");
-        LinearLayout.LayoutParams buttonParams = new LinearLayout.LayoutParams(dp(90), dp(44));
+        LinearLayout.LayoutParams buttonParams = new LinearLayout.LayoutParams(dp(104), dp(44));
         buttonParams.leftMargin = dp(8);
         searchRow.addView(searchButton, buttonParams);
         root.addView(searchRow);
@@ -237,7 +237,7 @@ public class ModrinthBrowserFragment extends Fragment {
         b.setText(label);
         b.setAllCaps(false);
         b.setTextColor(Color.rgb(0, 34, 36));
-        b.setBackgroundTintList(android.content.res.ColorStateList.valueOf(ACCENT));
+        b.setBackground(rounded(ACCENT, 12, Color.rgb(80, 255, 213), 1));
         b.setTextSize(12);
         return b;
     }
@@ -327,17 +327,17 @@ public class ModrinthBrowserFragment extends Fragment {
         LinearLayout card = new LinearLayout(requireContext());
         card.setOrientation(LinearLayout.HORIZONTAL);
         card.setGravity(Gravity.CENTER_VERTICAL);
-        card.setPadding(dp(14), dp(12), dp(14), dp(12));
-        card.setBackground(rounded(CARD, 14, Color.rgb(20, 76, 91), 1));
+        card.setPadding(dp(16), dp(14), dp(16), dp(14));
+        card.setBackground(rounded(CARD, 16, Color.rgb(24, 91, 111), 1));
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, -2);
-        params.bottomMargin = dp(10);
+        params.bottomMargin = dp(12);
         resultList.addView(card, params);
 
         ImageView icon = new ImageView(requireContext());
         icon.setScaleType(ImageView.ScaleType.CENTER_CROP);
-        icon.setBackground(rounded(Color.rgb(0, 70, 72), 12, ACCENT, 1));
+        icon.setBackground(rounded(Color.rgb(6, 57, 67), 14, Color.rgb(25, 126, 132), 1));
         icon.setClipToOutline(true);
-        icon.setImageDrawable(rounded(Color.rgb(0, 70, 72), 12, ACCENT, 1));
+        icon.setImageDrawable(rounded(Color.rgb(6, 57, 67), 14, Color.rgb(25, 126, 132), 1));
         LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams(dp(58), dp(58));
         iconParams.rightMargin = dp(12);
         card.addView(icon, iconParams);
@@ -350,7 +350,7 @@ public class ModrinthBrowserFragment extends Fragment {
         TextView title = new TextView(requireContext());
         title.setText(project.title);
         title.setTextColor(TEXT);
-        title.setTextSize(15);
+        title.setTextSize(16);
         title.setMaxLines(2);
         title.setTypeface(null, android.graphics.Typeface.BOLD);
         details.addView(title);
@@ -358,7 +358,7 @@ public class ModrinthBrowserFragment extends Fragment {
         TextView description = new TextView(requireContext());
         description.setText(project.description);
         description.setTextColor(MUTED);
-        description.setTextSize(11);
+        description.setTextSize(12);
         description.setMaxLines(3);
         description.setEllipsize(android.text.TextUtils.TruncateAt.END);
         LinearLayout.LayoutParams descParams = new LinearLayout.LayoutParams(-1, -2);
@@ -368,7 +368,7 @@ public class ModrinthBrowserFragment extends Fragment {
         TextView metadata = new TextView(requireContext());
         metadata.setText(categoryTitle() + "  ·  Modrinth");
         metadata.setTextColor(ACCENT);
-        metadata.setTextSize(10);
+        metadata.setTextSize(11);
         LinearLayout.LayoutParams metaParams = new LinearLayout.LayoutParams(-1, -2);
         metaParams.topMargin = dp(6);
         details.addView(metadata, metaParams);
@@ -376,7 +376,7 @@ public class ModrinthBrowserFragment extends Fragment {
         Button install = button(category.equals("modpack") ? "Choose version" : "Install");
         install.setTextSize(11);
         LinearLayout.LayoutParams installParams = new LinearLayout.LayoutParams(dp(94), dp(40));
-        installParams.leftMargin = dp(10);
+        installParams.leftMargin = dp(12);
         card.addView(install, installParams);
         card.setOnClickListener(v -> openProject(project));
         install.setOnClickListener(v -> openProject(project));
