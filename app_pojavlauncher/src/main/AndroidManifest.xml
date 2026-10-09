@@ -144,6 +144,16 @@
         <package android:name="git.mojo.zink"/>
         <package android:name="git.mojo.mesa"/>
         <package android:name="com.fcl.plugin.mobileglues"/>
+        <package android:name="com.fcl.plugin.renderer.mobileglues"/>
+        <package android:name="com.mio.plugin.renderer.mobileglues"/>
+        <package android:name="com.bzlzhh.plugin.ngg"/>
+        <package android:name="com.bzlzhh.plugin.ngg.angleless"/>
+        <package android:name="com.fcl.plugin.renderer.mesa"/>
+        <package android:name="com.mio.plugin.renderer.mesa2319"/>
+        <package android:name="com.mio.plugin.renderer.mesa2427"/>
+        <package android:name="com.mio.plugin.renderer.mesa2434"/>
+        <package android:name="com.mio.plugin.renderer.mesa2500"/>
+        <package android:name="com.mio.plugin.renderer.mesa2500.rc1"/>
         <package android:name="git.artdeell.mojo"/>
         <package android:name="git.artdeell.mojo.debug"/>
         <package android:name="git.artdeell.mojo.pub"/>
