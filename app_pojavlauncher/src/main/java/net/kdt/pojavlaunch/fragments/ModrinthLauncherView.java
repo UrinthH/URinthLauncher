@@ -193,7 +193,7 @@ public final class ModrinthLauncherView extends View {
                         api.disconnect();
                     }
                     String iconUrl = new JSONObject(json).optString("icon_url", "");
-                    if (iconUrl.isEmpty()) continue;
+                    if (iconUrl.isEmpty()) return;
                     HttpURLConnection img = null;
                     try {
                         img = (HttpURLConnection) new URL(iconUrl).openConnection();
