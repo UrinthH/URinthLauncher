@@ -213,7 +213,7 @@ public class MesaRenderSpec implements RenderSpec {
         @Override public String library() { return "libOSMesa_2300d.so"; }
         @Override public boolean compatibleDevice(Context context) {
             GpuUtils.GLInfo info = GpuUtils.getGlInfo();
-            return info != null && info.isArm() && super.compatibleDevice(context);
+            return info != null && info.isMali() && super.compatibleDevice(context);
         }
         @Override public void setupEnvironment(Context context, Map<String, String> envMap) {
             super.setupEnvironment(context, envMap);
