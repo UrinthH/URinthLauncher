@@ -35,6 +35,7 @@ fi
 # any downloads and must leave the original artifact untouched.
 mkdir -p "$tmpdir/content/META-INF/jars"
 : > "$tmpdir/content/META-INF/jars/lwjgl-vulkan-3.3.4.jar"
+rm -f "$fake_jar"
 (cd "$tmpdir/content" && zip -q -r "$fake_jar" META-INF)
 cp "$fake_jar" "$tmpdir/before.jar"
 set +e
