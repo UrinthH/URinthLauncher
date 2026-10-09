@@ -111,10 +111,12 @@ FAKE_WGET
 chmod +x "$fakebin/wget"
 
 fixture="$tmpdir/fixture"
-mkdir -p "$fixture/META-INF/jars" "$fixture/seed"
+mkdir -p "$fixture/META-INF/jars" "$fixture/seed/META-INF"
 printf 'original-module\n' > "$fixture/seed/module.txt"
-(cd "$fixture/seed" && zip -q -r "$fixture/META-INF/jars/lwjgl-vulkan-3.3.3.jar" module.txt)
-printf '{"id":"original-vulkan"}\n' > "$fixture/META-INF/jars/fabric.mod.json"
+printf 'original-metadata\n' > "$fixture/seed/META-INF/module.marker"
+printf '{"id":"original-vulkan"}\n' > "$fixture/seed/fabric.mod.json"
+(cd "$fixture/seed" && zip -q -r "$fixture/META-INF/jars/lwjgl-vulkan-3.3.3.jar" module.txt META-INF fabric.mod.json)
+printf '{"id":"outer-vulkanmod"}\n' > "$fixture/META-INF/jars/fabric.mod.json"
 for module in shaderc vma; do
   case "$module" in
     shaderc) native_path="linux/arm64/org/lwjgl/shaderc/libshaderc.so" ;;
