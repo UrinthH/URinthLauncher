@@ -31,10 +31,17 @@ public interface GLESProvider {
         if (!preferAngle) return new NativeGLESProvider();
         GLESProvider provider;
         // External ANGLE takes priority over system ANGLE so we can override it easily
-        LibraryPlugin anglePlugin = LibraryPlugin.discoverPlugin(context, LibraryPlugin.ID_ANGLE_PLUGIN);
-        provider = new GLESProvider.ExternalAngleProvider(anglePlugin);
-        if (provider.supported()) {
-            return provider;
+        String[] anglePackages = {
+                LibraryPlugin.ID_ANGLE_PLUGIN,
+                LibraryPlugin.ID_ANGLE_PLUGIN_FCL,
+                LibraryPlugin.ID_ANGLE_PLUGIN_MIO
+        };
+        for (String packageName : anglePackages) {
+            LibraryPlugin anglePlugin = LibraryPlugin.discoverPlugin(context, packageName);
+            provider = new GLESProvider.ExternalAngleProvider(anglePlugin);
+            if (provider.supported()) {
+                return provider;
+            }
         }
         provider = new GLESProvider.SystemAngleProvider();
         if (provider.supported()) {
