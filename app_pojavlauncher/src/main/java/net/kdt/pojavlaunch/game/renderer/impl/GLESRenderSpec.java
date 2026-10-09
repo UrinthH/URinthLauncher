@@ -101,8 +101,52 @@ public abstract class GLESRenderSpec implements RenderSpec {
     }
 
     public static class GL4ESRenderSpec extends GLESRenderSpec {
+        private LibraryPlugin externalProvider;
+
+        private boolean discoverExternalProvider(Context context) {
+            if (externalProvider != null && externalProvider.checkLibraries(library())) return true;
+            externalProvider = null;
+            String[] packages = {
+                    LibraryPlugin.ID_GL4ES_PLUGIN_FCL,
+                    LibraryPlugin.ID_GL4ES_PLUGIN_MIO
+            };
+            for (String packageName : packages) {
+                LibraryPlugin candidate = LibraryPlugin.discoverPlugin(context, packageName);
+                if (candidate != null && candidate.checkLibraries(library())) {
+                    externalProvider = candidate;
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        @Override
         public boolean compatibleDevice(Context context) {
-            return true;
+            // Prefer the launcher's bundled GL4ES. Discover external copies only if it is absent.
+            return new File(Tools.NATIVE_LIB_DIR, library()).isFile()
+                    || discoverExternalProvider(context);
+        }
+
+        @Override
+        public String librarySearchPath() {
+            return new File(Tools.NATIVE_LIB_DIR, library()).isFile()
+                    ? null : (externalProvider == null ? null : externalProvider.getLibraryPath());
+        }
+
+        @Override
+        public void setupEnvironment(Context context, Map<String, String> envMap) {
+            discoverExternalProvider(context);
+            super.setupEnvironment(context, envMap);
+        }
+
+        @Override
+        public boolean setupRenderer() {
+            if (new File(Tools.NATIVE_LIB_DIR, library()).isFile()) {
+                return super.setupRenderer();
+            }
+            LibraryPlugin plugin = externalProvider;
+            if (plugin == null || !plugin.checkLibraries(library())) return false;
+            return MojoExec.prepareEgl(plugin.resolveAbsolutePath(library()), true, true, glesVersion());
         }
         public String name() {
             return "GL4ES";
