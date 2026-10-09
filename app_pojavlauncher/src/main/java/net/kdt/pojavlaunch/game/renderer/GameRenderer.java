@@ -167,12 +167,32 @@ public class GameRenderer {
         }
     }
 
+    /**
+     * Resolve the selected backend library path and initialize it safely. Optional
+     * plugin metadata can become stale between Settings and launch, so failures
+     * here must also allow the normal fallback path to run.
+     */
+    static boolean prepareRendererSafely(RenderSpec renderer) {
+        if (renderer == null) return false;
+        try {
+            setRendererLibraryPath(Tools.NATIVE_LIB_DIR, renderer.librarySearchPath());
+            return setupRendererSafely(renderer);
+        } catch (RuntimeException error) {
+            Log.e(TAG, "Renderer preparation failed before native setup: backend="
+                    + renderer.name(), error);
+            return false;
+        } catch (LinkageError error) {
+            Log.e(TAG, "Renderer preparation hit a native linkage error: backend="
+                    + renderer.name(), error);
+            return false;
+        }
+    }
+
     /** Set up current renderer or fall back to GL4ES if setup fails. */
     public boolean maybeSetupRenderer() {
         final String requestedBackend = currentRenderer.name();
         final long setupStartedAt = SystemClock.elapsedRealtime();
-        setRendererLibraryPath(Tools.NATIVE_LIB_DIR, currentRenderer.librarySearchPath());
-        if (!setupRendererSafely(currentRenderer)) {
+        if (!prepareRendererSafely(currentRenderer)) {
             final long primarySetupMs = SystemClock.elapsedRealtime() - setupStartedAt;
             Log.e(TAG, "Renderer setup failed: backend=" + requestedBackend
                     + ", elapsedMs=" + primarySetupMs
@@ -189,9 +209,8 @@ public class GameRenderer {
             } else {
                 currentRenderer = fallback;
             }
-            setRendererLibraryPath(Tools.NATIVE_LIB_DIR, currentRenderer.librarySearchPath());
             final long fallbackStartedAt = SystemClock.elapsedRealtime();
-            boolean fallbackReady = setupRendererSafely(currentRenderer);
+            boolean fallbackReady = prepareRendererSafely(currentRenderer);
             final long fallbackSetupMs = SystemClock.elapsedRealtime() - fallbackStartedAt;
             Log.i(TAG, "Renderer fallback result: backend=" + currentRenderer.name()
                     + ", ready=" + fallbackReady
