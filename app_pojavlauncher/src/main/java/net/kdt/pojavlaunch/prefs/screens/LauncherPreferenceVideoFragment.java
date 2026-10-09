@@ -67,6 +67,9 @@ public class LauncherPreferenceVideoFragment extends LauncherPreferenceFragment 
 
         ListPreference rendererListPreference = requirePreference("renderer",
                 ListPreference.class);
+        // Renderer plugins may be installed or removed while the launcher is open. Rebuild
+        // the compatible list whenever Settings is entered so stale plugin paths do not persist.
+        RendererCache.releaseRendererCache();
         RendererCache list = RendererCache.getCompatibleRenderers(getContext());
         rendererListPreference.setEntries(list.rendererDisplayNames);
         rendererListPreference.setEntryValues(list.rendererIds.toArray(new String[0]));
