@@ -54,8 +54,8 @@ public class RendererFrameTimeStatsTest {
         stats.recordFrameTimeNanos(50_000_000L); // 20 FPS
         stats.recordFrameTimeNanos(100_000_000L); // 10 FPS
 
-        // Slowest 1% of 200 samples is two frames: average(20, 10) = 15 FPS.
-        assertEquals(15.0, stats.snapshot().onePercentLowFps, EPSILON);
+        // Slowest 1% is 50 ms and 100 ms: 1000 / mean(50, 100) = 13.333 FPS.
+        assertEquals(1000.0 / 75.0, stats.snapshot().onePercentLowFps, EPSILON);
     }
 
     @Test
