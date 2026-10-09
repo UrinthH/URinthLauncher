@@ -301,16 +301,12 @@ public final class URinthRender {
             // Retain the legacy cache key used elsewhere in this launcher fork.
             env.put("MESA_GLSL_CACHE_DIR", Tools.DIR_CACHE.getAbsolutePath());
             Log.i(TAG, "Enabled Mesa shader cache sizing; worker-thread decision is memory-aware");
-        } else if (shouldEnableGl4esBatching(tag, ultraEnabled)) {
-            // GL4ES supports conservative draw-call batching. Keep it opt-in with
-            // Ultra Mode and restore the original value when Ultra is disabled.
-            // The effect is workload/device-dependent and must be benchmarked.
-            env.put("LIBGL_BATCH", "1");
-            Log.i(TAG, "Enabled experimental GL4ES draw batching (LIBGL_BATCH=1); benchmark FPS and visual correctness on-device");
         } else {
-            // The wrapper alone is not a performance optimization.
-            Log.i(TAG, "No backend-specific Ultra optimization is implemented for " + tag
-                    + "; this profile does not replace the selected renderer");
+            // Do not enable experimental GL4ES batching: it can hang or stall older
+            // Minecraft versions on some Android devices. Keep the selected renderer's
+            // baseline environment unchanged until a dedicated device test validates it.
+            Log.i(TAG, "No experimental GL4ES batching or backend override applied for "
+                    + tag + "; keeping the selected renderer baseline to protect launch stability");
         }
     }
 
