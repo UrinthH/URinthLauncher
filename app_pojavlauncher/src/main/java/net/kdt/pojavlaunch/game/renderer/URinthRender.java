@@ -311,33 +311,6 @@ public final class URinthRender {
     }
 
     /**
-     * Add conservative, opt-in JVM latency defaults without replacing explicit user GC
-     * choices or changing heap size. The target pause time is a hint, not a guarantee.
-     */
-    static void addJvmOptimizationArgs(List<String> javaArgs) {
-        if (javaArgs == null) return;
-
-        boolean hasGcChoice = false;
-        boolean hasPauseTarget = false;
-        boolean hasParallelRefProcessing = false;
-        for (String arg : javaArgs) {
-            if (arg == null) continue;
-            if (arg.startsWith("-XX:+Use") || arg.startsWith("-XX:-Use")) {
-                if (arg.endsWith("GC")) hasGcChoice = true;
-            }
-            if (arg.startsWith("-XX:MaxGCPauseMillis=")) hasPauseTarget = true;
-            if (arg.equals("-XX:+ParallelRefProcEnabled")
-                    || arg.equals("-XX:-ParallelRefProcEnabled")) {
-                hasParallelRefProcessing = true;
-            }
-        }
-
-        if (!hasGcChoice) javaArgs.add("-XX:+UseG1GC");
-        if (!hasPauseTarget) javaArgs.add("-XX:MaxGCPauseMillis=100");
-        if (!hasParallelRefProcessing) javaArgs.add("-XX:+ParallelRefProcEnabled");
-    }
-
-    /**
      * JVM flags are intentionally not injected by Ultra Mode until validated on-device.
      * Unsupported or runtime-specific GC flags can prevent Minecraft from starting;
      * keep the user's configured Java arguments unchanged for reliable launch testing.
