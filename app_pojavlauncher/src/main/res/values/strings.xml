@@ -64,7 +64,11 @@
     <string name="mcl_setting_subtitle_javaargs">Be careful, this may make game crash if modified without knowledge.</string>
     <string name="mcl_setting_category_renderer">Renderer</string>
     <string name="mcl_setting_renderer_gles2_4">GL4ES (OpenGL ES 2) - 1.21.4 and lower</string>
+    <string name="mcl_setting_renderer_krypton">Krypton Wrapper (NG GL4ES) - requires renderer plugin</string>
     <string name="mcl_setting_renderer_ltw">LTW (OpenGL ES 3) - 1.17+ only</string>
+    <string name="mcl_setting_renderer_mobileglues">MobileGlues (external plugin, GLES 3+)</string>
+    <string name="mcl_setting_renderer_virgl">VirGL (external Mesa plugin required)</string>
+    <string name="mcl_setting_renderer_panfrost">Panfrost (Mali, external Mesa plugin required)</string>
     <string name="mcl_setting_renderer_vulkan_zink">Zink (Vulkan) - all versions</string>
     <string name="mcl_setting_renderer_vulkan_lzink">Legacy Zink (Vulkan) - all versions, low performance</string>
     <string name="mcl_setting_renderer_freedreno_kgsl">Freedreno (KGSL) - all versions</string>
