@@ -31,4 +31,23 @@ if [ -s "$fake_jar" ]; then
   exit 1
 fi
 
-echo "VulkanMod patcher argument-validation tests passed"
+# A structurally valid jar with an unsupported LWJGL version must fail before
+# any downloads and must leave the original artifact untouched.
+mkdir -p "$tmpdir/content/META-INF/jars"
+: > "$tmpdir/content/META-INF/jars/lwjgl-vulkan-3.3.4.jar"
+(cd "$tmpdir/content" && zip -q -r "$fake_jar" META-INF)
+cp "$fake_jar" "$tmpdir/before.jar"
+set +e
+output=$(bash "$patcher" "$fake_jar" arm64 2>&1)
+status=$?
+set -e
+if [ "$status" -ne 1 ] || [[ "$output" != *"Unsupported LWJGL version: 3.3.4"* ]]; then
+  echo "Expected clear unsupported-version failure; got exit=$status output=$output" >&2
+  exit 1
+fi
+if ! cmp -s "$fake_jar" "$tmpdir/before.jar"; then
+  echo "Unsupported-version validation modified the original jar" >&2
+  exit 1
+fi
+
+echo "VulkanMod patcher argument and version-validation tests passed"
