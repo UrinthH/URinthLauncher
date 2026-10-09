@@ -54,6 +54,7 @@ import java.util.Set;
 public class ModrinthBrowserFragment extends Fragment {
     public static final String TAG = "ModrinthBrowserFragment";
     public static final String ARG_CATEGORY = "modrinth_category";
+    public static final String ARG_QUERY = "modrinth_initial_query";
 
     private static final int BG = Color.rgb(4, 20, 32);
     private static final int CARD = Color.rgb(8, 32, 47);
@@ -210,6 +211,8 @@ public class ModrinthBrowserFragment extends Fragment {
         search.setTextColor(TEXT);
         search.setHintTextColor(MUTED);
         search.setHint("Search " + categoryTitle().toLowerCase(Locale.ROOT));
+        String initialQuery = getArguments() == null ? "" : getArguments().getString(ARG_QUERY, "");
+        if (!initialQuery.isEmpty()) search.setText(initialQuery);
         search.setBackground(rounded(Color.rgb(7, 31, 46), 12, Color.rgb(25, 94, 112), 1));
         search.setPadding(dp(14), 0, dp(14), 0);
         searchRow.addView(search, new LinearLayout.LayoutParams(0, dp(44), 1f));
@@ -253,7 +256,7 @@ public class ModrinthBrowserFragment extends Fragment {
 
         // World/map downloads are commonly published as modpacks on Modrinth.
         // Load results here instead of leaving the Worlds page empty.
-        loadProjects("");
+        loadProjects(initialQuery);
         return root;
     }
 
@@ -346,9 +349,13 @@ public class ModrinthBrowserFragment extends Fragment {
             HttpURLConnection connection = null;
             try {
                 connection = (HttpURLConnection) new java.net.URL(project.icon).openConnection();
-                connection.setConnectTimeout(8000);
-                connection.setReadTimeout(10000);
+                connection.setInstanceFollowRedirects(true);
+                connection.setConnectTimeout(10000);
+                connection.setReadTimeout(12000);
                 connection.setRequestProperty("User-Agent", "URinthLauncher/1.0 (Android)");
+                connection.setRequestProperty("Accept", "image/avif,image/webp,image/apng,image/*,*/*;q=0.8");
+                int responseCode = connection.getResponseCode();
+                if (responseCode < 200 || responseCode >= 300) throw new java.io.IOException("Icon HTTP " + responseCode);
                 try (InputStream in = connection.getInputStream()) {
                     Bitmap bitmap = BitmapFactory.decodeStream(in);
                     if (bitmap != null) Tools.runOnUiThread(() -> {
