@@ -251,12 +251,9 @@ public class ModrinthBrowserFragment extends Fragment {
         scroll.addView(resultList);
         root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1f));
 
-        if ("world".equals(category)) {
-            status.setText("Modrinth does not expose Worlds as a separate project type. Search Modpacks for downloadable map packs, or use the launcher's existing world import workflow.");
-            progress.setVisibility(View.GONE);
-        } else {
-            loadProjects("");
-        }
+        // World/map downloads are commonly published as modpacks on Modrinth.
+        // Load results here instead of leaving the Worlds page empty.
+        loadProjects("");
         return root;
     }
 
@@ -298,7 +295,7 @@ public class ModrinthBrowserFragment extends Fragment {
                 String url = "https://api.modrinth.com/v2/search?query="
                         + URLEncoder.encode(query, "UTF-8")
                         + "&facets=" + URLEncoder.encode(facets, "UTF-8")
-                        + "&limit=30&index=relevance";
+                        + "&limit=200&index=relevance";
                 connection = (HttpURLConnection) new java.net.URL(url).openConnection();
                 connection.setConnectTimeout(10000);
                 connection.setReadTimeout(15000);
@@ -316,7 +313,7 @@ public class ModrinthBrowserFragment extends Fragment {
                     progress.setVisibility(View.GONE);
                     projects.addAll(found);
                     if (found.isEmpty()) status.setText("No projects found. Try another search.");
-                    else status.setText(found.size() + " projects found");
+                    else status.setText(found.size() + (found.size() == 200 ? " projects loaded · showing up to 200" : " projects found"));
                     for (Project project : found) {
                         if (!isAdded() || getView() == null || resultList == null) return;
                         addProjectCard(project);
