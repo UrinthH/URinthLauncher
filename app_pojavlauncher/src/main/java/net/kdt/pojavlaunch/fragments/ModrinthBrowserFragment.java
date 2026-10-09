@@ -171,8 +171,12 @@ public class ModrinthBrowserFragment extends Fragment {
         LinearLayout root = new LinearLayout(requireContext());
         root.setOrientation(LinearLayout.VERTICAL);
         GradientDrawable pageBackground = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
-                new int[]{Color.argb(102, 6, 27, 42), Color.argb(102, 3, 17, 29)});
+                new int[]{Color.argb(176, 10, 39, 53), Color.argb(164, 4, 21, 34)});
+        pageBackground.setCornerRadius(dp(22));
+        pageBackground.setStroke(dp(1), Color.argb(150, 31, 111, 132));
         root.setBackground(pageBackground);
+        root.setClipToOutline(true);
+        root.setElevation(dp(3));
         root.setPadding(dp(22), dp(20), dp(22), dp(14));
 
         TextView heading = new TextView(requireContext());
