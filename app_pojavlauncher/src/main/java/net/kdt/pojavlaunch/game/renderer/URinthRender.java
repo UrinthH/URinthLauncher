@@ -23,10 +23,14 @@ public final class URinthRender {
     private static final String KEY_ULTRA = "ultra";
     private static final String PROFILE_KEY = "URINTH_RENDER_PROFILE";
     private static final String ULTRA_KEY = "URINTH_ULTRA_MODE";
+    private static final String BACKEND_KEY = "URINTH_RENDER_BACKEND";
+    private static final String PROFILE_VERSION_KEY = "URINTH_RENDER_PROFILE_VERSION";
 
     private static final String[] PROFILE_ENV_KEYS = {
             ULTRA_KEY,
             PROFILE_KEY,
+            BACKEND_KEY,
+            PROFILE_VERSION_KEY,
             "MESA_SHADER_CACHE_MAX_SIZE",
             "mesa_glthread",
             "MESA_GLSL_CACHE_DIR"
@@ -77,14 +81,17 @@ public final class URinthRender {
      */
     public static void applyProfile(Context context, RenderSpec renderer, Map<String, String> env) {
         if (!isUltraEnabled(context) || renderer == null) {
-            Log.i(TAG, "Ultra profile OFF; using the selected renderer's normal environment");
+            Log.i(TAG, "URinthUltra Mode OFF; selected renderer remains unchanged and no Ultra overrides are added");
             return;
         }
 
         String tag = renderer.tag();
         env.put(ULTRA_KEY, "1");
         env.put(PROFILE_KEY, "ultra");
-        Log.i(TAG, "Ultra profile enabled for backend: " + renderer.name());
+        env.put(BACKEND_KEY, tag);
+        env.put(PROFILE_VERSION_KEY, "1");
+        Log.i(TAG, "URinthUltra Mode ON; profile version=1; selected backend="
+                + renderer.name() + " (" + tag + ")");
 
         // Mesa's shader cache and GL worker thread apply only to Mesa-backed
         // implementations (including Zink); leave GL4ES/LTW and other backends alone.
