@@ -115,9 +115,14 @@ public class GameRenderer {
 
         // Ultra is a launch-time wrapper around the selected backend, not a fake native driver.
         // Keep the underlying tag/library intact so capability checks and fallback remain correct.
-        if (URinthRender.isUltraEnabled(context)
-                && !(currentRenderer instanceof UrinthUltraWrapperRenderSpec)) {
-            currentRenderer = new UrinthUltraWrapperRenderSpec(currentRenderer);
+        if (URinthRender.isUltraEnabled(context)) {
+            if (!(currentRenderer instanceof UrinthUltraWrapperRenderSpec)) {
+                currentRenderer = new UrinthUltraWrapperRenderSpec(currentRenderer);
+            }
+        } else if (currentRenderer instanceof UrinthUltraWrapperRenderSpec) {
+            // If this instance is reused after the toggle changes, OFF must remove the
+            // wrapper identity as well as restoring the profile environment variables.
+            currentRenderer = ((UrinthUltraWrapperRenderSpec) currentRenderer).getDelegate();
         }
 
         // Respect the renderer selected in Settings; do not silently swap backends.
