@@ -130,7 +130,7 @@ public final class URinthRender {
 
     public static boolean isUltraEnabled(Context context) {
         SharedPreferences prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
-        return prefs.getBoolean(KEY_ULTRA, true);
+        return prefs.getBoolean(KEY_ULTRA, false);
     }
 
     /**
