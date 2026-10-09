@@ -98,6 +98,17 @@ public class Accounts {
 	public static Account create(Setter setter) throws IOException {
 		Account account = new Account();
 		setter.writeAccount(account);
+
+		// Offline accounts are identified by their username. Reuse an existing
+		// matching local profile instead of creating a second identical entry.
+		if (account.isLocal() && account.username != null) {
+			for (Account existing : load().accounts) {
+				if (existing.isLocal() && account.username.equalsIgnoreCase(existing.username)) {
+					return existing;
+				}
+			}
+		}
+
 		account.mSaveLocation = pickAccountPath();
 		account.save();
 		return account;
