@@ -183,8 +183,10 @@ public final class ModrinthLauncherView extends View {
             PojavApplication.sExecutorService.execute(() -> {
                 try {
                     HttpURLConnection api = (HttpURLConnection) new URL("https://api.modrinth.com/v2/project/" + slug).openConnection();
-                    api.setConnectTimeout(5000); api.setReadTimeout(5000);
-                    api.setRequestProperty("User-Agent", "URinthLauncher/1.0");
+                    api.setInstanceFollowRedirects(true);
+                    api.setConnectTimeout(8000); api.setReadTimeout(8000);
+                    api.setRequestProperty("User-Agent", "URinthLauncher/1.0 (Android)");
+                    api.setRequestProperty("Accept", "application/json");
                     String json;
                     try (java.io.InputStream stream = api.getInputStream();
                          java.util.Scanner scanner = new java.util.Scanner(stream, "UTF-8").useDelimiter("\\A")) {
@@ -197,9 +199,13 @@ public final class ModrinthLauncherView extends View {
                     HttpURLConnection img = null;
                     try {
                         img = (HttpURLConnection) new URL(iconUrl).openConnection();
-                        img.setConnectTimeout(10000);
-                        img.setReadTimeout(10000);
-                        img.setRequestProperty("User-Agent", "URinthLauncher/1.0");
+                        img.setInstanceFollowRedirects(true);
+                        img.setConnectTimeout(12000);
+                        img.setReadTimeout(12000);
+                        img.setRequestProperty("User-Agent", "URinthLauncher/1.0 (Android)");
+                        img.setRequestProperty("Accept", "image/avif,image/webp,image/apng,image/*,*/*;q=0.8");
+                        int imageStatus = img.getResponseCode();
+                        if (imageStatus < 200 || imageStatus >= 300) throw new IOException("Mod icon HTTP " + imageStatus);
                         try (java.io.InputStream imageStream = img.getInputStream()) {
                             Bitmap b = BitmapFactory.decodeStream(imageStream);
                             if (b != null) Tools.runOnUiThread(() -> {
@@ -727,7 +733,17 @@ public final class ModrinthLauncherView extends View {
         String[] slugs={"sodium","lithium","complementary-reimagined","ruidskin-ultimate","modernfix"};
         Bitmap b=modIcons.get(slugs[i]);
         if(b!=null) { drawBitmap(c,b,x,y,39,39); return; }
-        p.setColor(PANEL_2); c.drawRoundRect(x,y,x+39,y+39,10,10,p);
+        p.setShader(new LinearGradient(x,y,x+39,y+39,Color.rgb(10,91,91),Color.rgb(8,38,58),Shader.TileMode.CLAMP));
+        c.drawRoundRect(x,y,x+39,y+39,10,10,p);
+        p.setShader(null);
+        p.setColor(Color.rgb(0,230,170));
+        p.setTextAlign(Paint.Align.CENTER);
+        p.setTypeface(Typeface.create("sans-serif-black", Typeface.BOLD));
+        p.setTextSize(i==2?17:21);
+        String[] marks={"S","L","C","4","M"};
+        c.drawText(marks[i],x+19.5f,y+26,p);
+        p.setTextAlign(Paint.Align.LEFT);
+        p.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
     }
 
     private void drawRight(Canvas c) {
