@@ -131,6 +131,8 @@ public class GameRenderer {
 
         try {
             configureRendererEnvironment(context, environment);
+        } catch (ErrnoException error) {
+            configureGl4esEnvironmentAfterFailure(context, error);
         } catch (RuntimeException error) {
             configureGl4esEnvironmentAfterFailure(context, error);
         } catch (LinkageError error) {
