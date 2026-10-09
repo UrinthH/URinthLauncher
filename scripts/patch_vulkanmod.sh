@@ -111,8 +111,19 @@ copy_libs() {
 
   mv libshaderc.so "linux/$arch/org/lwjgl/shaderc/"
   mv liblwjgl_vma.so "linux/$arch/org/lwjgl/vma/"
-  zip -q -gr "META-INF/jars/lwjgl-shaderc-$lwjgl_version-natives-linux.jar" "linux/$arch/org/lwjgl/shaderc"
-  zip -q -gr "META-INF/jars/lwjgl-vma-$lwjgl_version-natives-linux.jar" "linux/$arch/org/lwjgl/vma"
+
+  # Remove any existing entries for this architecture first. Appending duplicate
+  # ZIP paths can leave the old native library as the entry Java loads.
+  local shaderc_jar="META-INF/jars/lwjgl-shaderc-$lwjgl_version-natives-linux.jar"
+  local vma_jar="META-INF/jars/lwjgl-vma-$lwjgl_version-natives-linux.jar"
+  if [ -f "$shaderc_jar" ]; then
+    zip -q -d "$shaderc_jar" "linux/$arch/org/lwjgl/shaderc/libshaderc.so" || true
+  fi
+  if [ -f "$vma_jar" ]; then
+    zip -q -d "$vma_jar" "linux/$arch/org/lwjgl/vma/liblwjgl_vma.so" || true
+  fi
+  zip -q -gr "$shaderc_jar" "linux/$arch/org/lwjgl/shaderc"
+  zip -q -gr "$vma_jar" "linux/$arch/org/lwjgl/vma"
   rm -rf linux
 }
 
