@@ -52,6 +52,8 @@ jobs:
           java-version: '17'
       - name: Create out directory
         run: mkdir out
+      - name: Test URinthRender frame-time statistics
+        run: gradle :app_pojavlauncher:testFullDebugUnitTest
       - name: Build Publishing .aab
         if: github.repository_owner == 'MojoLauncher' && github.ref_name == 'v3_openjdk'
         run: |
