@@ -52,6 +52,22 @@ public class UrinthUltraWrapperRenderSpecTest {
         assertEquals("unknown(99)", URinthRender.thermalStatusName(99));
     }
 
+
+    @Test
+    public void gl4esBatchingRequiresUltraMode() {
+        assertTrue(URinthRender.shouldEnableGl4esBatching(
+                net.kdt.pojavlaunch.game.renderer.def.Renderers.GL4ES_RENDERER, true));
+        org.junit.Assert.assertFalse(URinthRender.shouldEnableGl4esBatching(
+                net.kdt.pojavlaunch.game.renderer.def.Renderers.GL4ES_RENDERER, false));
+    }
+
+    @Test
+    public void gl4esBatchingDoesNotLeakToOtherBackends() {
+        assertTrue(!URinthRender.shouldEnableGl4esBatching("ltw", true));
+        assertTrue(!URinthRender.shouldEnableGl4esBatching("zink", true));
+        assertTrue(!URinthRender.shouldEnableGl4esBatching("fake-backend", true));
+    }
+
     private static final class FakeRenderSpec implements RenderSpec {
         @Override
         public boolean compatibleDevice(Context context) {
