@@ -2,12 +2,15 @@ package net.kdt.pojavlaunch.game.renderer;
 
 import static net.kdt.pojavlaunch.game.renderer.def.Renderers.FREEDRENO_RENDERER;
 import static net.kdt.pojavlaunch.game.renderer.def.Renderers.GL4ES_RENDERER;
+import static net.kdt.pojavlaunch.game.renderer.def.Renderers.KRYPTON_RENDERER;
 import static net.kdt.pojavlaunch.game.renderer.def.Renderers.LEGACYZINK_RENDERER;
 import static net.kdt.pojavlaunch.game.renderer.def.Renderers.LTW_RENDERER;
 import static net.kdt.pojavlaunch.game.renderer.def.Renderers.MESA_RENDERER;
 import static net.kdt.pojavlaunch.game.renderer.def.Renderers.MESA_RENDERER_EXT;
 import static net.kdt.pojavlaunch.game.renderer.def.Renderers.MOBILEGLUES_RENDERER;
 import static net.kdt.pojavlaunch.game.renderer.def.Renderers.ZINK_RENDERER;
+import static net.kdt.pojavlaunch.game.renderer.def.Renderers.VIRGL_RENDERER;
+import static net.kdt.pojavlaunch.game.renderer.def.Renderers.PANFROST_RENDERER;
 
 import android.content.Context;
 import android.os.SystemClock;
@@ -59,7 +62,10 @@ public class GameRenderer {
             case "opengles2_5":
             case GL4ES_RENDERER: return new GLESRenderSpec.GL4ESRenderSpec();
             case LTW_RENDERER: return new GLESRenderSpec.LTWRenderSpec();
+            case KRYPTON_RENDERER: return new GLESRenderSpec.KryptonRenderSpec();
             case ZINK_RENDERER: return new MesaRenderSpec.ZinkRenderSpec();
+            case VIRGL_RENDERER: return new MesaRenderSpec.VirGLRenderSpec();
+            case PANFROST_RENDERER: return new MesaRenderSpec.PanfrostRenderSpec();
             case FREEDRENO_RENDERER: return new MesaRenderSpec.FreedrenoRenderSpec();
             case MESA_RENDERER: return new MesaRenderSpec();
             case MESA_RENDERER_EXT: return new MesaRenderSpec.ExtMesaRenderSpec();
@@ -86,47 +92,16 @@ public class GameRenderer {
     }
 
     /**
-     * Prepare the selected backend and optional Ultra profile. MobileGlues is selected only
-     * when Ultra is ON, its plugin library is installed, and the caller confirms MC >= 1.17.
+     * Prepare the renderer selected in Settings. The boolean overload remains for callers
+     * that still pass a version compatibility flag; selection itself is controlled by Settings.
      */
     public void setupEnvironment(Context context, boolean allowMobileGlues) throws ErrnoException {
         if (environment == null) {
             Log.w(TAG, "Tried to call setupEnvironment in already initialized environment");
             return;
         }
-        URinthRender.restoreNormalEnvironment();
-
-        boolean ultraEnabled = URinthRender.isUltraEnabled(context);
-        if (ultraEnabled) {
-            RenderSpec delegate = currentRenderer instanceof UrinthUltraWrapperRenderSpec
-                    ? ((UrinthUltraWrapperRenderSpec) currentRenderer).getDelegate()
-                    : currentRenderer;
-
-            if (!allowMobileGlues) {
-                // Older versions such as 1.8.9 must keep the exact selected renderer.
-                // The wrapper adds no proven rendering capability to these versions,
-                // so avoid introducing extra launch-time environment state while stabilizing.
-                currentRenderer = delegate;
-                Log.i(TAG, "URinthUltra compatibility-safe mode for older Minecraft version; preserving selected backend="
-                        + currentRenderer.tag());
-            } else {
-                RenderSpec mobileGlues = new MobileGluesRenderSpec();
-                if (mobileGlues.compatibleDevice(context)) {
-                    delegate = mobileGlues;
-                    Log.i(TAG, "URinthUltra selected external MobileGlues backend; library availability and GLES compatibility checks passed");
-                } else {
-                    Log.w(TAG, "MobileGlues plugin/library unavailable or GLES 3.x requirement not met; preserving the selected renderer");
-                }
-                currentRenderer = new UrinthUltraWrapperRenderSpec(delegate);
-                Log.i(TAG, "URinthUltra Wrapper active; delegated backend=" + currentRenderer.tag());
-            }
-        } else if (currentRenderer instanceof UrinthUltraWrapperRenderSpec) {
-            currentRenderer = ((UrinthUltraWrapperRenderSpec) currentRenderer).getDelegate();
-            Log.i(TAG, "URinthUltra disabled; restored selected backend=" + currentRenderer.tag());
-        }
-
+        // Respect the renderer selected in Settings; do not silently swap backends.
         currentRenderer.setupEnvironment(context, environment);
-        URinthRender.applyProfile(context, currentRenderer, environment);
         for (Map.Entry<String, String> e : environment.entrySet()) {
             Logger.appendToLog("Added renderer env: " + e.getKey() + "=" + e.getValue());
             Os.setenv(e.getKey(), e.getValue(), true);
