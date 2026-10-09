@@ -67,6 +67,11 @@ public final class ModrinthLauncherView extends View {
     private final Bitmap badlandsArtwork;
     private final Bitmap updateIcon;
     private final Bitmap ultraIcon;
+    private final Bitmap optifineIcon;
+    private final Bitmap fabricIcon;
+    private final Bitmap quiltIcon;
+    private final Bitmap forgeIcon;
+    private final Bitmap neoforgeIcon;
     private Bitmap backgroundArtwork;
     private Bitmap heroRealisticArtwork;
     private final Bitmap[] versionBiomeArtworks = new Bitmap[5];
@@ -88,7 +93,7 @@ public final class ModrinthLauncherView extends View {
     private boolean authChooserOpen;
     private DisplayInstance[] instanceCards = new DisplayInstance[0];
 
-    private final ExtraListener<Void> accountRefreshListener = (key, value) -> {
+    private final ExtraListener<Boolean> accountRefreshListener = (key, value) -> {
         reloadLauncherData();
         return false;
     };
@@ -106,6 +111,11 @@ public final class ModrinthLauncherView extends View {
         badlandsArtwork = bitmap(R.drawable.urinth_badlands);
         updateIcon = bitmap(R.drawable.ic_px_verify_hash);
         ultraIcon = bitmap(R.drawable.ic_px_speed);
+        optifineIcon = bitmap(R.drawable.ic_optifine);
+        fabricIcon = bitmap(R.drawable.ic_fabric);
+        quiltIcon = bitmap(R.drawable.ic_quilt);
+        forgeIcon = bitmap(R.drawable.ic_forge);
+        neoforgeIcon = bitmap(R.drawable.ic_neoforge);
         loadBackgroundArtwork();
         SharedPreferences prefs = activity.getSharedPreferences("urinth_ui", Context.MODE_PRIVATE);
         ultraOn = prefs.getBoolean("ultra", true);
@@ -371,8 +381,14 @@ public final class ModrinthLauncherView extends View {
         p.setColor(option==2?ACCENT:CYAN);
         c.drawRoundRect(x+1,y+16,x+5,y+h-16,2,2,p);
         round(c,x+18,y+18,x+58,y+58,12,Color.rgb(6,56,70),Color.rgb(20,111,129),0.8f);
-        String symbol = option==0?"V":option==1?"O":option==2?"F":option==3?"Q":option==4?"Fg":option==5?"N":"LF";
-        text(c,symbol,x+25,y+45,option>=4?14:20,ACCENT,true);
+        Bitmap loaderIcon = option==1 ? optifineIcon : option==2 ? fabricIcon
+                : option==3 ? quiltIcon : option==4 ? forgeIcon
+                : option==5 ? neoforgeIcon : null;
+        if (loaderIcon != null) {
+            drawBitmap(c, loaderIcon, x+20, y+20, 36, 36);
+        } else {
+            drawBitmap(c, blockIcon(), x+20, y+20, 36, 36);
+        }
         text(c,title,x+72,y+34,19,TEXT,true);
         text(c,subtitle,x+72,y+56,12,MUTED,false);
         text(c,detail,x+20,y+86,13,TEXT,false);
