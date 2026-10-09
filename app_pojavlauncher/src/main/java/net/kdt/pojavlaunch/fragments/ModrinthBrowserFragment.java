@@ -171,7 +171,7 @@ public class ModrinthBrowserFragment extends Fragment {
         LinearLayout root = new LinearLayout(requireContext());
         root.setOrientation(LinearLayout.VERTICAL);
         GradientDrawable pageBackground = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
-                new int[]{Color.rgb(6, 27, 42), Color.rgb(3, 17, 29)});
+                new int[]{Color.argb(102, 6, 27, 42), Color.argb(102, 3, 17, 29)});
         root.setBackground(pageBackground);
         root.setPadding(dp(22), dp(20), dp(22), dp(14));
 
@@ -378,7 +378,7 @@ public class ModrinthBrowserFragment extends Fragment {
         card.setGravity(Gravity.CENTER_VERTICAL);
         card.setPadding(dp(16), dp(14), dp(16), dp(14));
         GradientDrawable cardBackground = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
-                new int[]{Color.rgb(11, 43, 59), Color.rgb(6, 27, 42)});
+                new int[]{Color.argb(102, 11, 43, 59), Color.argb(102, 6, 27, 42)});
         cardBackground.setCornerRadius(dp(16));
         cardBackground.setStroke(dp(1), Color.rgb(27, 91, 110));
         card.setBackground(cardBackground);
@@ -434,7 +434,8 @@ public class ModrinthBrowserFragment extends Fragment {
         LinearLayout.LayoutParams installParams = new LinearLayout.LayoutParams(dp(94), dp(40));
         installParams.leftMargin = dp(12);
         card.addView(install, installParams);
-        card.setOnClickListener(v -> openProject(project));
+        // Do not open the install flow when the user taps empty space on a card.
+        // Only the explicit Install / Choose version button starts that flow.
         install.setOnClickListener(v -> openProject(project));
     }
 
