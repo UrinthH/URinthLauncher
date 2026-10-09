@@ -4,6 +4,7 @@ import android.content.Context;
 
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
@@ -66,6 +67,37 @@ public class UrinthUltraWrapperRenderSpecTest {
         assertTrue(!URinthRender.shouldEnableGl4esBatching("ltw", true));
         assertTrue(!URinthRender.shouldEnableGl4esBatching("zink", true));
         assertTrue(!URinthRender.shouldEnableGl4esBatching("fake-backend", true));
+    }
+
+    @Test
+    public void ultraJvmDefaultsAreAddedWithoutReplacingExistingArguments() {
+        java.util.List<String> args = new ArrayList<>();
+        URinthRender.addJvmOptimizationArgs(args);
+
+        org.junit.Assert.assertTrue(args.contains("-XX:+UseG1GC"));
+        org.junit.Assert.assertTrue(args.contains("-XX:MaxGCPauseMillis=100"));
+        org.junit.Assert.assertTrue(args.contains("-XX:+ParallelRefProcEnabled"));
+
+        int sizeAfterFirstPass = args.size();
+        URinthRender.addJvmOptimizationArgs(args);
+        assertEquals(sizeAfterFirstPass, args.size());
+    }
+
+    @Test
+    public void ultraJvmDefaultsRespectExplicitUserGcAndPauseSettings() {
+        java.util.List<String> args = new ArrayList<>();
+        args.add("-XX:+UseSerialGC");
+        args.add("-XX:MaxGCPauseMillis=250");
+        args.add("-XX:-ParallelRefProcEnabled");
+
+        URinthRender.addJvmOptimizationArgs(args);
+
+        assertTrue(args.contains("-XX:+UseSerialGC"));
+        assertTrue(args.contains("-XX:MaxGCPauseMillis=250"));
+        assertTrue(args.contains("-XX:-ParallelRefProcEnabled"));
+        org.junit.Assert.assertFalse(args.contains("-XX:+UseG1GC"));
+        org.junit.Assert.assertFalse(args.contains("-XX:MaxGCPauseMillis=100"));
+        org.junit.Assert.assertFalse(args.contains("-XX:+ParallelRefProcEnabled"));
     }
 
     private static final class FakeRenderSpec implements RenderSpec {
