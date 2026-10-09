@@ -107,7 +107,9 @@ copy_libs() {
 
   mkdir -p "linux/$arch/org/lwjgl/shaderc" "linux/$arch/org/lwjgl/vma"
   wget -q -O "lwjgl3-android-natives-$arch.zip" "https://nightly.link/PojavLauncherTeam/lwjgl3/workflows/build-android/$lwjgl_version/lwjgl3-android-natives-$arch.zip"
-  unzip -q "lwjgl3-android-natives-$arch.zip" libshaderc.so liblwjgl_vma.so
+  # These downloads may contain files left by the previous architecture iteration;
+  # overwrite them non-interactively in CI and multi-architecture runs.
+  unzip -o -q "lwjgl3-android-natives-$arch.zip" libshaderc.so liblwjgl_vma.so
   rm -f "lwjgl3-android-natives-$arch.zip"
 
   mv libshaderc.so "linux/$arch/org/lwjgl/shaderc/"
