@@ -1072,7 +1072,7 @@ public final class ModrinthLauncherView extends View {
             }
             return true;
         }
-        if(x>242 && x<1215 && y>=258 && y<418){
+        if(x>(menuOpen ? 242f : 18f) && x<1215 && y>=258 && y<418){
             float left = menuOpen ? 242f : 18f;
             float gap=12f, cw=(1215f-left-gap*2f)/3f;
             float contentX = x + instanceScrollX;
