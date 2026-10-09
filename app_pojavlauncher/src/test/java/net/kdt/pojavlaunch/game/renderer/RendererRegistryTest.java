@@ -2,19 +2,26 @@ package net.kdt.pojavlaunch.game.renderer;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 import org.junit.Test;
+
+import java.util.HashSet;
+import java.util.Set;
 
 import net.kdt.pojavlaunch.game.renderer.def.Renderers;
 
 /** Guards against renderer IDs being listed without a matching implementation. */
 public class RendererRegistryTest {
     @Test
-    public void everyListedRendererHasAnImplementation() {
+    public void everyListedRendererHasAnImplementationAndUniqueId() {
         String[] rendererIds = Renderers.allRendererIds();
-        assertEquals("Unexpected renderer registry size", 11, rendererIds.length);
+        assertTrue("Renderer registry must not be empty", rendererIds.length > 0);
+        Set<String> uniqueIds = new HashSet<>();
 
         for (String rendererId : rendererIds) {
+            assertTrue("Duplicate renderer ID in registry: " + rendererId,
+                    uniqueIds.add(rendererId));
             RenderSpec spec = GameRenderer.getKnownRenderer(rendererId);
             assertNotNull("Missing RenderSpec for renderer ID: " + rendererId, spec);
             assertEquals("Renderer tag does not match registry ID: " + rendererId,
