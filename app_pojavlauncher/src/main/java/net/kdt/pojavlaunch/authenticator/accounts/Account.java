@@ -2,6 +2,9 @@ package net.kdt.pojavlaunch.authenticator.accounts;
 
 
 import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
 import android.util.Log;
 
 import net.kdt.pojavlaunch.*;
@@ -32,6 +35,7 @@ public class Account {
     public String xuid;
     public long expiresAt;
     private transient Bitmap mFaceCache;
+    private static Bitmap sSteveFace;
 
     protected Account() {}
 
@@ -81,7 +85,7 @@ public class Account {
      }
 
     public Bitmap getSkinFace(){
-        if(isLocal()) return null;
+        if(isLocal()) return getSteveFace();
         File skinFaceFile = getSkinFaceFile();
         if(!skinFaceFile.exists()) return null;
         if(mFaceCache == null) {
@@ -90,6 +94,37 @@ public class Account {
         return mFaceCache;
     }
 
+    private static synchronized Bitmap getSteveFace() {
+        if (sSteveFace != null && !sSteveFace.isRecycled()) return sSteveFace;
+        Bitmap face = Bitmap.createBitmap(100, 100, Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(face);
+        Paint paint = new Paint();
+        paint.setStyle(Paint.Style.FILL);
+        paint.setColor(Color.rgb(92, 58, 35));
+        canvas.drawRect(0, 0, 100, 25, paint);
+        canvas.drawRect(0, 20, 14, 78, paint);
+        canvas.drawRect(86, 20, 100, 78, paint);
+        paint.setColor(Color.rgb(198, 142, 103));
+        canvas.drawRect(14, 20, 86, 84, paint);
+        paint.setColor(Color.rgb(45, 29, 21));
+        canvas.drawRect(14, 20, 30, 31, paint);
+        canvas.drawRect(30, 25, 43, 31, paint);
+        canvas.drawRect(57, 25, 70, 31, paint);
+        canvas.drawRect(70, 20, 86, 31, paint);
+        paint.setColor(Color.WHITE);
+        canvas.drawRect(22, 39, 42, 51, paint);
+        canvas.drawRect(58, 39, 78, 51, paint);
+        paint.setColor(Color.rgb(55, 112, 180));
+        canvas.drawRect(30, 39, 40, 51, paint);
+        canvas.drawRect(60, 39, 70, 51, paint);
+        paint.setColor(Color.rgb(40, 29, 24));
+        canvas.drawRect(14, 58, 86, 84, paint);
+        canvas.drawRect(30, 52, 70, 64, paint);
+        paint.setColor(Color.rgb(198, 142, 103));
+        canvas.drawRect(40, 52, 60, 62, paint);
+        sSteveFace = face;
+        return face;
+    }
     private File getSkinFaceFile() {
         return new File(Tools.DIR_CACHE,  "skin-face-" + profileId +"-"+authType.name() + ".webp");
     }
