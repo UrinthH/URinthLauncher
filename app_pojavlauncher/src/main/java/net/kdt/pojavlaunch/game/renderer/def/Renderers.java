@@ -8,4 +8,6 @@ public final class Renderers {
     public static final String MESA_RENDERER = "mesa_desktop";
     public static final String MESA_RENDERER_EXT = "mesa_desktop_ext";
     public static final String LEGACYZINK_RENDERER = "vulkan_legacyzink";
+    /** External MobileGlues OpenGL backend, available when its official plugin app is installed. */
+    public static final String MOBILEGLUES_RENDERER = "mobileglues";
 }
