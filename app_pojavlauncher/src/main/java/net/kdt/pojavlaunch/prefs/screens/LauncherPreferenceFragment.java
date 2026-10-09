@@ -4,12 +4,15 @@ package net.kdt.pojavlaunch.prefs.screens;
 import android.Manifest;
 import android.app.Activity;
 import android.content.SharedPreferences;
+import android.graphics.Color;
+import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.view.View;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.preference.Preference;
+import androidx.preference.PreferenceGroup;
 import androidx.preference.PreferenceFragmentCompat;
 
 import net.kdt.pojavlaunch.LauncherActivity;
@@ -25,7 +28,7 @@ public class LauncherPreferenceFragment extends PreferenceFragmentCompat impleme
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
-        view.setBackgroundColor(getResources().getColor(R.color.background_app));
+        view.setBackgroundColor(Color.rgb(4, 21, 34));
         super.onViewCreated(view, savedInstanceState);
     }
 
@@ -34,6 +37,23 @@ public class LauncherPreferenceFragment extends PreferenceFragmentCompat impleme
         mVisibilityUpdater = this::updateVisibility;
         addPreferencesFromResource(R.xml.pref_main);
         setupNotificationRequestPreference();
+        tintPreferenceIcons(getPreferenceScreen());
+    }
+
+    private void tintPreferenceIcons(PreferenceGroup group) {
+        if (group == null) return;
+        for (int i = 0; i < group.getPreferenceCount(); i++) {
+            Preference preference = group.getPreference(i);
+            Drawable icon = preference.getIcon();
+            if (icon != null) {
+                Drawable tinted = icon.mutate();
+                tinted.setTint(Color.rgb(0, 225, 180));
+                preference.setIcon(tinted);
+            }
+            if (preference instanceof PreferenceGroup) {
+                tintPreferenceIcons((PreferenceGroup) preference);
+            }
+        }
     }
 
     private void updateVisibility(){
