@@ -52,6 +52,8 @@ jobs:
           java-version: '17'
       - name: Create out directory
         run: mkdir out
+      - name: Validate VulkanMod patch script syntax
+        run: bash -n scripts/patch_vulkanmod.sh
       - name: Test URinthRender frame-time statistics
         run: gradle :app_pojavlauncher:testFullDebugUnitTest
       - name: Build Publishing .aab
