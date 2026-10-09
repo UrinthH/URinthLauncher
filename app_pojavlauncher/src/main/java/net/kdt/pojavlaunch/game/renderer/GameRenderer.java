@@ -120,11 +120,6 @@ public class GameRenderer {
             }
         }
 
-        String batch = Os.getenv("LIBGL_BATCH");
-        if (GL4ES_RENDERER.equals(currentRenderer.tag()) && ultraEnabled) {
-            Log.i(TAG, "GL4ES Ultra batch setting applied=" + "1".equals(batch)
-                    + "; native GL4ES behavior and FPS effect still require device testing");
-        }
         environment.clear();
         environment = null;
     }
