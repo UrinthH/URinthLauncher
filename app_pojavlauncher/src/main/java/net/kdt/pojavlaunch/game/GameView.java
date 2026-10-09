@@ -35,7 +35,6 @@ import net.kdt.pojavlaunch.prefs.LauncherPreferences;
 import net.kdt.pojavlaunch.render.SurfaceProvider;
 import net.kdt.pojavlaunch.render.SurfaceViewSurfaceProvider;
 import net.kdt.pojavlaunch.render.TextureViewSurfaceProvider;
-import net.kdt.pojavlaunch.utils.MCOptionUtils;
 
 import git.artdeell.mojo.R;
 import git.artdeell.mojoexec.MojoExec;
@@ -297,11 +296,8 @@ public class GameView extends FrameLayout implements PlatformGrabListener, Surfa
         // may be broken/unknown.
         refreshSize(true);
 
-        //Load Minecraft options:
-        MCOptionUtils.set("fullscreen", "off");
-        MCOptionUtils.set("overrideWidth", String.valueOf(windowWidth));
-        MCOptionUtils.set("overrideHeight", String.valueOf(windowHeight));
-        MCOptionUtils.save();
+        // Read the user's existing options without rewriting options.txt or forcing
+        // fullscreen/resolution values. The renderer must remain independent of resolution.
         getMcScale();
 
         new Thread(() -> {
