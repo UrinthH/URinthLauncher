@@ -143,6 +143,8 @@
         <package android:name="git.mojo.angle"/>
         <package android:name="com.fcl.plugin.renderer.angle"/>
         <package android:name="com.mio.plugin.renderer.angle"/>
+        <package android:name="com.fcl.plugin.renderer.gl4es"/>
+        <package android:name="com.mio.plugin.renderer.gl4es"/>
         <package android:name="com.fcl.plugin.renderer.ltw"/>
         <package android:name="com.mio.plugin.renderer.ltw"/>
         <package android:name="git.mojo.zink"/>
