@@ -85,6 +85,7 @@ These are explicit project targets, not claims of current universal compatibilit
 
 ### VulkanMod
 - Test the exact Minecraft version, Fabric/Quilt loader, VulkanMod release, Java runtime, device ABI, Vulkan driver/API version, and required Vulkan features.
+- The current `scripts/patch_vulkanmod.sh` targets the specific LWJGL 3.3.1 jar layout; it is not a universal patcher for every VulkanMod release. Verify each target release's packaged LWJGL version/layout before patching.
 - Verify that Vulkan is actually initialized and used, and that the required LWJGL Vulkan bindings and native libraries are present for the target ABI.
 - Do not claim VulkanMod support on an OpenGL-only backend such as GL4ES. If required Vulkan capabilities are missing, report the combination as unsupported rather than silently forcing it.
 - Verify startup failure and fallback behavior on devices that do not meet VulkanMod's requirements.
