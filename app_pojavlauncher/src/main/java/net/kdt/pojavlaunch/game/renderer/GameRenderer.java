@@ -100,9 +100,11 @@ public class GameRenderer {
             Log.w(TAG, "Tried to call setupEnvironment in already initialized environment");
             return;
         }
+        // Undo any profile overrides left by a previous game launch first. The
+        // selected backend then rebuilds its normal environment; Ultra is layered
+        // on only if the saved toggle is ON.
+        URinthRender.restoreNormalEnvironment();
         currentRenderer.setupEnvironment(context, environment);
-        // URinthUltra is an opt-in profile. It decorates the chosen backend without
-        // changing Minecraft options, resolution, or the user's saved renderer choice.
         URinthRender.applyProfile(context, currentRenderer, environment);
         for(Map.Entry<String, String> e : environment.entrySet()) {
             Logger.appendToLog("Added renderer env: " + e.getKey() + '=' + e.getValue());
