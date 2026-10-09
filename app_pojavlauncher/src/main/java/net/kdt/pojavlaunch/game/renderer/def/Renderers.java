@@ -2,6 +2,7 @@ package net.kdt.pojavlaunch.game.renderer.def;
 
 public final class Renderers {
     public static final String LTW_RENDERER = "opengles3_ltw";
+    public static final String LTW_LEGACY_RENDERER = "opengles3_ltw_legacy";
     public static final String GL4ES_RENDERER = "opengles2";
     /** Krypton/NG GL4ES wrapper supplied by a compatible renderer plugin. */
     public static final String KRYPTON_RENDERER = "opengles3";
@@ -22,6 +23,7 @@ public final class Renderers {
             GL4ES_RENDERER,
             KRYPTON_RENDERER,
             LTW_RENDERER,
+            LTW_LEGACY_RENDERER,
             ZINK_RENDERER,
             VIRGL_RENDERER,
             FREEDRENO_RENDERER,
