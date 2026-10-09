@@ -95,7 +95,7 @@ unzip -q "$jar_path" "META-INF/jars/lwjgl-*-$lwjgl_version-natives-linux.jar" "M
 mkdir -p lwjgl-vulkan
 unzip -q "META-INF/jars/lwjgl-vulkan-$lwjgl_version.jar" 'META-INF/*' fabric.mod.json -d lwjgl-vulkan
 wget -q -O lwjgl3-android-modules.zip "https://nightly.link/PojavLauncherTeam/lwjgl3/workflows/build-android/$lwjgl_version/lwjgl3-android-modules.zip"
-unzip -q lwjgl3-android-modules.zip lwjgl-vulkan/lwjgl-vulkan.jar
+unzip -o -q lwjgl3-android-modules.zip lwjgl-vulkan/lwjgl-vulkan.jar
 rm -f lwjgl3-android-modules.zip
 mv lwjgl-vulkan/lwjgl-vulkan.jar "META-INF/jars/lwjgl-vulkan-$lwjgl_version.jar"
 (cd lwjgl-vulkan && zip -qr "../META-INF/jars/lwjgl-vulkan-$lwjgl_version.jar" META-INF fabric.mod.json)
