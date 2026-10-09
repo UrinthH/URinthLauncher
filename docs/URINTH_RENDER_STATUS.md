@@ -55,6 +55,25 @@ Record the exact values for every run; do not infer capability from a GPU name a
 6. Only promote a profile from experimental after repeatable results and visual/stability checks.
 
 
+## Broad mod compatibility goal (LTW-class target)
+
+The project goal is broad compatibility with Minecraft mods, including rendering mods, comparable to established backends such as LTW where the device and game version permit it. This is a **target**, not a claim that every mod already works.
+
+### Architecture rules
+- URinthUltra must remain a backend-preserving integration/profile layer. It must not impersonate an OpenGL/Vulkan driver or replace the user's selected renderer.
+- Prefer making the existing backend selection, native libraries, and capability reporting work correctly over adding global environment-variable tweaks.
+- Do not assume that a mod is compatible just because the base game launches. Validate mod initialization, world rendering, chunk rebuilds, shaders/resource packs where relevant, and long-session stability.
+- Keep a compatibility matrix by Minecraft version, loader, Java runtime, mod version/dependencies, renderer/backend version, device ABI/GPU, and required graphics API features.
+- When a mod requires capabilities a backend does not implement, report that limitation clearly and recommend a compatible backend only when that pairing is actually validated. Never silently force a backend or alter the player's resolution or `options.txt`.
+- Do not promise universal compatibility. The goal is to maximize compatibility and clearly identify tested, experimental, and unsupported combinations.
+
+### Compatibility validation priorities
+1. Common gameplay/content mods that use standard Minecraft APIs.
+2. Rendering and performance mods (including Sodium and its related ecosystem), tested against the selected backend's actual OpenGL feature support.
+3. Vulkan-dependent mods such as VulkanMod, only on a genuinely working Vulkan path with compatible bindings/native libraries and required device capabilities.
+4. Shader, graphics, map, and portal mods, recording visual glitches and capability-specific limitations.
+5. Mod-loader and version coverage, with startup/crash regressions caught before marking any combination supported.
+
 ## Required Sodium and VulkanMod support plan
 
 These are explicit project targets, not claims of current universal compatibility.
