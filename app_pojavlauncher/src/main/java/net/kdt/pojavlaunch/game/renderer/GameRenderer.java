@@ -48,6 +48,8 @@ public class GameRenderer {
     private final static String FALLBACK_RENDERER = GL4ES_RENDERER;
     private RenderSpec currentRenderer;
     private Map<String, String> environment = new HashMap<>();
+    private Context rendererContext;
+    private final Map<String, String> originalRendererEnvironment = new HashMap<>();
 
     public GameRenderer(String currentRenderer) {
         this.currentRenderer = getKnownRenderer(currentRenderer);
@@ -100,6 +102,7 @@ public class GameRenderer {
      * that still pass a version compatibility flag; selection itself is controlled by Settings.
      */
     public void setupEnvironment(Context context, boolean allowMobileGlues) throws ErrnoException {
+        rendererContext = context;
         if (MOBILEGLUES_RENDERER.equals(currentRenderer.tag()) && !allowMobileGlues) {
             throw new IllegalStateException("MobileGlues requires Minecraft 1.17 or newer");
         }
@@ -130,27 +133,52 @@ public class GameRenderer {
         // Apply opt-in profile values to the same map that is actually exported to the game
         // process. Previously this profile helper was never called by the launch pipeline.
         URinthRender.applyProfile(context, currentRenderer, environment);
+        applyEnvironmentMap(environment);
 
-        for (Map.Entry<String, String> e : environment.entrySet()) {
-            Logger.appendToLog("Added renderer env: " + e.getKey() + "=" + e.getValue());
-            Os.setenv(e.getKey(), e.getValue(), true);
+        environment.clear();
+        environment = null;
+    }
 
-            // Read back the process environment immediately after setenv. This verifies
-            // launcher-side application only; it cannot prove a native library consumes
-            // the variable or that it improves frame rate.
-            String actual = Os.getenv(e.getKey());
+    /**
+     * Export renderer/profile variables and retain the prior values so a failed backend can
+     * be replaced without leaving its renderer-specific environment behind.
+     */
+    private void applyEnvironmentMap(Map<String, String> values) throws ErrnoException {
+        for (Map.Entry<String, String> e : values.entrySet()) {
+            String key = e.getKey();
+            if (!originalRendererEnvironment.containsKey(key)) {
+                originalRendererEnvironment.put(key, Os.getenv(key));
+            }
+            Logger.appendToLog("Added renderer env: " + key + "=" + e.getValue());
+            Os.setenv(key, e.getValue(), true);
+
+            // This checks launcher-side application only; it cannot prove a native library
+            // consumes the variable or that the setting improves frame rate.
+            String actual = Os.getenv(key);
             boolean matches = e.getValue().equals(actual);
-            Log.i(TAG, "Renderer env verification: key=" + e.getKey()
+            logRendererInfo("Renderer env verification: key=" + key
                     + ", expected=" + e.getValue()
                     + ", actual=" + (actual == null ? "<unset>" : actual)
                     + ", matches=" + matches);
             if (!matches) {
-                Log.w(TAG, "Renderer environment read-back mismatch for " + e.getKey());
+                logRendererFailure("Renderer environment read-back mismatch for " + key, null);
             }
         }
+    }
 
-        environment.clear();
-        environment = null;
+    private void restorePreviousRendererEnvironment() {
+        for (Map.Entry<String, String> entry : originalRendererEnvironment.entrySet()) {
+            try {
+                if (entry.getValue() == null) {
+                    Os.unsetenv(entry.getKey());
+                } else {
+                    Os.setenv(entry.getKey(), entry.getValue(), true);
+                }
+            } catch (ErrnoException error) {
+                logRendererFailure("Could not restore renderer environment key " + entry.getKey(), error);
+            }
+        }
+        originalRendererEnvironment.clear();
     }
 
     /** Get current selected renderer. */
@@ -256,7 +284,26 @@ public class GameRenderer {
                 currentRenderer = fallback;
             }
             final long fallbackStartedAt = SystemClock.elapsedRealtime();
-            boolean fallbackReady = prepareRendererSafely(currentRenderer);
+            boolean fallbackReady = false;
+            try {
+                // Restore values injected by the failed renderer before preparing GL4ES.
+                // Then construct and apply the fallback's own environment from scratch.
+                restorePreviousRendererEnvironment();
+                URinthRender.restoreNormalEnvironment();
+                if (rendererContext != null) {
+                    Map<String, String> fallbackEnvironment = new HashMap<>();
+                    currentRenderer.setupEnvironment(rendererContext, fallbackEnvironment);
+                    URinthRender.applyProfile(rendererContext, currentRenderer, fallbackEnvironment);
+                    applyEnvironmentMap(fallbackEnvironment);
+                }
+                fallbackReady = prepareRendererSafely(currentRenderer);
+            } catch (ErrnoException error) {
+                logRendererFailure("Could not apply fallback renderer environment", error);
+            } catch (RuntimeException error) {
+                logRendererFailure("Fallback renderer environment setup failed", error);
+            } catch (LinkageError error) {
+                logRendererFailure("Fallback renderer environment hit a native linkage error", error);
+            }
             final long fallbackSetupMs = SystemClock.elapsedRealtime() - fallbackStartedAt;
             logRendererInfo("Renderer fallback result: backend=" + currentRenderer.name()
                     + ", ready=" + fallbackReady
