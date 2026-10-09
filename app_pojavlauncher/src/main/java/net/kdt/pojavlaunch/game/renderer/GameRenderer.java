@@ -102,7 +102,14 @@ public class GameRenderer {
                     ? ((UrinthUltraWrapperRenderSpec) currentRenderer).getDelegate()
                     : currentRenderer;
 
-            if (allowMobileGlues) {
+            if (!allowMobileGlues) {
+                // Older versions such as 1.8.9 must keep the exact selected renderer.
+                // The wrapper adds no proven rendering capability to these versions,
+                // so avoid introducing extra launch-time environment state while stabilizing.
+                currentRenderer = delegate;
+                Log.i(TAG, "URinthUltra compatibility-safe mode for older Minecraft version; preserving selected backend="
+                        + currentRenderer.tag());
+            } else {
                 RenderSpec mobileGlues = new MobileGluesRenderSpec();
                 if (mobileGlues.compatibleDevice(context)) {
                     delegate = mobileGlues;
@@ -110,12 +117,9 @@ public class GameRenderer {
                 } else {
                     Log.w(TAG, "MobileGlues plugin/library unavailable or GLES 3.x requirement not met; preserving the selected renderer");
                 }
-            } else {
-                Log.i(TAG, "MobileGlues requires Minecraft 1.17+; preserving the selected renderer for this version");
+                currentRenderer = new UrinthUltraWrapperRenderSpec(delegate);
+                Log.i(TAG, "URinthUltra Wrapper active; delegated backend=" + currentRenderer.tag());
             }
-
-            currentRenderer = new UrinthUltraWrapperRenderSpec(delegate);
-            Log.i(TAG, "URinthUltra Wrapper active; delegated backend=" + currentRenderer.tag());
         } else if (currentRenderer instanceof UrinthUltraWrapperRenderSpec) {
             currentRenderer = ((UrinthUltraWrapperRenderSpec) currentRenderer).getDelegate();
             Log.i(TAG, "URinthUltra disabled; restored selected backend=" + currentRenderer.tag());
