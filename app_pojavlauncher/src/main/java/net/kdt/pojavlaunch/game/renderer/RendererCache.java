@@ -39,7 +39,7 @@ public class RendererCache {
             RenderSpec spec = GameRenderer.getKnownRenderer(renderer);
             if (spec == null) {
                 // A broken registry entry must not crash the Settings screen in release builds.
-                android.util.Log.e("Renderer", "No RenderSpec registered for renderer ID: " + renderer);
+                logProbeFailure("No RenderSpec registered for renderer ID: " + renderer, null);
                 continue;
             }
             if (!isCompatibleSafely(spec, context)) continue;
