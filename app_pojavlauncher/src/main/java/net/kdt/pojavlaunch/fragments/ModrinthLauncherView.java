@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.*;
 import android.graphics.drawable.Drawable;
+import android.os.SystemClock;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Toast;
@@ -59,6 +60,7 @@ public final class ModrinthLauncherView extends View {
 
     private final Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint stroke = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint edgeGlowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final RectF r = new RectF();
     private final Bitmap logo;
     private final Bitmap heroArtwork;
@@ -259,6 +261,8 @@ public final class ModrinthLauncherView extends View {
         drawRight(canvas);
         if (accountChooserOpen) drawAccountChooser(canvas);
         if (authChooserOpen) drawAuthChooser(canvas);
+        drawUltraEdgeGlow(canvas);
+        if (ultraOn) postInvalidateDelayed(40L);
         canvas.restore();
     }
 
@@ -725,6 +729,32 @@ public final class ModrinthLauncherView extends View {
         text(c,"›",x+w-25,233,24,TEXT,true);
 
         drawSkinViewer(c, x, 274, w, 270);
+    }
+
+    /**
+     * Full-screen status frame: green while Ultra is idle/off, animated red while active.
+     * Drawn over the launcher UI only; it does not affect the game surface or resolution.
+     */
+    private void drawUltraEdgeGlow(Canvas c) {
+        long now = SystemClock.uptimeMillis();
+        float pulse = ultraOn ? (0.5f + 0.5f * (float) Math.sin(now / 360.0)) : 0.55f;
+        int rgb = ultraOn ? Color.rgb(255, 42, 58) : Color.rgb(0, 255, 132);
+        int glowAlpha = ultraOn ? (int) (80 + 100 * pulse) : 115;
+
+        edgeGlowPaint.setStyle(Paint.Style.STROKE);
+        edgeGlowPaint.setStrokeCap(Paint.Cap.ROUND);
+        edgeGlowPaint.setStrokeJoin(Paint.Join.ROUND);
+        edgeGlowPaint.setStrokeWidth(4.5f);
+        edgeGlowPaint.setColor(Color.argb(glowAlpha, Color.red(rgb), Color.green(rgb), Color.blue(rgb)));
+        edgeGlowPaint.setShadowLayer(18f + 10f * pulse, 0f, 0f, Color.argb(170, Color.red(rgb), Color.green(rgb), Color.blue(rgb)));
+        c.drawRoundRect(4f, 4f, W - 4f, H - 4f, 16f, 16f, edgeGlowPaint);
+
+        edgeGlowPaint.clearShadowLayer();
+        edgeGlowPaint.setStrokeWidth(1.5f);
+        edgeGlowPaint.setColor(Color.argb(ultraOn ? (int) (130 + 100 * pulse) : 190,
+                Color.red(rgb), Color.green(rgb), Color.blue(rgb)));
+        c.drawRoundRect(7f, 7f, W - 7f, H - 7f, 13f, 13f, edgeGlowPaint);
+        edgeGlowPaint.setStyle(Paint.Style.FILL);
     }
 
     private void drawUltraMode(Canvas c, float x, float y, float w, float h) {
