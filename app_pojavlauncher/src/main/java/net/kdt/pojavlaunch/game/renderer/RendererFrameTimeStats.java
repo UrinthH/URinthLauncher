@@ -1,6 +1,7 @@
 package net.kdt.pojavlaunch.game.renderer;
 
 import java.util.Arrays;
+import java.util.Locale;
 
 /**
  * Bounded frame-time statistics accumulator for URinthRender diagnostics.
@@ -10,15 +11,13 @@ import java.util.Arrays;
  * completed frame before these metrics represent game performance.
  */
 public final class RendererFrameTimeStats {
+    private static final long FRAME_SPIKE_THRESHOLD_NANOS = 50_000_000L;
     private final long[] samplesNanos;
     private int nextIndex;
     private int sampleCount;
     private long totalNanos;
-    private long spikeCount;
 
-    /**
-     * @param capacity number of recent frame samples to retain; must be positive
-     */
+    /** @param capacity number of recent frame samples to retain; must be positive */
     public RendererFrameTimeStats(int capacity) {
         if (capacity < 1) {
             throw new IllegalArgumentException("capacity must be at least 1");
@@ -31,29 +30,24 @@ public final class RendererFrameTimeStats {
         if (frameTimeNanos <= 0) return;
 
         if (sampleCount == samplesNanos.length) {
-            totalNanos -= samplesNanosNanosAt(nextIndex);
+            totalNanos -= samplesNanos[nextIndex];
         } else {
             sampleCount++;
         }
 
         samplesNanos[nextIndex] = frameTimeNanos;
         totalNanos += frameTimeNanos;
-        if (frameTimeNanos >= 50_000_000L) spikeCount++;
         nextIndex = (nextIndex + 1) % samplesNanos.length;
-    }
-
-    private long samplesNanosNanosAt(int index) {
-        return samplesNanos[index];
     }
 
     /** Return a snapshot of the most recent bounded sample window. */
     public synchronized Snapshot snapshot() {
         if (sampleCount == 0) {
-            return new Snapshot(0, 0, 0, 0, 0, 0, 0);
+            return new Snapshot(0, 0, 0, 0, 0, 0, 0, 0);
         }
 
-        long[] sorted = new long[sampleCount];
-        System.arraycopy(samplesNanos, 0, sorted, 0, sampleCount);
+        // Every slot is valid once full; before full, valid samples occupy [0, sampleCount).
+        long[] sorted = Arrays.copyOf(samplesNanos, sampleCount);
         Arrays.sort(sorted);
 
         double averageFrameMs = (totalNanos / (double) sampleCount) / 1_000_000.0;
@@ -64,12 +58,12 @@ public final class RendererFrameTimeStats {
         // Approximate 1% low FPS from the 99th-percentile frame time.
         double onePercentLowFps = p99Ms > 0 ? 1000.0 / p99Ms : 0;
 
-        long recentSpikes = 0;
+        long spikes = 0;
         for (long sample : sorted) {
-            if (sample >= 50_000_000L) recentSpikes++;
+            if (sample >= FRAME_SPIKE_THRESHOLD_NANOS) spikes++;
         }
         return new Snapshot(sampleCount, averageFps, averageFrameMs,
-                p50Ms, p95Ms, p99Ms, onePercentLowFps, recentSpikes);
+                p50Ms, p95Ms, p99Ms, onePercentLowFps, spikes);
     }
 
     private static double percentileMs(long[] sorted, double percentile) {
@@ -84,7 +78,6 @@ public final class RendererFrameTimeStats {
         nextIndex = 0;
         sampleCount = 0;
         totalNanos = 0;
-        spikeCount = 0;
     }
 
     public static final class Snapshot {
@@ -99,13 +92,6 @@ public final class RendererFrameTimeStats {
 
         private Snapshot(int sampleCount, double averageFps, double averageFrameMs,
                          double p50FrameMs, double p95FrameMs, double p99FrameMs,
-                         double onePercentLowFps) {
-            this(sampleCount, averageFps, averageFrameMs, p50FrameMs, p95FrameMs,
-                    p99FrameMs, onePercentLowFps, 0);
-        }
-
-        private Snapshot(int sampleCount, double averageFps, double averageFrameMs,
-                         double p50FrameMs, double p95FrameMs, double p99FrameMs,
                          double onePercentLowFps, long frameSpikesOver50Ms) {
             this.sampleCount = sampleCount;
             this.averageFps = averageFps;
@@ -115,6 +101,14 @@ public final class RendererFrameTimeStats {
             this.p99FrameMs = p99FrameMs;
             this.onePercentLowFps = onePercentLowFps;
             this.frameSpikesOver50Ms = frameSpikesOver50Ms;
+        }
+
+        @Override
+        public String toString() {
+            return String.format(Locale.ROOT,
+                    "samples=%d avgFps=%.2f avgFrameMs=%.3f p50Ms=%.3f p95Ms=%.3f p99Ms=%.3f onePercentLowFps=%.2f spikesOver50Ms=%d",
+                    sampleCount, averageFps, averageFrameMs, p50FrameMs, p95FrameMs,
+                    p99FrameMs, onePercentLowFps, frameSpikesOver50Ms);
         }
     }
 }
