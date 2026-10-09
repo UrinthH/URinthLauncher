@@ -15,6 +15,7 @@ import net.kdt.pojavlaunch.utils.GpuUtils;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.Executor;
 
 /**
  * Reversible opt-in renderer profile. It never edits options.txt, resolution,
@@ -46,6 +47,68 @@ public final class URinthRender {
     // Snapshot the launcher's original process environment before we change it.
     // OFF restores these values (or unsets variables that were originally absent).
     private static final Map<String, String> ORIGINAL_ENV = captureOriginalEnvironment();
+
+    private static PowerManager thermalPowerManager;
+    private static PowerManager.OnThermalStatusChangedListener thermalStatusListener;
+
+    /**
+     * Monitor thermal status while the game activity is alive. This is diagnostic only:
+     * it never changes clocks, resolution, graphics options, or renderer selection.
+     */
+    public static synchronized void startThermalMonitoring(Context context) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q || context == null) return;
+        stopThermalMonitoring();
+        try {
+            PowerManager manager = (PowerManager) context.getApplicationContext()
+                    .getSystemService(Context.POWER_SERVICE);
+            if (manager == null) {
+                Log.i(TAG, "Live thermal monitoring unavailable: PowerManager missing");
+                return;
+            }
+            Executor executor = context.getMainExecutor();
+            PowerManager.OnThermalStatusChangedListener listener = status -> {
+                String state = thermalStatusName(status);
+                if (status >= PowerManager.THERMAL_STATUS_MODERATE) {
+                    Log.w(TAG, "Live thermal status=" + state
+                            + "; frame pacing may degrade due to device throttling. No graphics settings were changed.");
+                } else {
+                    Log.i(TAG, "Live thermal status=" + state);
+                }
+            };
+            manager.addThermalStatusListener(executor, listener);
+            thermalPowerManager = manager;
+            thermalStatusListener = listener;
+            Log.i(TAG, "Live thermal monitoring started");
+        } catch (RuntimeException e) {
+            Log.w(TAG, "Unable to start live thermal monitoring", e);
+        }
+    }
+
+    public static synchronized void stopThermalMonitoring() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
+                && thermalPowerManager != null && thermalStatusListener != null) {
+            try {
+                thermalPowerManager.removeThermalStatusListener(thermalStatusListener);
+            } catch (RuntimeException e) {
+                Log.w(TAG, "Unable to stop live thermal monitoring cleanly", e);
+            }
+        }
+        thermalPowerManager = null;
+        thermalStatusListener = null;
+    }
+
+    private static String thermalStatusName(int status) {
+        switch (status) {
+            case PowerManager.THERMAL_STATUS_NONE: return "none";
+            case PowerManager.THERMAL_STATUS_LIGHT: return "light";
+            case PowerManager.THERMAL_STATUS_MODERATE: return "moderate";
+            case PowerManager.THERMAL_STATUS_SEVERE: return "severe";
+            case PowerManager.THERMAL_STATUS_CRITICAL: return "critical";
+            case PowerManager.THERMAL_STATUS_EMERGENCY: return "emergency";
+            case PowerManager.THERMAL_STATUS_SHUTDOWN: return "shutdown";
+            default: return "unknown(" + status + ")";
+        }
+    }
 
     private URinthRender() {}
 
