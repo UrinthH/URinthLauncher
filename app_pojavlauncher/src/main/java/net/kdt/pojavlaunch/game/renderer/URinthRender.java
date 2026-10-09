@@ -80,17 +80,23 @@ public final class URinthRender {
      * are added after the normal renderer has configured its environment.
      */
     public static void applyProfile(Context context, RenderSpec renderer, Map<String, String> env) {
-        if (!isUltraEnabled(context) || renderer == null) {
-            Log.i(TAG, "URinthUltra Mode OFF; selected renderer remains unchanged and no Ultra overrides are added");
+        if (renderer == null) {
+            Log.w(TAG, "Renderer profile skipped because no renderer was selected");
             return;
         }
 
         String tag = renderer.tag();
+        if (!isUltraEnabled(context)) {
+            Log.i(TAG, "URinthUltra Mode OFF; selected backend remains "
+                    + renderer.name() + " (" + tag + "); no Ultra overrides added");
+            return;
+        }
+
         env.put(ULTRA_KEY, "1");
         env.put(PROFILE_KEY, "ultra");
         env.put(BACKEND_KEY, tag);
-        env.put(PROFILE_VERSION_KEY, "1");
-        Log.i(TAG, "URinthUltra Mode ON; profile version=1; selected backend="
+        env.put(PROFILE_VERSION_KEY, "2");
+        Log.i(TAG, "URinthUltra Mode ON; profile version=2; selected backend="
                 + renderer.name() + " (" + tag + ")");
 
         // Mesa's shader cache and GL worker thread apply only to Mesa-backed
@@ -103,6 +109,9 @@ public final class URinthRender {
             env.put("mesa_glthread", "true");
             env.put("MESA_GLSL_CACHE_DIR", Tools.DIR_CACHE.getAbsolutePath());
             Log.i(TAG, "Enabled Mesa shader cache sizing and GL worker-thread profile");
+        } else {
+            Log.i(TAG, "No backend-specific Ultra optimization is implemented for " + tag
+                    + "; this profile does not replace the selected renderer");
         }
     }
 }
