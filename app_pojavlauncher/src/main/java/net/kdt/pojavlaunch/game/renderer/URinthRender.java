@@ -14,6 +14,7 @@ import net.kdt.pojavlaunch.game.renderer.def.Renderers;
 import net.kdt.pojavlaunch.utils.GpuUtils;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
 
@@ -312,4 +313,45 @@ public final class URinthRender {
                     + "; this profile does not replace the selected renderer");
         }
     }
+
+    /**
+     * Add conservative, opt-in JVM latency defaults without replacing explicit user GC
+     * choices or changing heap size. The target pause time is a hint, not a guarantee.
+     */
+    static void addJvmOptimizationArgs(List<String> javaArgs) {
+        if (javaArgs == null) return;
+
+        boolean hasGcChoice = false;
+        boolean hasPauseTarget = false;
+        boolean hasParallelRefProcessing = false;
+        for (String arg : javaArgs) {
+            if (arg == null) continue;
+            if (arg.startsWith("-XX:+Use") || arg.startsWith("-XX:-Use")) {
+                if (arg.endsWith("GC")) hasGcChoice = true;
+            }
+            if (arg.startsWith("-XX:MaxGCPauseMillis=")) hasPauseTarget = true;
+            if (arg.equals("-XX:+ParallelRefProcEnabled")
+                    || arg.equals("-XX:-ParallelRefProcEnabled")) {
+                hasParallelRefProcessing = true;
+            }
+        }
+
+        if (!hasGcChoice) javaArgs.add("-XX:+UseG1GC");
+        if (!hasPauseTarget) javaArgs.add("-XX:MaxGCPauseMillis=100");
+        if (!hasParallelRefProcessing) javaArgs.add("-XX:+ParallelRefProcEnabled");
+    }
+
+    /** Apply JVM defaults only when the player's Ultra toggle is enabled. */
+    public static void applyJvmOptimizationProfile(Context context, List<String> javaArgs) {
+        if (!isUltraEnabled(context)) {
+            Log.i(TAG, "URinthUltra Mode OFF; leaving JVM arguments unchanged");
+            return;
+        }
+        int before = javaArgs == null ? 0 : javaArgs.size();
+        addJvmOptimizationArgs(javaArgs);
+        int added = javaArgs == null ? 0 : javaArgs.size() - before;
+        Log.i(TAG, "URinthUltra JVM profile applied; added " + added
+                + " conservative GC argument(s); user GC choices and heap size preserved");
+    }
+
 }
