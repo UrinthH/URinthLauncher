@@ -1,25 +1,15 @@
 package net.kdt.pojavlaunch.game.renderer;
 
-import static net.kdt.pojavlaunch.game.renderer.def.Renderers.FREEDRENO_RENDERER;
-import static net.kdt.pojavlaunch.game.renderer.def.Renderers.GL4ES_RENDERER;
-import static net.kdt.pojavlaunch.game.renderer.def.Renderers.KRYPTON_RENDERER;
-import static net.kdt.pojavlaunch.game.renderer.def.Renderers.LEGACYZINK_RENDERER;
-import static net.kdt.pojavlaunch.game.renderer.def.Renderers.LTW_RENDERER;
-import static net.kdt.pojavlaunch.game.renderer.def.Renderers.MESA_RENDERER;
-import static net.kdt.pojavlaunch.game.renderer.def.Renderers.MESA_RENDERER_EXT;
-import static net.kdt.pojavlaunch.game.renderer.def.Renderers.ZINK_RENDERER;
-import static net.kdt.pojavlaunch.game.renderer.def.Renderers.VIRGL_RENDERER;
-import static net.kdt.pojavlaunch.game.renderer.def.Renderers.PANFROST_RENDERER;
-import static net.kdt.pojavlaunch.game.renderer.def.Renderers.MOBILEGLUES_RENDERER;
-
 import android.content.Context;
 import android.content.res.Resources;
+
+import net.kdt.pojavlaunch.game.renderer.def.Renderers;
 
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Compatible renderers cache. Used for the UI renderer list
+ * Compatible renderers cache. Used for the UI renderer list.
  */
 public class RendererCache {
     private static RendererCache sCompatibleRenderers;
@@ -33,41 +23,37 @@ public class RendererCache {
     }
 
     /**
-     * Return a list of renderers compatible with the current device
-     * Don't forget to clean the cache when the list isn't needed anymore
+     * Return renderers compatible with the current device.
+     * Don't forget to clean the cache when the list isn't needed anymore.
      *
      * @param context application context
-     * @return RenderersList containing all compatible renderers
+     * @return cache containing all compatible renderers
      */
     public static RendererCache getCompatibleRenderers(Context context) {
         if (sCompatibleRenderers != null) return sCompatibleRenderers;
         Resources resources = context.getResources();
-        // This is the list that controls em all!
-        String[] renderers = {
-                GL4ES_RENDERER, KRYPTON_RENDERER, LTW_RENDERER, ZINK_RENDERER,
-                VIRGL_RENDERER, FREEDRENO_RENDERER, PANFROST_RENDERER,
-                MESA_RENDERER, MESA_RENDERER_EXT, LEGACYZINK_RENDERER, MOBILEGLUES_RENDERER
-        };
+        String[] renderers = Renderers.allRendererIds();
         ArrayList<String> rendererIds = new ArrayList<>(renderers.length);
-        ArrayList<String> rendererNames = new ArrayList<>(rendererIds);
+        ArrayList<String> rendererNames = new ArrayList<>(renderers.length);
         for (String renderer : renderers) {
-            RenderSpec r = GameRenderer.getKnownRenderer(renderer);
-            assert r != null;
-            if (!r.compatibleDevice(context)) continue;
+            RenderSpec spec = GameRenderer.getKnownRenderer(renderer);
+            if (spec == null) {
+                // A broken registry entry must not crash the Settings screen in release builds.
+                android.util.Log.e("Renderer", "No RenderSpec registered for renderer ID: " + renderer);
+                continue;
+            }
+            if (!spec.compatibleDevice(context)) continue;
             rendererIds.add(renderer);
-            rendererNames.add(resources.getString(r.displayName()));
+            rendererNames.add(resources.getString(spec.displayName()));
         }
         rendererIds.trimToSize();
         rendererNames.trimToSize();
-        return (sCompatibleRenderers = new RendererCache(rendererIds, rendererNames.toArray(new String[0])));
+        return (sCompatibleRenderers = new RendererCache(
+                rendererIds, rendererNames.toArray(new String[0])));
     }
 
-    /**
-     * Destroy compatible renderers cache
-     */
+    /** Destroy compatible renderers cache. Safe to call repeatedly. */
     public static void releaseRendererCache() {
-        // Cache cleanup can be requested before the first compatibility scan.
-        // Make release idempotent so lifecycle cleanup cannot throw a NullPointerException.
         if (sCompatibleRenderers != null) {
             sCompatibleRenderers.rendererIds.clear();
             sCompatibleRenderers = null;
