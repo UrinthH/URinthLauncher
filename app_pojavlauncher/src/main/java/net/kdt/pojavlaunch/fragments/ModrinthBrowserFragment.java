@@ -189,6 +189,7 @@ public class ModrinthBrowserFragment extends Fragment {
         root.addView(searchRow, searchRowParams);
         search = new EditText(requireContext());
         search.setSingleLine(true);
+        search.setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH);
         search.setTextColor(TEXT);
         search.setHintTextColor(MUTED);
         search.setHint("Search " + categoryTitle().toLowerCase(Locale.ROOT));
@@ -201,8 +202,15 @@ public class ModrinthBrowserFragment extends Fragment {
         searchRow.addView(searchButton, buttonParams);
         searchButton.setOnClickListener(v -> loadProjects(search.getText().toString().trim()));
         search.setOnEditorActionListener((v, actionId, event) -> {
-            loadProjects(search.getText().toString().trim());
-            return true;
+            boolean enterPressed = event != null && event.getKeyCode() == android.view.KeyEvent.KEYCODE_ENTER && event.getAction() == android.view.KeyEvent.ACTION_DOWN;
+            if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH || actionId == android.view.inputmethod.EditorInfo.IME_ACTION_DONE || actionId == android.view.inputmethod.EditorInfo.IME_ACTION_GO || enterPressed) {
+                android.view.inputmethod.InputMethodManager imm = (android.view.inputmethod.InputMethodManager) requireContext().getSystemService(android.content.Context.INPUT_METHOD_SERVICE);
+                if (imm != null) imm.hideSoftInputFromWindow(search.getWindowToken(), 0);
+                search.clearFocus();
+                loadProjects(search.getText().toString().trim());
+                return true;
+            }
+            return false;
         });
 
         progress = new ProgressBar(requireContext());
