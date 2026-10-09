@@ -21,6 +21,7 @@ import net.kdt.pojavlaunch.multirt.MultiRTUtils;
 import net.kdt.pojavlaunch.multirt.Runtime;
 import net.kdt.pojavlaunch.prefs.LauncherPreferences;
 import net.kdt.pojavlaunch.game.renderer.GameRenderer;
+import net.kdt.pojavlaunch.game.renderer.URinthRender;
 import net.kdt.pojavlaunch.game.renderer.RenderSpec;
 import net.kdt.pojavlaunch.utils.DateUtils;
 import net.kdt.pojavlaunch.utils.FileUtils;
@@ -288,6 +289,8 @@ public class GameRunner {
         versionInfo.assetIndex = null;
 
         javaArgList.addAll(JREUtils.parseJavaArguments(instance.getLaunchArgs()));
+        // Opt-in only; preserves explicit GC options and does not change heap size.
+        URinthRender.applyJvmOptimizationProfile(activity, javaArgList);
 
         // TODO: this should be decoupled from GameRunner completely
         gameRenderer.setupEnvironment(activity);
