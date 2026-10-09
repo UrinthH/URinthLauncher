@@ -95,9 +95,10 @@ case "$url" in
     mkdir -p fake-module/lwjgl-vulkan/META-INF
     printf 'android-module\n' > fake-module/lwjgl-vulkan/META-INF/module.marker
     printf '{"id":"lwjgl-vulkan"}\n' > fake-module/lwjgl-vulkan/fabric.mod.json
-    (cd fake-module/lwjgl-vulkan && zip -qr "../../lwjgl-vulkan.jar" META-INF fabric.mod.json)
+    module_zip="$PWD/fake-module/lwjgl-vulkan.jar"
+    (cd fake-module/lwjgl-vulkan && zip -qr "$module_zip" META-INF fabric.mod.json)
     mkdir -p lwjgl-vulkan
-    cp fake-module/lwjgl-vulkan.jar lwjgl-vulkan/lwjgl-vulkan.jar
+    cp "$module_zip" lwjgl-vulkan/lwjgl-vulkan.jar
     zip -qr "$out" lwjgl-vulkan/lwjgl-vulkan.jar
     ;;
   *lwjgl3-android-natives-*.zip)
