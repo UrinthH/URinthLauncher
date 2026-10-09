@@ -28,7 +28,7 @@ This document distinguishes code that exists from work that still needs device v
 ## Next engineering gates
 
 1. Confirm the environment verification logs on a real GL4ES launch with Ultra OFF and ON. The supplied Minecraft 1.8.9 test measured 391 FPS in both modes, so it showed no gain; do not re-enable GL4ES overrides without repeatable evidence.
-2. Identify a reliable frame-presentation or game-loop integration point before connecting frame-time statistics. Do not label launcher startup timing as game FPS.
+2. The native frame-presentation candidate has been located in the pinned GLFW submodule at `glfw/src/egl_context.c`, in `swapBuffersEGL()` immediately around `eglSwapBuffers()`. A real implementation must patch/build the native submodule and measure consecutive swap timestamps (frame intervals), while labeling these as presentation intervals rather than GPU execution time. Do not fake FPS with Android `View` callbacks or label launcher startup timing as game FPS.
 3. Keep backend defaults where no benefit is measured. Implement and validate one backend-specific change only after instrumentation identifies a bottleneck; keep it reversible and compare repeated frame-time runs.
 4. Avoid unsupported assumptions about native hooks or variables. If a variable is accepted by `setenv`, that alone is not proof the backend implements it.
 
