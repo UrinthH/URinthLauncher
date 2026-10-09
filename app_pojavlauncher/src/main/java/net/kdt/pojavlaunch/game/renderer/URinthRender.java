@@ -1,9 +1,11 @@
 package net.kdt.pojavlaunch.game.renderer;
 
+import android.app.ActivityManager;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.system.ErrnoException;
 import android.system.Os;
+import android.os.Build;
 import android.util.Log;
 
 import net.kdt.pojavlaunch.Tools;
@@ -50,6 +52,36 @@ public final class URinthRender {
         return values;
     }
 
+    /** Log a reproducible device/backend snapshot without changing player graphics settings. */
+    private static void logDeviceSnapshot(Context context, RenderSpec renderer, boolean ultraEnabled) {
+        String abi = Build.SUPPORTED_ABIS != null && Build.SUPPORTED_ABIS.length > 0
+                ? Build.SUPPORTED_ABIS[0] : "unknown";
+        long totalRamMb = -1;
+        try {
+            ActivityManager manager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
+            if (manager != null) {
+                ActivityManager.MemoryInfo memoryInfo = new ActivityManager.MemoryInfo();
+                manager.getMemoryInfo(memoryInfo);
+                totalRamMb = memoryInfo.totalMem / (1024L * 1024L);
+            }
+        } catch (RuntimeException e) {
+            Log.w(TAG, "Unable to read device memory information", e);
+        }
+
+        Log.i(TAG, "Device snapshot: manufacturer=" + Build.MANUFACTURER
+                + ", model=" + Build.MODEL
+                + ", device=" + Build.DEVICE
+                + ", Android=" + Build.VERSION.RELEASE
+                + ", SDK=" + Build.VERSION.SDK_INT
+                + ", ABI=" + abi
+                + ", RAM_MB=" + totalRamMb
+                + ", ultra=" + ultraEnabled
+                + ", selectedRenderer=" + renderer.name()
+                + ", rendererTag=" + renderer.tag()
+                + ", customBackendIntegrated=false"
+                + ", resolutionAndOptionsTxtModified=false");
+    }
+
     public static boolean isUltraEnabled(Context context) {
         SharedPreferences prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
         return prefs.getBoolean(KEY_ULTRA, true);
@@ -86,7 +118,9 @@ public final class URinthRender {
         }
 
         String tag = renderer.tag();
-        if (!isUltraEnabled(context)) {
+        boolean ultraEnabled = isUltraEnabled(context);
+        logDeviceSnapshot(context, renderer, ultraEnabled);
+        if (!ultraEnabled) {
             Log.i(TAG, "URinthUltra Mode OFF; selected backend remains "
                     + renderer.name() + " (" + tag + "); no Ultra overrides added");
             return;
