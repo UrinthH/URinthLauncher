@@ -36,8 +36,10 @@ public final class URinthRender {
             "URINTH_ULTRA_WRAPPER",
             "URINTH_ULTRA_WRAPPER_VERSION",
             "MESA_SHADER_CACHE_MAX_SIZE",
+            "MESA_SHADER_CACHE_DIR",
             "mesa_glthread",
-            "MESA_GLSL_CACHE_DIR"
+            "MESA_GLSL_CACHE_DIR",
+            "LIBGL_BATCH"
     };
 
     // Snapshot the launcher's original process environment before we change it.
@@ -132,8 +134,8 @@ public final class URinthRender {
         env.put(ULTRA_KEY, "1");
         env.put(PROFILE_KEY, "ultra");
         env.put(BACKEND_KEY, tag);
-        env.put(PROFILE_VERSION_KEY, "2");
-        Log.i(TAG, "URinthUltra Mode ON; profile version=2; selected backend="
+        env.put(PROFILE_VERSION_KEY, "3");
+        Log.i(TAG, "URinthUltra Mode ON; profile version=3; selected backend="
                 + renderer.name() + " (" + tag + ")");
 
         // Mesa's shader cache and GL worker thread apply only to Mesa-backed
@@ -143,9 +145,16 @@ public final class URinthRender {
                 || Renderers.MESA_RENDERER_EXT.equals(tag)
                 || Renderers.LEGACYZINK_RENDERER.equals(tag)) {
             env.put("MESA_SHADER_CACHE_MAX_SIZE", "128M");
+            env.put("MESA_SHADER_CACHE_DIR", Tools.DIR_CACHE.getAbsolutePath());
             env.put("mesa_glthread", "true");
+            // Retain the legacy cache key used elsewhere in this launcher fork.
             env.put("MESA_GLSL_CACHE_DIR", Tools.DIR_CACHE.getAbsolutePath());
             Log.i(TAG, "Enabled Mesa shader cache sizing and GL worker-thread profile");
+        } else if (Renderers.GL4ES_RENDERER.equals(tag)) {
+            // GL4ES supports draw batching. Keep it opt-in behind Ultra Mode because
+            // some games/mods may render differently; compare frame-time results on-device.
+            env.put("LIBGL_BATCH", "1");
+            Log.i(TAG, "Enabled opt-in GL4ES draw batching (LIBGL_BATCH=1); verify visual and FPS results");
         } else {
             Log.i(TAG, "No backend-specific Ultra optimization is implemented for " + tag
                     + "; this profile does not replace the selected renderer");
