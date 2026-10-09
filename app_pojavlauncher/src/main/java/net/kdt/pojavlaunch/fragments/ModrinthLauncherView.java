@@ -41,8 +41,6 @@ import java.io.File;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.HashMap;
-import java.util.Map;
 import org.json.JSONObject;
 
 import git.artdeell.mojo.R;
