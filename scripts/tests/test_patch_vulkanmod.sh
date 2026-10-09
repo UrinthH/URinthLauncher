@@ -89,6 +89,7 @@ while [ "$#" -gt 0 ]; do
   esac
 done
 [ -n "$out" ] && [ -n "$url" ]
+case "$out" in /*) ;; *) out="$PWD/$out" ;; esac
 case "$url" in
   *lwjgl3-android-modules.zip)
     mkdir -p fake-module/lwjgl-vulkan/META-INF
