@@ -129,14 +129,12 @@ public final class ModrinthLauncherView extends View {
     }
 
     private void loadBackgroundArtwork() {
-        // Overworld mountain landscape with cherry-grove trees, replacing the ocean background.
+        // One continuous mountain/tundra scene is used as the launcher background.
+        // Warm grading below gives it a sunset look without splitting or layering
+        // a second screenshot over the background.
         loadRemoteArtwork(
-                "https://www.minecraft.net/content/dam/minecraftnet/games/minecraft/screenshots/MCV_VibrantVisuals_MCL_comparison_03_cherrygrove.jpg",
+                "https://www.minecraft.net/content/dam/minecraftnet/games/minecraft/screenshots/vv_Tundra_AG_02_1280x720.jpg",
                 bitmap -> { backgroundArtwork = bitmap; invalidate(); }
-        );
-        loadRemoteArtwork(
-                "https://www.minecraft.net/content/dam/minecraftnet/games/minecraft/screenshots/MCV_ChaseTheSkies_Swamp02_VV_.net_1280x720.jpg",
-                bitmap -> { heroRealisticArtwork = bitmap; invalidate(); }
         );
 
         // Verified official Minecraft biome artwork. Each card gets a different biome
@@ -261,9 +259,26 @@ public final class ModrinthLauncherView extends View {
     private void drawBackground(Canvas c) {
         p.setStyle(Paint.Style.FILL);
         if (backgroundArtwork != null) {
+            android.graphics.ColorMatrix sunsetGrade = new android.graphics.ColorMatrix(new float[]{
+                    1.13f, 0.02f, 0, 0, 10,
+                    0.01f, 1.02f, 0, 0, 2,
+                    0, 0, 0.86f, 0, 0,
+                    0, 0, 0, 1, 0
+            });
+            p.setColorFilter(new android.graphics.ColorMatrixColorFilter(sunsetGrade));
             drawCoverBitmap(c, backgroundArtwork, 0, 0, W, H);
+            p.setColorFilter(null);
+
+            // Warm sunset sky/highlights, while preserving a single full-screen image.
+            p.setShader(new LinearGradient(0, 0, 0, H,
+                    Color.argb(8, 255, 168, 83),
+                    Color.argb(92, 255, 102, 38),
+                    Shader.TileMode.CLAMP));
+            c.drawRect(0, 0, W, H, p);
+            p.setShader(null);
+
             // Keep the launcher panels readable while retaining the scenery underneath.
-            p.setColor(Color.argb(112, 2, 12, 22));
+            p.setColor(Color.argb(94, 2, 12, 22));
             c.drawRect(0, 0, W, H, p);
         } else {
             p.setShader(new LinearGradient(0,0,0,H,
@@ -506,72 +521,28 @@ public final class ModrinthLauncherView extends View {
     }
 
     private void drawRealisticHeroImage(Canvas c,float x,float y,float w,float h) {
-        // Always establish a bundled, offline-safe image first. A failed or black
-        // remote response must never leave the Play / Explore / Create banner black.
-        p.setStyle(Paint.Style.FILL);
-        p.setShader(null);
-        p.setColorFilter(null);
-        p.setAlpha(255);
-
-        Bitmap fallback = isUsableArtwork(backgroundArtwork) ? backgroundArtwork
-                : isUsableArtwork(versionBiomeArtworks[4]) ? versionBiomeArtworks[4]
-                : isUsableArtwork(versionBiomeArtworks[0]) ? versionBiomeArtworks[0]
-                : heroArtwork;
-        if (fallback != null) {
-            drawCoverBitmap(c, fallback, x, y, w, h);
+        // Use one complete image, never a split comparison or a second image overlay.
+        Bitmap artwork = isUsableArtwork(backgroundArtwork) ? backgroundArtwork : heroArtwork;
+        if (artwork != null) {
+            android.graphics.ColorMatrix shaderTextureGrade = new android.graphics.ColorMatrix(new float[]{
+                    1.18f, 0.02f, 0, 0, 5,
+                    0.01f, 1.12f, 0, 0, 3,
+                    0, 0.02f, 1.08f, 0, 2,
+                    0, 0, 0, 1, 0
+            });
+            p.setColorFilter(new android.graphics.ColorMatrixColorFilter(shaderTextureGrade));
+            drawCoverBitmap(c, artwork, x, y, w, h);
+            p.setColorFilter(null);
+            p.setShader(new LinearGradient(x, y, x, y+h,
+                    Color.argb(12, 255, 180, 95),
+                    Color.argb(82, 0, 12, 25),
+                    Shader.TileMode.CLAMP));
+            c.drawRect(x, y, x+w, y+h, p);
+            p.setShader(null);
         } else {
             p.setColor(Color.rgb(24, 52, 60));
-            c.drawRect(x, y, x + w, y + h, p);
+            c.drawRect(x, y, x+w, y+h, p);
         }
-
-        // Only overlay the featured Minecraft screenshot when it decoded into
-        // visibly varied artwork; reject blank/black responses from the server.
-        if (!isUsableArtwork(heroRealisticArtwork)) {
-            p.setColorFilter(null);
-            p.setShader(null);
-            return;
-        }
-
-        android.graphics.ColorMatrix cm = new android.graphics.ColorMatrix(new float[]{
-                1.18f, 0.02f, 0, 0, 2,
-                0.01f, 1.14f, 0.01f, 0, 2,
-                0, 0.03f, 1.22f, 0, 5,
-                0, 0, 0, 1, 0
-        });
-        p.setColorFilter(new android.graphics.ColorMatrixColorFilter(cm));
-        drawCoverBitmap(c, heroRealisticArtwork, x, y, w, h);
-        p.setColorFilter(null);
-
-        LinearGradient sunset = new LinearGradient(
-                x, y, x, y + h * 0.78f,
-                Color.argb(105, 255, 185, 105),
-                Color.argb(0, 255, 185, 105),
-                Shader.TileMode.CLAMP
-        );
-        p.setShader(sunset);
-        c.drawRect(x, y, x + w, y + h, p);
-        p.setShader(null);
-
-        LinearGradient atmosphere = new LinearGradient(
-                x, y, x, y + h,
-                Color.argb(0, 30, 190, 215),
-                Color.argb(78, 0, 24, 42),
-                Shader.TileMode.CLAMP
-        );
-        p.setShader(atmosphere);
-        c.drawRect(x, y, x + w, y + h, p);
-        p.setShader(null);
-
-        RadialGradient vignette = new RadialGradient(
-                x + w * 0.52f, y + h * 0.40f, Math.max(w, h) * 0.76f,
-                new int[]{Color.TRANSPARENT, Color.argb(115, 0, 0, 0)},
-                new float[]{0.45f, 1f},
-                Shader.TileMode.CLAMP
-        );
-        p.setShader(vignette);
-        c.drawRect(x, y, x + w, y + h, p);
-        p.setShader(null);
-        p.setColorFilter(null);
     }
 
     private void drawRealisticInstanceImage(Canvas c,float x,float y,float w,float h,int index) {
@@ -594,10 +565,8 @@ public final class ModrinthLauncherView extends View {
                     0, 0, 0, 1, 0
             });
             p.setColorFilter(new android.graphics.ColorMatrixColorFilter(cm));
-            // The official cherry-grove source is a before/after comparison.
-            // Render only the Vibrant Visuals half so the card stays consistently shader-lit.
-            if (index == 0) drawCoverBitmapRightHalf(c, b, x, y, w, h);
-            else drawCoverBitmap(c,b,x,y,w,h);
+            // Draw the complete screenshot. Never crop to one half of a split comparison.
+            drawCoverBitmap(c,b,x,y,w,h);
             p.setColorFilter(null);
 
             LinearGradient light = new LinearGradient(
@@ -1031,9 +1000,16 @@ public final class ModrinthLauncherView extends View {
             int card=(int)((contentX-left)/(cw+gap));
             if(card>=0 && card<instanceCards.length) {
                 float cardX=left+card*(cw+gap);
-                if(contentX >= cardX+cw-43f && contentX <= cardX+cw-5f && y >= 376f && y < 414f) {
+                // Only the explicit Play pill launches Minecraft. Artwork/title taps
+                // must never launch a version accidentally.
+                boolean playPressed = contentX >= cardX+cw-105f
+                        && contentX <= cardX+cw-37f && y >= 383f && y < 411f;
+                boolean menuPressed = contentX >= cardX+cw-35f
+                        && contentX <= cardX+cw-7f && y >= 376f && y < 411f;
+                if (menuPressed) {
                     openInstanceEditor(card);
-                } else if (contentX >= cardX && contentX <= cardX + cw && y >= 258f && y < 418f) {
+                } else if (playPressed) {
+                    Instances.setSelectedInstance(instanceCards[card]);
                     ExtraCore.setValue(ExtraConstants.LAUNCH_GAME,true);
                 }
             }
