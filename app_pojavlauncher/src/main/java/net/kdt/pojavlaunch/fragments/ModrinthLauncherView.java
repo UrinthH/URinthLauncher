@@ -51,8 +51,8 @@ public final class ModrinthLauncherView extends View {
     private static final float W = 1536f;
     private static final float H = 686f;
     private static final int BG = Color.rgb(3, 16, 27);
-    private static final int PANEL = Color.rgb(7, 29, 44);
-    private static final int PANEL_2 = Color.rgb(9, 39, 55);
+    private static final int PANEL = Color.argb(102, 7, 29, 44);
+    private static final int PANEL_2 = Color.argb(102, 9, 39, 55);
     private static final int TEXT = Color.rgb(242, 248, 250);
     private static final int MUTED = Color.rgb(171, 192, 203);
     private static final int ACCENT = Color.rgb(0, 230, 170);
@@ -321,7 +321,7 @@ public final class ModrinthLauncherView extends View {
 
     private void drawSidebar(Canvas c) {
         float x=0, y=62, w=228;
-        p.setShader(new LinearGradient(0,y,w,H,Color.rgb(5,28,43),Color.rgb(3,17,29),Shader.TileMode.CLAMP));
+        p.setShader(new LinearGradient(0,y,w,H,Color.argb(102,5,28,43),Color.argb(102,3,17,29),Shader.TileMode.CLAMP));
         c.drawRect(x,y,w,H,p); p.setShader(null);
         p.setColor(Color.argb(35,35,160,180)); c.drawRect(227,y,228,H,p);
         String[] labels={"Home","Instances","Mods","Resource Packs","Servers","Settings"};
@@ -1048,25 +1048,40 @@ public final class ModrinthLauncherView extends View {
             return true;
         }
         if(x>242 && x<1215 && y>=505 && y<545){
-            Tools.swapFragment(activity,SearchModFragment.class,SearchModFragment.TAG,null);return true;
+            float left = menuOpen ? 242f : 18f;
+            float width = 1215f - left;
+            if (x >= left + width - 95f && y <= 545f) {
+                selectedPage = 2;
+                openContentCategory("mod");
+                invalidate();
+            }
+            return true;
         }
         if(x>242 && x<1215 && y>=553 && y<650){
-            float gap=10f, cw=(1215f-242f-gap*4f)/5f;
-            int mod=(int)((x-242f)/(cw+gap));
-            if(mod==2){ selectedPage=7; openContentCategory("shader"); }
-            else if(mod==3){ selectedPage=3; openContentCategory("resourcepack", "realistic 4k"); }
-            else if(mod>=0 && mod<5){ modInstaller.run(); }
+            float left = menuOpen ? 242f : 18f;
+            float gap=10f, cw=(1215f-left-gap*4f)/5f;
+            int mod=(int)((x-left)/(cw+gap));
+            if (mod >= 0 && mod < 5) {
+                float cardX = left + mod * (cw + gap);
+                // Only the visible Add pill is actionable; blank card space is inert.
+                if (x >= cardX + cw - 63f && x <= cardX + cw - 12f && y >= 601f && y <= 630f) {
+                    if(mod==2){ selectedPage=7; openContentCategory("shader"); }
+                    else if(mod==3){ selectedPage=3; openContentCategory("resourcepack", "realistic 4k"); }
+                    else { modInstaller.run(); }
+                }
+            }
             return true;
         }
         if(x>242 && x<1215 && y>=258 && y<418){
-            float gap=12f, cw=(1215f-242f-gap*2f)/3f;
+            float left = menuOpen ? 242f : 18f;
+            float gap=12f, cw=(1215f-left-gap*2f)/3f;
             float contentX = x + instanceScrollX;
-            int card=(int)((contentX-242f)/(cw+gap));
+            int card=(int)((contentX-left)/(cw+gap));
             if(card>=0 && card<instanceCards.length) {
-                float cardX=242f+card*(cw+gap);
-                if(contentX >= cardX+cw-42f && y >= 358f && y < 418f) {
+                float cardX=left+card*(cw+gap);
+                if(contentX >= cardX+cw-43f && contentX <= cardX+cw-5f && y >= 376f && y < 414f) {
                     openInstanceEditor(card);
-                } else {
+                } else if (contentX >= cardX && contentX <= cardX + cw && y >= 258f && y < 418f) {
                     ExtraCore.setValue(ExtraConstants.LAUNCH_GAME,true);
                 }
             }
