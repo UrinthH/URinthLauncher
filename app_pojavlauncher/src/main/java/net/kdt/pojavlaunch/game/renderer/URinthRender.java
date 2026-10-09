@@ -111,6 +111,11 @@ public final class URinthRender {
         }
     }
 
+    /** True only for the opt-in GL4ES path; never enables batching for another backend. */
+    static boolean shouldEnableGl4esBatching(String rendererTag, boolean ultraEnabled) {
+        return ultraEnabled && Renderers.GL4ES_RENDERER.equals(rendererTag);
+    }
+
     private URinthRender() {}
 
     private static Map<String, String> captureOriginalEnvironment() {
@@ -295,7 +300,7 @@ public final class URinthRender {
             // Retain the legacy cache key used elsewhere in this launcher fork.
             env.put("MESA_GLSL_CACHE_DIR", Tools.DIR_CACHE.getAbsolutePath());
             Log.i(TAG, "Enabled Mesa shader cache sizing; worker-thread decision is memory-aware");
-        } else if (Renderers.GL4ES_RENDERER.equals(tag)) {
+        } else if (shouldEnableGl4esBatching(tag, ultraEnabled)) {
             // GL4ES supports conservative draw-call batching. Keep it opt-in with
             // Ultra Mode and restore the original value when Ultra is disabled.
             // The effect is workload/device-dependent and must be benchmarked.
