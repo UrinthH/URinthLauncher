@@ -101,6 +101,9 @@ public class GameRenderer {
             return;
         }
         currentRenderer.setupEnvironment(context, environment);
+        // URinthUltra is an opt-in profile. It decorates the chosen backend without
+        // changing Minecraft options, resolution, or the user's saved renderer choice.
+        URinthRender.applyProfile(context, currentRenderer, environment);
         for(Map.Entry<String, String> e : environment.entrySet()) {
             Logger.appendToLog("Added renderer env: " + e.getKey() + '=' + e.getValue());
             Os.setenv(e.getKey(), e.getValue(), true);
