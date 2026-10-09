@@ -152,15 +152,23 @@ public class ModrinthBrowserFragment extends Fragment {
                              @Nullable Bundle savedInstanceState) {
         LinearLayout root = new LinearLayout(requireContext());
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackgroundColor(BG);
+        GradientDrawable pageBackground = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
+                new int[]{Color.rgb(6, 27, 42), Color.rgb(3, 17, 29)});
+        root.setBackground(pageBackground);
         root.setPadding(dp(22), dp(20), dp(22), dp(14));
 
         TextView heading = new TextView(requireContext());
         heading.setText(categoryTitle());
         heading.setTextColor(TEXT);
-        heading.setTextSize(25);
-        heading.setTypeface(null, android.graphics.Typeface.BOLD);
+        heading.setTextSize(26);
+        heading.setLetterSpacing(-0.02f);
+        heading.setTypeface(android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.BOLD));
         root.addView(heading, new LinearLayout.LayoutParams(-1, -2));
+        View accentRule = new View(requireContext());
+        accentRule.setBackground(rounded(ACCENT, 2, Color.TRANSPARENT, 0));
+        LinearLayout.LayoutParams ruleParams = new LinearLayout.LayoutParams(dp(54), dp(3));
+        ruleParams.topMargin = dp(7);
+        root.addView(accentRule, ruleParams);
 
         TextView sub = new TextView(requireContext());
         sub.setText("Browse real Modrinth projects. Install only versions compatible with your selected profile.");
@@ -173,6 +181,12 @@ public class ModrinthBrowserFragment extends Fragment {
 
         LinearLayout searchRow = new LinearLayout(requireContext());
         searchRow.setOrientation(LinearLayout.HORIZONTAL);
+        searchRow.setGravity(Gravity.CENTER_VERTICAL);
+        searchRow.setPadding(dp(8), dp(8), dp(8), dp(8));
+        searchRow.setBackground(rounded(Color.rgb(8, 32, 46), 16, Color.rgb(25, 82, 101), 1));
+        LinearLayout.LayoutParams searchRowParams = new LinearLayout.LayoutParams(-1, -2);
+        searchRowParams.topMargin = dp(10);
+        root.addView(searchRow, searchRowParams);
         search = new EditText(requireContext());
         search.setSingleLine(true);
         search.setTextColor(TEXT);
@@ -185,7 +199,6 @@ public class ModrinthBrowserFragment extends Fragment {
         LinearLayout.LayoutParams buttonParams = new LinearLayout.LayoutParams(dp(104), dp(44));
         buttonParams.leftMargin = dp(8);
         searchRow.addView(searchButton, buttonParams);
-        root.addView(searchRow);
         searchButton.setOnClickListener(v -> loadProjects(search.getText().toString().trim()));
         search.setOnEditorActionListener((v, actionId, event) -> {
             loadProjects(search.getText().toString().trim());
@@ -328,7 +341,12 @@ public class ModrinthBrowserFragment extends Fragment {
         card.setOrientation(LinearLayout.HORIZONTAL);
         card.setGravity(Gravity.CENTER_VERTICAL);
         card.setPadding(dp(16), dp(14), dp(16), dp(14));
-        card.setBackground(rounded(CARD, 16, Color.rgb(24, 91, 111), 1));
+        GradientDrawable cardBackground = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
+                new int[]{Color.rgb(11, 43, 59), Color.rgb(6, 27, 42)});
+        cardBackground.setCornerRadius(dp(16));
+        cardBackground.setStroke(dp(1), Color.rgb(27, 91, 110));
+        card.setBackground(cardBackground);
+        card.setElevation(dp(2));
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, -2);
         params.bottomMargin = dp(12);
         resultList.addView(card, params);
@@ -375,6 +393,8 @@ public class ModrinthBrowserFragment extends Fragment {
 
         Button install = button(category.equals("modpack") ? "Choose version" : "Install");
         install.setTextSize(11);
+        install.setMinHeight(dp(40));
+        install.setElevation(dp(1));
         LinearLayout.LayoutParams installParams = new LinearLayout.LayoutParams(dp(94), dp(40));
         installParams.leftMargin = dp(12);
         card.addView(install, installParams);
