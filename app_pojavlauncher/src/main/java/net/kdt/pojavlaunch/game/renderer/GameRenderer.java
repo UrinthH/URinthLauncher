@@ -138,7 +138,10 @@ public class GameRenderer {
 
     /** Set renderer before setupEnvironment. */
     public void setCurrentRenderer(RenderSpec spec) {
-        Log.i(TAG, "Replacing default renderer with the new: " + spec.name());
+        if (spec == null) {
+            throw new IllegalArgumentException("Renderer spec must not be null");
+        }
+        logRendererInfo("Replacing current renderer with: " + spec.name());
         currentRenderer = spec;
     }
 
@@ -164,6 +167,14 @@ public class GameRenderer {
             else Log.e(TAG, message, error);
         } catch (RuntimeException ignored) {
             // Android framework logging is not mocked in local JVM tests.
+        }
+    }
+
+    private static void logRendererInfo(String message) {
+        try {
+            Log.i(TAG, message);
+        } catch (RuntimeException ignored) {
+            // Diagnostics must never interfere with backend selection.
         }
     }
 
@@ -207,13 +218,13 @@ public class GameRenderer {
         final long setupStartedAt = SystemClock.elapsedRealtime();
         if (!prepareRendererSafely(currentRenderer)) {
             final long primarySetupMs = SystemClock.elapsedRealtime() - setupStartedAt;
-            Log.e(TAG, "Renderer setup failed: backend=" + requestedBackend
+            logRendererFailure("Renderer setup failed: backend=" + requestedBackend
                     + ", elapsedMs=" + primarySetupMs
-                    + ", falling back to " + FALLBACK_RENDERER);
+                    + ", falling back to " + FALLBACK_RENDERER, null);
 
             RenderSpec fallback = getKnownRenderer(FALLBACK_RENDERER);
             if (fallback == null) {
-                Log.e(TAG, "Renderer fallback is unavailable; primarySetupMs=" + primarySetupMs);
+                logRendererFailure("Renderer fallback is unavailable; primarySetupMs=" + primarySetupMs, null);
                 return false;
             }
 
@@ -225,7 +236,7 @@ public class GameRenderer {
             final long fallbackStartedAt = SystemClock.elapsedRealtime();
             boolean fallbackReady = prepareRendererSafely(currentRenderer);
             final long fallbackSetupMs = SystemClock.elapsedRealtime() - fallbackStartedAt;
-            Log.i(TAG, "Renderer fallback result: backend=" + currentRenderer.name()
+            logRendererInfo("Renderer fallback result: backend=" + currentRenderer.name()
                     + ", ready=" + fallbackReady
                     + ", primarySetupMs=" + primarySetupMs
                     + ", fallbackSetupMs=" + fallbackSetupMs
@@ -233,7 +244,7 @@ public class GameRenderer {
             return fallbackReady;
         }
 
-        Log.i(TAG, "Renderer setup succeeded: backend=" + currentRenderer.name()
+        logRendererInfo("Renderer setup succeeded: backend=" + currentRenderer.name()
                 + ", setupMs=" + (SystemClock.elapsedRealtime() - setupStartedAt));
         return true;
     }
