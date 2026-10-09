@@ -2,10 +2,8 @@ package net.kdt.pojavlaunch.fragments;
 
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.graphics.*;
 import android.graphics.drawable.Drawable;
-import android.os.SystemClock;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Toast;
@@ -60,7 +58,6 @@ public final class ModrinthLauncherView extends View {
 
     private final Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint stroke = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint edgeGlowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final RectF r = new RectF();
     private final Bitmap logo;
     private final Bitmap heroArtwork;
@@ -68,7 +65,6 @@ public final class ModrinthLauncherView extends View {
     private final Bitmap snowArtwork;
     private final Bitmap badlandsArtwork;
     private final Bitmap updateIcon;
-    private final Bitmap ultraIcon;
     private final Bitmap optifineIcon;
     private final Bitmap fabricIcon;
     private final Bitmap quiltIcon;
@@ -85,7 +81,6 @@ public final class ModrinthLauncherView extends View {
     private final Runnable modInstaller;
     private boolean menuOpen = true;
     private int selectedPage = 0;
-    private boolean ultraOn;
     private float sx = 1f, sy = 1f;
     private float instanceScrollX;
     private float touchDownX;
@@ -114,15 +109,12 @@ public final class ModrinthLauncherView extends View {
         snowArtwork = bitmap(R.drawable.urinth_snow);
         badlandsArtwork = bitmap(R.drawable.urinth_badlands);
         updateIcon = bitmap(R.drawable.ic_px_verify_hash);
-        ultraIcon = bitmap(R.drawable.ic_px_speed);
         optifineIcon = bitmap(R.drawable.ic_optifine);
         fabricIcon = bitmap(R.drawable.ic_fabric);
         quiltIcon = bitmap(R.drawable.ic_quilt);
         forgeIcon = bitmap(R.drawable.ic_forge);
         neoforgeIcon = bitmap(R.drawable.ic_neoforge);
         loadBackgroundArtwork();
-        SharedPreferences prefs = activity.getSharedPreferences("urinth_ui", Context.MODE_PRIVATE);
-        ultraOn = prefs.getBoolean("ultra", false);
         p.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
         p.setFilterBitmap(true);
         p.setDither(true);
@@ -261,8 +253,6 @@ public final class ModrinthLauncherView extends View {
         drawRight(canvas);
         if (accountChooserOpen) drawAccountChooser(canvas);
         if (authChooserOpen) drawAuthChooser(canvas);
-        drawUltraEdgeGlow(canvas);
-        if (ultraOn) postInvalidateDelayed(40L);
         canvas.restore();
     }
 
@@ -373,7 +363,6 @@ public final class ModrinthLauncherView extends View {
         }
         drawHero(c,left,75,width,170);
         drawInstances(c,left,258,width);
-        if (selectedPage == 0) drawUltraMode(c, left, 435, Math.min(width, 420), 66);
     }
 
     private void drawInstancesPage(Canvas c, float x, float y, float w, float h) {
@@ -729,44 +718,6 @@ public final class ModrinthLauncherView extends View {
         text(c,"›",x+w-25,233,24,TEXT,true);
 
         drawSkinViewer(c, x, 274, w, 270);
-    }
-
-    /**
-     * Full-screen status frame: animated green while Ultra is enabled, subdued while off.
-     * Drawn over the launcher UI only; it does not affect the game surface or resolution.
-     */
-    private void drawUltraEdgeGlow(Canvas c) {
-        long now = SystemClock.uptimeMillis();
-        float pulse = ultraOn ? (0.5f + 0.5f * (float) Math.sin(now / 360.0)) : 0.55f;
-        int rgb = ultraOn ? Color.rgb(0, 255, 132) : Color.rgb(87, 108, 118);
-        int glowAlpha = ultraOn ? (int) (80 + 100 * pulse) : 70;
-
-        edgeGlowPaint.setStyle(Paint.Style.STROKE);
-        edgeGlowPaint.setStrokeCap(Paint.Cap.ROUND);
-        edgeGlowPaint.setStrokeJoin(Paint.Join.ROUND);
-        edgeGlowPaint.setStrokeWidth(4.5f);
-        edgeGlowPaint.setColor(Color.argb(glowAlpha, Color.red(rgb), Color.green(rgb), Color.blue(rgb)));
-        edgeGlowPaint.setShadowLayer(18f + 10f * pulse, 0f, 0f, Color.argb(170, Color.red(rgb), Color.green(rgb), Color.blue(rgb)));
-        c.drawRoundRect(4f, 4f, W - 4f, H - 4f, 16f, 16f, edgeGlowPaint);
-
-        edgeGlowPaint.clearShadowLayer();
-        edgeGlowPaint.setStrokeWidth(1.5f);
-        edgeGlowPaint.setColor(Color.argb(ultraOn ? (int) (130 + 100 * pulse) : 190,
-                Color.red(rgb), Color.green(rgb), Color.blue(rgb)));
-        c.drawRoundRect(7f, 7f, W - 7f, H - 7f, 13f, 13f, edgeGlowPaint);
-        edgeGlowPaint.setStyle(Paint.Style.FILL);
-    }
-
-    private void drawUltraMode(Canvas c, float x, float y, float w, float h) {
-        panel(c, x, y, w, h);
-        drawBitmap(c, ultraIcon, x+16, y+13, 40, 40);
-        text(c, "UrinthUltra Mode", x+68, y+27, 15, TEXT, true);
-        text(c, "Enhanced performance mode", x+68, y+47, 11, MUTED, false);
-        round(c, x+w-88, y+15, x+w-16, y+51, 18,
-                ultraOn ? Color.rgb(7,126,105) : Color.rgb(34,51,61),
-                ultraOn ? ACCENT : Color.rgb(87,108,118), 1.5f);
-        p.setColor(ultraOn ? ACCENT : Color.rgb(142,161,169));
-        c.drawCircle(ultraOn ? x+w-34 : x+w-70, y+33, 12, p);
     }
 
     private void drawSkinViewer(Canvas c, float x, float y, float w, float h) {
@@ -1141,14 +1092,6 @@ public final class ModrinthLauncherView extends View {
             } else {
                 authChooserOpen = true;
             }
-            invalidate();
-            return true;
-        }
-        float mainLeft = menuOpen ? 242f : 18f;
-        if(selectedPage == 0 && x >= mainLeft && x < mainLeft + Math.min(1215f-mainLeft, 420f)
-                && y >= 435f && y < 501f) {
-            ultraOn=!ultraOn;
-            c.getSharedPreferences("urinth_ui",Context.MODE_PRIVATE).edit().putBoolean("ultra",ultraOn).apply();
             invalidate();
             return true;
         }
