@@ -44,9 +44,45 @@ public abstract class GLESRenderSpec implements RenderSpec {
     }
 
     public static class LTWRenderSpec extends GLESRenderSpec {
-        public boolean compatibleDevice(Context context) {
-            return JREUtils.getDetectedVersion() >= 3 && new File(Tools.NATIVE_LIB_DIR, this.library()).exists();
+        private LibraryPlugin externalProvider;
+
+        private boolean discoverExternalProvider(Context context) {
+            if (externalProvider != null && externalProvider.checkLibraries(library())) return true;
+            externalProvider = null;
+            String[] packages = {
+                    LibraryPlugin.ID_LTW_PLUGIN_FCL,
+                    LibraryPlugin.ID_LTW_PLUGIN_MIO
+            };
+            for (String packageName : packages) {
+                LibraryPlugin candidate = LibraryPlugin.discoverPlugin(context, packageName);
+                if (candidate != null && candidate.checkLibraries(library())) {
+                    externalProvider = candidate;
+                    return true;
+                }
+            }
+            return false;
         }
+
+        @Override
+        public boolean compatibleDevice(Context context) {
+            if (JREUtils.getDetectedVersion() < 3) return false;
+            return new File(Tools.NATIVE_LIB_DIR, library()).isFile()
+                    || discoverExternalProvider(context);
+        }
+
+        @Override
+        public String librarySearchPath() {
+            return externalProvider == null ? null : externalProvider.getLibraryPath();
+        }
+
+        @Override
+        public void setupEnvironment(Context context, Map<String, String> envMap) {
+            // Refresh plugin metadata immediately before launch; packages may be removed
+            // between the Settings compatibility scan and game startup.
+            discoverExternalProvider(context);
+            super.setupEnvironment(context, envMap);
+        }
+
         public String name() {
             return "OpenLTW";
         }
