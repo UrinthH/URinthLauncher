@@ -23,6 +23,14 @@ public class GpuUtilsGLInfoTest {
     }
 
     @Test
+    public void adrenoDetectionHandlesUnknownGpuStringsSafely() {
+        assertTrue(new GpuUtils.GLInfo("Qualcomm", "Adreno (TM) 530", 3, false).isAdreno());
+        assertTrue(new GpuUtils.GLInfo("Qualcomm", "Adreno (TM) 530", 3, false).isAdreno500Lower());
+        assertFalse(new GpuUtils.GLInfo(null, "Adreno (TM) 530", 3, false).isAdreno());
+        assertFalse(new GpuUtils.GLInfo("Qualcomm", null, 3, false).isAdreno500Lower());
+    }
+
+    @Test
     public void legacyIsArmMethodRemainsCompatible() {
         assertTrue(new GpuUtils.GLInfo("ARM", "Mali-G78", 3, false).isArm());
         assertFalse(new GpuUtils.GLInfo("Qualcomm", "Adreno 740", 3, false).isArm());
