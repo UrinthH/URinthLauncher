@@ -755,7 +755,8 @@ public class ModrinthBrowserFragment extends Fragment {
                 if ("resourcepack".equals(category)) folder = "resourcepacks";
                 else if ("shader".equals(category)) folder = "shaderpacks";
                 else if ("world".equals(category)) folder = "saves";
-                File targetDir = new File(gameDir, folder);
+                final String installFolder = folder;
+                File targetDir = new File(gameDir, installFolder);
                 if (!targetDir.exists() && !targetDir.mkdirs()) throw new java.io.IOException("Couldn't create " + folder + " folder");
 
                 List<Version> installQueue = new ArrayList<>();
@@ -776,7 +777,7 @@ public class ModrinthBrowserFragment extends Fragment {
                         return;
                     }
                     dialog.dismiss();
-                    Toast.makeText(getContext(), "Installed " + totalInstalled + " file(s) into " + folder + "/", Toast.LENGTH_LONG).show();
+                    Toast.makeText(getContext(), "Installed " + totalInstalled + " file(s) into " + installFolder + "/", Toast.LENGTH_LONG).show();
                     if (status != null) status.setText(project.title + " and required dependencies installed into " + (instance.name == null ? "selected profile" : instance.name));
                 });
             } catch (Exception e) {
@@ -836,7 +837,7 @@ public class ModrinthBrowserFragment extends Fragment {
             if (!dependency.versionId.isEmpty()) {
                 JsonObject json = fetchVersionJson("version/" + dependency.versionId);
                 Version candidate = new Version(json);
-                if (isCompatible(candidate, instance, "mod")) required = candidate;
+                if (isCompatible(candidate, instance, "mod") && !candidate.url.isEmpty()) required = candidate;
             } else if (!dependency.projectId.isEmpty()) {
                 JsonArray candidates = fetchProjectVersions(dependency.projectId);
                 for (int i = 0; i < candidates.size(); i++) {
