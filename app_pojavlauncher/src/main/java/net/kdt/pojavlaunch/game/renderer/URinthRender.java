@@ -33,6 +33,8 @@ public final class URinthRender {
             PROFILE_KEY,
             BACKEND_KEY,
             PROFILE_VERSION_KEY,
+            "URINTH_ULTRA_WRAPPER",
+            "URINTH_ULTRA_WRAPPER_VERSION",
             "MESA_SHADER_CACHE_MAX_SIZE",
             "mesa_glthread",
             "MESA_GLSL_CACHE_DIR"
@@ -78,7 +80,8 @@ public final class URinthRender {
                 + ", ultra=" + ultraEnabled
                 + ", selectedRenderer=" + renderer.name()
                 + ", rendererTag=" + renderer.tag()
-                + ", customBackendIntegrated=false"
+                + ", urinthUltraWrapperIntegrated=" + ultraEnabled
+                + ", customNativeDriverReplacement=false"
                 + ", resolutionAndOptionsTxtModified=false");
     }
 
