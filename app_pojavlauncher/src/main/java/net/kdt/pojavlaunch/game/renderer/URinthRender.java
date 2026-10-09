@@ -97,7 +97,7 @@ public final class URinthRender {
         thermalStatusListener = null;
     }
 
-    private static String thermalStatusName(int status) {
+    static String thermalStatusName(int status) {
         switch (status) {
             case PowerManager.THERMAL_STATUS_NONE: return "none";
             case PowerManager.THERMAL_STATUS_LIGHT: return "light";
