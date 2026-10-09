@@ -439,7 +439,7 @@
     <string name="preference_remap_controller_title">Change controller key bindings</string>
     <string name="preference_remap_controller_description">Allows you to modify the keyboard keys bound to each controller button</string>
     <string name="mcl_button_social_media">Discord</string>
-    <string name="ltw_render_distance_warning_msg">Your GPU may encounter rendering issues above 7 render distance without Sodium or similar mods. Press OK to continue without changing your Minecraft settings, or cancel to stop launching.</string>
+    <string name="ltw_render_distance_warning_msg">Your GPU may encounter rendering issues above 7 render distance without Sodium or similar mods. Press OK to continue with your current settings. Minecraft settings will not be changed.</string>
     <string name="mcl_button_open_directory">Open game directory</string>
     <string name="social_media_invite" translatable="false">https://discord.gg/VHdwQFsaGX</string>
     <string name="local_login_bad_username_title">Unsuitable username</string>
