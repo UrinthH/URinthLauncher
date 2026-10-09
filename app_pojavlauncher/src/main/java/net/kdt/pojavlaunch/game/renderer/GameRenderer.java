@@ -5,6 +5,7 @@ import static net.kdt.pojavlaunch.game.renderer.def.Renderers.GL4ES_RENDERER;
 import static net.kdt.pojavlaunch.game.renderer.def.Renderers.KRYPTON_RENDERER;
 import static net.kdt.pojavlaunch.game.renderer.def.Renderers.LEGACYZINK_RENDERER;
 import static net.kdt.pojavlaunch.game.renderer.def.Renderers.LTW_RENDERER;
+import static net.kdt.pojavlaunch.game.renderer.def.Renderers.LTW_LEGACY_RENDERER;
 import static net.kdt.pojavlaunch.game.renderer.def.Renderers.MESA_RENDERER;
 import static net.kdt.pojavlaunch.game.renderer.def.Renderers.MESA_RENDERER_EXT;
 import static net.kdt.pojavlaunch.game.renderer.def.Renderers.MOBILEGLUES_RENDERER;
@@ -68,6 +69,7 @@ public class GameRenderer {
             case "opengles2_5":
             case GL4ES_RENDERER: return new GLESRenderSpec.GL4ESRenderSpec();
             case LTW_RENDERER: return new GLESRenderSpec.LTWRenderSpec();
+            case LTW_LEGACY_RENDERER: return new GLESRenderSpec.LTWLegacyRenderSpec();
             case KRYPTON_RENDERER: return new GLESRenderSpec.KryptonRenderSpec();
             case ZINK_RENDERER: return new MesaRenderSpec.ZinkRenderSpec();
             case VIRGL_RENDERER: return new MesaRenderSpec.VirGLRenderSpec();
