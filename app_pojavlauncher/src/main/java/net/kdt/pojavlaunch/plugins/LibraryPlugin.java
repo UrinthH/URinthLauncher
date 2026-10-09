@@ -17,6 +17,8 @@ public class LibraryPlugin {
     /** Alternate installed ANGLE plugin package IDs used by compatible launcher forks. */
     public static final String ID_ANGLE_PLUGIN_FCL = "com.fcl.plugin.renderer.angle";
     public static final String ID_ANGLE_PLUGIN_MIO = "com.mio.plugin.renderer.angle";
+    public static final String ID_GL4ES_PLUGIN_FCL = "com.fcl.plugin.renderer.gl4es";
+    public static final String ID_GL4ES_PLUGIN_MIO = "com.mio.plugin.renderer.gl4es";
     public static final String ID_LTW_PLUGIN_FCL = "com.fcl.plugin.renderer.ltw";
     public static final String ID_LTW_PLUGIN_MIO = "com.mio.plugin.renderer.ltw";
     public static final String ID_FFMPEG_PLUGIN = "git.mojo.ffmpeg";
