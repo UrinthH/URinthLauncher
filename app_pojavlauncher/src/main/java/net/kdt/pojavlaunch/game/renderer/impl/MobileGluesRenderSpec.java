@@ -97,6 +97,8 @@ public final class MobileGluesRenderSpec implements RenderSpec {
 
     @Override
     public void setupEnvironment(Context context, Map<String, String> envMap) {
+        // Resolve the plugin on the launch instance; RendererCache probes a separate instance.
+        discover(context);
         GLESProvider glesProvider = GLESProvider.getGlesProvider(
                 context, LauncherPreferences.PREF_USE_ANGLE);
         glesProvider.setEnvironment(envMap);
