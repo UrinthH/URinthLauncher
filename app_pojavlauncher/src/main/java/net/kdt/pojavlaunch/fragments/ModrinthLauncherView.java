@@ -301,29 +301,53 @@ public final class ModrinthLauncherView extends View {
 
     private void drawSidebar(Canvas c) {
         float x=0, y=62, w=228;
-        p.setShader(new LinearGradient(0,y,w,H,Color.rgb(4,25,39),Color.rgb(3,20,32),Shader.TileMode.CLAMP)); c.drawRect(x,y,w,H,p); p.setShader(null);
+        p.setShader(new LinearGradient(0,y,w,H,Color.rgb(5,28,43),Color.rgb(3,17,29),Shader.TileMode.CLAMP));
+        c.drawRect(x,y,w,H,p); p.setShader(null);
+        p.setColor(Color.argb(35,35,160,180)); c.drawRect(227,y,228,H,p);
         String[] labels={"Home","Instances","Mods","Resource Packs","Servers","Settings"};
         for(int i=0;i<labels.length;i++) {
             float yy=72+i*48;
-            if(i==selectedPage) { round(c,19,yy,215,yy+42,12,Color.rgb(7,91,81),ACCENT,1.2f); p.setColor(Color.argb(35,0,230,170)); c.drawRoundRect(19,yy,25,yy+42,3,3,p); }
+            if(i==selectedPage) {
+                p.setShader(new LinearGradient(19,yy,215,yy+42,Color.rgb(8,102,86),Color.rgb(5,65,68),Shader.TileMode.CLAMP));
+                c.drawRoundRect(19,yy,215,yy+42,12,12,p); p.setShader(null);
+                round(c,19,yy,215,yy+42,12,Color.TRANSPARENT,Color.rgb(0,230,170),1.3f);
+                p.setShader(new LinearGradient(19,yy,25,yy+42,ACCENT,Color.rgb(0,115,125),Shader.TileMode.CLAMP));
+                c.drawRoundRect(19,yy+5,24,yy+37,3,3,p); p.setShader(null);
+                p.setColor(Color.argb(22,0,230,170)); c.drawCircle(195,yy+10,22,p);
+            } else {
+                round(c,19,yy,215,yy+42,12,Color.argb(14,105,175,190),Color.TRANSPARENT,0);
+            }
             drawNavIcon(c,43,yy+21,i);
             text(c,labels[i],75,yy+27,14,i==selectedPage?ACCENT:TEXT,true);
         }
-        p.setColor(Color.rgb(21,94,112)); c.drawRect(20,365,205,366,p);
+        p.setShader(new LinearGradient(20,365,205,365,Color.TRANSPARENT,Color.rgb(34,115,130),Shader.TileMode.CLAMP));
+        c.drawRect(20,365,205,366,p); p.setShader(null);
         String[] more={"Modpacks","Shaders","Worlds"};
         for(int i=0;i<3;i++) {
             float yy=378+i*48;
-            if(selectedPage==6+i) { round(c,19,yy,215,yy+42,12,Color.rgb(7,91,81),ACCENT,1.2f); p.setColor(Color.argb(35,0,230,170)); c.drawRoundRect(19,yy,25,yy+42,3,3,p); }
+            if(selectedPage==6+i) {
+                p.setShader(new LinearGradient(19,yy,215,yy+42,Color.rgb(8,102,86),Color.rgb(5,65,68),Shader.TileMode.CLAMP));
+                c.drawRoundRect(19,yy,215,yy+42,12,12,p); p.setShader(null);
+                round(c,19,yy,215,yy+42,12,Color.TRANSPARENT,Color.rgb(0,230,170),1.3f);
+                p.setColor(Color.argb(22,0,230,170)); c.drawCircle(195,yy+10,22,p);
+            } else {
+                round(c,19,yy,215,yy+42,12,Color.argb(14,105,175,190),Color.TRANSPARENT,0);
+            }
             drawNavIcon(c,43,yy+21,6+i);
             text(c,more[i],75,yy+27,14,selectedPage==6+i?ACCENT:TEXT,true);
         }
-        round(c,19,522,215,602,12,Color.rgb(5,44,55),ACCENT,1.5f);
+        p.setShader(new LinearGradient(19,522,215,602,Color.rgb(8,60,69),Color.rgb(5,35,49),Shader.TileMode.CLAMP));
+        c.drawRoundRect(19,522,215,602,15,15,p); p.setShader(null);
+        round(c,19,522,215,602,15,Color.TRANSPARENT,Color.rgb(0,174,148),1.1f);
+        p.setColor(Color.argb(24,0,230,170)); c.drawCircle(48,544,28,p);
         drawBitmap(c,logo,31,536,42,42);
         text(c,"Modrinth",87,546,15,TEXT,true);
         text(c,"Better Minecraft",87,564,11,MUTED,false);
         text(c,"Together",87,580,11,MUTED,false);
         text(c,"›",196,564,26,ACCENT,true);
-        p.setColor(Color.rgb(14,61,75)); c.drawRect(0,625,228,H,p);
+        p.setShader(new LinearGradient(0,625,228,H,Color.rgb(9,45,59),Color.rgb(4,27,41),Shader.TileMode.CLAMP));
+        c.drawRect(0,625,228,H,p); p.setShader(null);
+        p.setColor(Color.rgb(18,79,95)); c.drawRect(0,625,228,626,p);
         drawBitmap(c,logo,25,632,29,29);
         text(c,"Modrinth",67,651,14,TEXT,true);
     }
@@ -341,7 +365,10 @@ public final class ModrinthLauncherView extends View {
     }
 
     private void drawInstancesPage(Canvas c, float x, float y, float w, float h) {
-        round(c, x, y, x+w, y+h, 18, Color.rgb(5,25,39), Color.rgb(21,82,105), 1.2f);
+        p.setShader(new LinearGradient(x,y,x+w,y+h,Color.rgb(8,35,51),Color.rgb(4,22,36),Shader.TileMode.CLAMP));
+        c.drawRoundRect(x,y,x+w,y+h,20,20,p); p.setShader(null);
+        round(c,x,y,x+w,y+h,20,Color.TRANSPARENT,Color.rgb(27,89,108),1.1f);
+        p.setColor(Color.argb(26,0,230,170)); c.drawRoundRect(x+1,y+1,x+w-1,y+4,2,2,p);
         text(c, "Instances", x+28, y+42, 27, TEXT, true);
         text(c, "Create and manage your Minecraft profiles", x+28, y+66, 13, MUTED, false);
 
@@ -432,7 +459,9 @@ public final class ModrinthLauncherView extends View {
     }
 
     private void drawHero(Canvas c,float x,float y,float w,float h) {
-        round(c,x,y,x+w,y+h,17,Color.rgb(7,32,48),Color.rgb(25,116,139),1.1f);
+        p.setShader(new LinearGradient(x,y,x+w,y+h,Color.rgb(8,38,54),Color.rgb(4,24,39),Shader.TileMode.CLAMP));
+        c.drawRoundRect(x,y,x+w,y+h,19,19,p); p.setShader(null);
+        round(c,x,y,x+w,y+h,19,Color.TRANSPARENT,Color.rgb(29,101,122),1.1f);
         c.save();
         c.clipRect(x+1,y+1,x+w-1,y+h-1);
         drawRealisticHeroImage(c,x+1,y+1,w-2,h-2);
@@ -577,7 +606,9 @@ public final class ModrinthLauncherView extends View {
             drawRealisticInstanceImage(c, xx, y, cw, 160, i);
             round(c,xx,y+100,xx+cw,y+160,0,Color.argb(215,3,25,39),Color.TRANSPARENT,0);
             c.restore();
-            round(c,xx,y,xx+cw,y+160,14,Color.TRANSPARENT,Color.rgb(23,111,137),1.1f);
+            p.setShader(new LinearGradient(xx,y,xx+cw,y+160,Color.argb(28,0,230,170),Color.TRANSPARENT,Shader.TileMode.CLAMP));
+            c.drawRoundRect(xx+1,y+1,xx+cw-1,y+159,14,14,p); p.setShader(null);
+            round(c,xx,y,xx+cw,y+160,14,Color.TRANSPARENT,Color.rgb(28,91,113),1.1f);
 
             DisplayInstance instance = i < instanceCards.length ? instanceCards[i] : null;
             String name = instance != null && Tools.isValidString(instance.name)
@@ -658,7 +689,9 @@ public final class ModrinthLauncherView extends View {
         float gap=10,cw=(w-gap*4)/5f;
         for(int i=0;i<5;i++) {
             float xx=x+i*(cw+gap);
-            round(c,xx,y+48,xx+cw,y+130,13,PANEL_2,Color.rgb(23,96,119),1.0f);
+            p.setShader(new LinearGradient(xx,y+48,xx+cw,y+130,Color.rgb(12,48,64),Color.rgb(6,30,46),Shader.TileMode.CLAMP));
+            c.drawRoundRect(xx,y+48,xx+cw,y+130,14,14,p); p.setShader(null);
+            round(c,xx,y+48,xx+cw,y+130,14,Color.TRANSPARENT,Color.rgb(28,91,112),1.0f);
             drawModIcon(c,xx+13,y+59,i);
             text(c,mods[i][0],xx+57,y+73,12,TEXT,true);
             text(c,mods[i][1],xx+57,y+94,10,MUTED,false);
