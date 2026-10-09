@@ -23,7 +23,7 @@
         android:icon="@drawable/ic_modrinth_setting"
         />
 
-<PreferenceCategory android:title="@string/preference_category_video" >
+<PreferenceCategory android:layout="@layout/preference_category_modrinth" android:title="@string/preference_category_video" >
         <androidx.preference.ListPreference
             android:title="@string/mcl_setting_category_renderer"
             android:key="renderer"
@@ -90,7 +90,7 @@
         <intent android:targetPackage="@string/application_package" android:targetClass="net.kdt.pojavlaunch.CustomControlsActivity" android:action=".CustomControlsActivity"/>
     </Preference>
 
-    <PreferenceCategory
+    <PreferenceCategory android:layout="@layout/preference_category_modrinth"
         android:title="@string/preference_category_gestures">
 
         <androidx.preference.SwitchPreferenceCompat
@@ -121,7 +121,7 @@
 
     </PreferenceCategory>
 
-    <PreferenceCategory
+    <PreferenceCategory android:layout="@layout/preference_category_modrinth"
         android:title="@string/preference_category_buttons">
 
         <net.kdt.pojavlaunch.prefs.CustomSeekBarPreference
@@ -155,7 +155,7 @@
 
     </PreferenceCategory>
 
-    <PreferenceCategory
+    <PreferenceCategory android:layout="@layout/preference_category_modrinth"
         android:title="@string/preference_category_virtual_mouse">
 
         <net.kdt.pojavlaunch.prefs.CustomSeekBarPreference
@@ -188,7 +188,7 @@
             android:icon="@drawable/ic_modrinth_setting"/>
     </PreferenceCategory>
 
-    <PreferenceCategory
+    <PreferenceCategory android:layout="@layout/preference_category_modrinth"
         android:key="gyroCategory"
         android:title="@string/preference_category_gyro_controls"
         >
@@ -230,7 +230,7 @@
 
     </PreferenceCategory>
 
-    <PreferenceCategory
+    <PreferenceCategory android:layout="@layout/preference_category_modrinth"
         android:title="@string/preference_category_controller_settings"
         >
         <Preference
@@ -253,7 +253,7 @@
 
     </PreferenceCategory>
 
-    <PreferenceCategory android:title="@string/preference_category_keyboard">
+    <PreferenceCategory android:layout="@layout/preference_category_modrinth" android:title="@string/preference_category_keyboard">
         <SwitchPreferenceCompat
             android:key="keyboardAutoPanning"
             android:title="@string/preference_keyboard_autopan_title"
@@ -261,7 +261,7 @@
             />
     </PreferenceCategory>
 
-<PreferenceCategory android:title="@string/preference_category_java_tweaks">
+<PreferenceCategory android:layout="@layout/preference_category_modrinth" android:title="@string/preference_category_java_tweaks">
         <Preference
             android:key="install_jre"
             android:icon="@drawable/ic_modrinth_setting"
@@ -296,7 +296,7 @@
 
     </PreferenceCategory>
 
-<PreferenceCategory android:title="@string/preference_category_miscellaneous">
+<PreferenceCategory android:layout="@layout/preference_category_modrinth" android:title="@string/preference_category_miscellaneous">
         <SwitchPreferenceCompat
             android:defaultValue="true"
             android:icon="@drawable/ic_modrinth_setting"
@@ -348,7 +348,7 @@
 
     </PreferenceCategory>
 
-<PreferenceCategory android:title="@string/preference_category_experimental_settings">
+<PreferenceCategory android:layout="@layout/preference_category_modrinth" android:title="@string/preference_category_experimental_settings">
 
         <SwitchPreferenceCompat
             android:key="dump_shaders"
