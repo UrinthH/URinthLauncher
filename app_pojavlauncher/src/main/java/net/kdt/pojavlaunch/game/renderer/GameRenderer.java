@@ -107,8 +107,25 @@ public class GameRenderer {
             Log.w(TAG, "Tried to call setupEnvironment in already initialized environment");
             return;
         }
+
+        // A GameRenderer can be reused when the user exits and launches another instance.
+        // Restore only URinth-owned variables before configuring the newly selected backend,
+        // so Ultra OFF cannot inherit overrides from a previous Ultra ON launch.
+        URinthRender.restoreNormalEnvironment();
+
+        // Ultra is a launch-time wrapper around the selected backend, not a fake native driver.
+        // Keep the underlying tag/library intact so capability checks and fallback remain correct.
+        if (URinthRender.isUltraEnabled(context)
+                && !(currentRenderer instanceof UrinthUltraWrapperRenderSpec)) {
+            currentRenderer = new UrinthUltraWrapperRenderSpec(currentRenderer);
+        }
+
         // Respect the renderer selected in Settings; do not silently swap backends.
         currentRenderer.setupEnvironment(context, environment);
+        // Apply opt-in profile values to the same map that is actually exported to the game
+        // process. Previously this profile helper was never called by the launch pipeline.
+        URinthRender.applyProfile(context, currentRenderer, environment);
+
         for (Map.Entry<String, String> e : environment.entrySet()) {
             Logger.appendToLog("Added renderer env: " + e.getKey() + "=" + e.getValue());
             Os.setenv(e.getKey(), e.getValue(), true);
