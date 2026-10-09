@@ -75,7 +75,8 @@ if [ "$check_only" = true ]; then
 fi
 
 tmp_base=${TMPDIR:-/tmp}
-workdir=$(mktemp "${tmp_base%/}/vkmodpatch.XXXXXX")
+# mktemp without -d creates a regular file; this workspace must be a directory.
+workdir=$(mktemp -d "${tmp_base%/}/vkmodpatch.XXXXXX")
 patch_tmp=""
 cleanup() {
   if [ -n "$patch_tmp" ] && [ -e "$patch_tmp" ]; then
