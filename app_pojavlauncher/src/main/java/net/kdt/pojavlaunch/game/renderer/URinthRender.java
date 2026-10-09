@@ -57,6 +57,25 @@ public final class URinthRender {
         return values;
     }
 
+    /**
+     * Avoid Mesa's extra GL worker thread on memory-constrained phones. The thread can
+     * improve throughput on some devices, but its queues and extra allocations are not
+     * a safe default when Android reports a low-RAM device or <= 4 GiB physical RAM.
+     */
+    private static boolean isMemoryConstrainedDevice(Context context) {
+        try {
+            ActivityManager manager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
+            if (manager == null) return false;
+            if (manager.isLowRamDevice()) return true;
+            ActivityManager.MemoryInfo memoryInfo = new ActivityManager.MemoryInfo();
+            manager.getMemoryInfo(memoryInfo);
+            return memoryInfo.totalMem > 0 && memoryInfo.totalMem <= 4L * 1024L * 1024L * 1024L;
+        } catch (RuntimeException e) {
+            Log.w(TAG, "Could not determine memory budget; leaving Mesa worker-thread decision conservative", e);
+            return true;
+        }
+    }
+
     /** Log a reproducible device/backend snapshot without changing player graphics settings. */
     private static void logDeviceSnapshot(Context context, RenderSpec renderer, boolean ultraEnabled) {
         String abi = Build.SUPPORTED_ABIS != null && Build.SUPPORTED_ABIS.length > 0
@@ -164,10 +183,17 @@ public final class URinthRender {
                 || Renderers.LEGACYZINK_RENDERER.equals(tag)) {
             env.put("MESA_SHADER_CACHE_MAX_SIZE", "128M");
             env.put("MESA_SHADER_CACHE_DIR", Tools.DIR_CACHE.getAbsolutePath());
-            env.put("mesa_glthread", "true");
+            // A worker thread can help throughput but adds queues/allocations. Prefer
+            // a lower-memory profile on phones that Android identifies as low-RAM.
+            if (isMemoryConstrainedDevice(context)) {
+                Log.i(TAG, "Memory-constrained device detected; leaving mesa_glthread unset to avoid extra worker-thread pressure");
+            } else {
+                env.put("mesa_glthread", "true");
+                Log.i(TAG, "Enabled Mesa GL worker-thread profile on non-low-RAM device");
+            }
             // Retain the legacy cache key used elsewhere in this launcher fork.
             env.put("MESA_GLSL_CACHE_DIR", Tools.DIR_CACHE.getAbsolutePath());
-            Log.i(TAG, "Enabled Mesa shader cache sizing and GL worker-thread profile");
+            Log.i(TAG, "Enabled Mesa shader cache sizing; worker-thread decision is memory-aware");
         } else if (Renderers.GL4ES_RENDERER.equals(tag)) {
             // GL4ES supports draw batching. Keep it opt-in behind Ultra Mode because
             // some games/mods may render differently; compare frame-time results on-device.
