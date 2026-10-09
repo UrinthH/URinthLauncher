@@ -178,7 +178,7 @@ public final class ModrinthLauncherView extends View {
     }
 
     private void loadRealModIcons() {
-        final String[] slugs = {"sodium","lithium","immediatelyfast","modernfix","vulkanmod"};
+        final String[] slugs = {"sodium","lithium","complementary-reimagined","ruidskin-ultimate","modernfix"};
         for (String slug : slugs) {
             PojavApplication.sExecutorService.execute(() -> {
                 try {
@@ -697,9 +697,9 @@ public final class ModrinthLauncherView extends View {
 
     private void drawMods(Canvas c,float x,float y,float w) {
         text(c,"★",x+3,y+30,31,TEXT,true);
-        text(c,"Optimize Mods",x+52,y+28,21,TEXT,true);
+        text(c,"Featured Mods & Visuals",x+52,y+28,21,TEXT,true);
         pillOutline(c,x+w-95,y+2,x+w,y+40,"▦  View All");
-        String[][] mods={{"Sodium","High-FPS rendering"},{"Lithium","Game logic optimization"},{"ImmediatelyFast","Faster UI rendering"},{"ModernFix","Memory optimization"},{"VulkanMod","Vulkan renderer"}};
+        String[][] mods={{"Sodium","High-FPS rendering"},{"Lithium","Game logic optimization"},{"Complementary Shaders","Realistic lighting"},{"Realistic Texture 4K","High-detail textures"},{"ModernFix","Memory optimization"}};
         float gap=10,cw=(w-gap*4)/5f;
         for(int i=0;i<5;i++) {
             float xx=x+i*(cw+gap);
@@ -714,7 +714,7 @@ public final class ModrinthLauncherView extends View {
     }
 
     private void drawModIcon(Canvas c,float x,float y,int i) {
-        String[] slugs={"sodium","lithium","immediatelyfast","modernfix","vulkanmod"};
+        String[] slugs={"sodium","lithium","complementary-reimagined","ruidskin-ultimate","modernfix"};
         Bitmap b=modIcons.get(slugs[i]);
         if(b!=null) { drawBitmap(c,b,x,y,39,39); return; }
         p.setColor(PANEL_2); c.drawRoundRect(x,y,x+39,y+39,10,10,p);
@@ -1027,7 +1027,9 @@ public final class ModrinthLauncherView extends View {
         if(x>242 && x<1215 && y>=553 && y<650){
             float gap=10f, cw=(1215f-242f-gap*4f)/5f;
             int mod=(int)((x-242f)/(cw+gap));
-            if(mod>=0 && mod<5){ modInstaller.run(); }
+            if(mod==2){ selectedPage=7; openContentCategory("shader"); }
+            else if(mod==3){ selectedPage=3; openContentCategory("resourcepack"); }
+            else if(mod>=0 && mod<5){ modInstaller.run(); }
             return true;
         }
         if(x>242 && x<1215 && y>=258 && y<418){
