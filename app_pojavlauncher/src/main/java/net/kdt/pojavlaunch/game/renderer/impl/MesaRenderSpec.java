@@ -191,6 +191,25 @@ public class MesaRenderSpec implements RenderSpec {
             return "libEGL_legacy.so";
         }
     }
+    /** Gallium Freedreno backend matching DroidBridge's renderer ID and Mesa plugin library. */
+    public static class GalliumFreedrenoRenderSpec extends ExtMesaRenderSpec {
+        @Override protected String plugin() { return LibraryPlugin.ID_MESA_PLUGIN; }
+        @Override public String name() { return "Freedreno (Gallium / Adreno)"; }
+        @Override public String tag() { return Renderers.FREEDRENO_GALLIUM_RENDERER; }
+        @Override public int displayName() { return R.string.mcl_setting_renderer_freedreno_kgsl; }
+        @Override public String library() { return "libOSMesa_8.so"; }
+        @Override public boolean compatibleDevice(Context context) {
+            GpuUtils.GLInfo info = GpuUtils.getGlInfo();
+            return info != null && info.isAdreno() && super.compatibleDevice(context);
+        }
+        @Override public void setupEnvironment(Context context, Map<String, String> envMap) {
+            super.setupEnvironment(context, envMap);
+            envMap.put("GALLIUM_DRIVER", "freedreno");
+            envMap.put("MESA_LOADER_DRIVER_OVERRIDE", "freedreno");
+            envMap.put("LIB_MESA_NAME", library());
+        }
+    }
+
     /** VirGL backend; only exposed if an installed Mesa package provides its library. */
     public static class VirGLRenderSpec extends ExtMesaRenderSpec {
         @Override public String name() { return "VirGL"; }
