@@ -71,7 +71,10 @@ public class MainMenuFragment extends Fragment {
         });
         getChildFragmentManager().addOnBackStackChangedListener(() -> {
             if (centerContainer != null && getChildFragmentManager().getBackStackEntryCount() == 0) {
+                centerContainer.animate().cancel();
                 centerContainer.setVisibility(View.GONE);
+                centerContainer.setAlpha(1f);
+                centerContainer.setTranslationY(0f);
                 if (launcherView != null) launcherView.onCenterContentClosed();
             }
         });
@@ -102,12 +105,29 @@ public class MainMenuFragment extends Fragment {
 
     public void showCenterFragment(Class<? extends Fragment> fragmentClass, String tag, Bundle bundle) {
         if (centerContainer == null) return;
+
+        // Animate the actual content surface, not the launcher canvas behind it.
+        // This runs for first opens and for every category switch.
+        centerContainer.animate().cancel();
         centerContainer.setVisibility(View.VISIBLE);
+        centerContainer.setAlpha(0.72f);
+        centerContainer.setTranslationY(dp(30));
+        centerContainer.animate()
+                .alpha(1f)
+                .translationY(0f)
+                .setDuration(280L)
+                .setInterpolator(new android.view.animation.DecelerateInterpolator())
+                .start();
+
         getChildFragmentManager().beginTransaction()
                 .setReorderingAllowed(true)
                 .addToBackStack(fragmentClass.getName())
                 .replace(CENTER_CONTAINER_ID, fragmentClass, bundle, tag)
                 .commit();
+    }
+
+    private int dp(float value) {
+        return Math.round(value * getResources().getDisplayMetrics().density);
     }
 
     public void handleCenterBack() {
