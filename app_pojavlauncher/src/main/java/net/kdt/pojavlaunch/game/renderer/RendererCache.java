@@ -43,17 +43,18 @@ public class RendererCache {
                 continue;
             }
 
-            boolean compatible = isCompatibleSafely(spec, context);
-            rendererIds.add(renderer);
-            String displayName = resources.getString(spec.displayName());
-            // Show every registered renderer in Settings, including optional/plugin backends
-            // that are not currently installed or supported by this device. This lets users
-            // see the full renderer list instead of making the picker appear to contain only
-            // GL4ES and LTW. Availability is explicitly disclosed in the label.
-            if (!compatible) {
-                displayName += " — unavailable (check device support / renderer plugin)";
+            // A renderer must have its required native library/plugin and pass the
+            // device capability probe before it can be selected. Showing unavailable
+            // backends as normal choices makes them look broken and can only end in a
+            // failed native setup followed by a GL4ES fallback.
+            if (!isCompatibleSafely(spec, context)) {
+                logProbeFailure("Hiding unavailable renderer: " + renderer + " (" + spec.name()
+                        + "). Check its native library/plugin and device support.", null);
+                continue;
             }
-            rendererNames.add(displayName);
+
+            rendererIds.add(renderer);
+            rendererNames.add(resources.getString(spec.displayName()));
         }
         rendererIds.trimToSize();
         rendererNames.trimToSize();
