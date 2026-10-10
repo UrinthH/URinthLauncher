@@ -9,6 +9,8 @@ public final class Renderers {
     public static final String ZINK_RENDERER = "vulkan_zink";
     public static final String VIRGL_RENDERER = "gallium_virgl";
     public static final String FREEDRENO_RENDERER = "freedreno_kgsl";
+    /** Mesa Gallium Freedreno backend exposed by DroidBridge-compatible Mesa plugins. */
+    public static final String FREEDRENO_GALLIUM_RENDERER = "gallium_freedreno";
     public static final String PANFROST_RENDERER = "gallium_panfrost";
     public static final String MESA_RENDERER = "mesa_desktop";
     public static final String MESA_RENDERER_EXT = "mesa_desktop_ext";
@@ -27,6 +29,7 @@ public final class Renderers {
             ZINK_RENDERER,
             VIRGL_RENDERER,
             FREEDRENO_RENDERER,
+            FREEDRENO_GALLIUM_RENDERER,
             PANFROST_RENDERER,
             MESA_RENDERER,
             MESA_RENDERER_EXT,
