@@ -1,6 +1,7 @@
 package net.kdt.pojavlaunch.fragments;
 
 import android.content.Context;
+import android.animation.ValueAnimator;
 import android.content.Intent;
 import android.graphics.*;
 import android.graphics.drawable.Drawable;
@@ -83,6 +84,8 @@ public final class ModrinthLauncherView extends View {
     private int selectedPage = 0;
     private float sx = 1f, sy = 1f;
     private float instanceScrollX;
+    private float instancesPageOffsetY;
+    private ValueAnimator instancesPageAnimator;
     private float touchDownX;
     private float lastTouchX;
     private boolean draggingInstances;
@@ -376,11 +379,28 @@ public final class ModrinthLauncherView extends View {
                 .start();
     }
 
+    // Slide the Instances panel upward into place whenever its sidebar item is selected.
+    private void animateInstancesPage() {
+        if (instancesPageAnimator != null) instancesPageAnimator.cancel();
+        instancesPageOffsetY = 54f;
+        instancesPageAnimator = ValueAnimator.ofFloat(54f, 0f);
+        instancesPageAnimator.setDuration(280L);
+        instancesPageAnimator.setInterpolator(new android.view.animation.DecelerateInterpolator());
+        instancesPageAnimator.addUpdateListener(animation -> {
+            instancesPageOffsetY = (Float) animation.getAnimatedValue();
+            invalidate();
+        });
+        instancesPageAnimator.start();
+    }
+
     private void drawMain(Canvas c) {
         float left=menuOpen?242:18, right=1215;
         float width=right-left;
         if (selectedPage == 1) {
+            c.save();
+            c.translate(0, instancesPageOffsetY);
             drawInstancesPage(c, left, 75, width, 585);
+            c.restore();
             return;
         }
         drawHero(c,left,75,width,170);
@@ -1116,6 +1136,11 @@ public final class ModrinthLauncherView extends View {
                 MainMenuFragment host = getMainMenuHost();
                 if (host != null && host.isCenterContentVisible()) host.closeCenterContent();
                 selectedPage = idx;
+                if (idx == 1) animateInstancesPage();
+                else {
+                    if (instancesPageAnimator != null) instancesPageAnimator.cancel();
+                    instancesPageOffsetY = 0f;
+                }
             }
             else if(idx==2){selectedPage=2;openContentCategory("mod");}
             else if(idx==3){selectedPage=3;openContentCategory("resourcepack");}
