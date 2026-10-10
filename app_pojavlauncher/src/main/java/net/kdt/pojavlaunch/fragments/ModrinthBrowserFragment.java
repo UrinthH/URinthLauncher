@@ -177,7 +177,7 @@ public class ModrinthBrowserFragment extends Fragment {
         root.setBackground(pageBackground);
         root.setClipToOutline(true);
         root.setElevation(dp(3));
-        root.setPadding(dp(22), dp(20), dp(22), dp(14));
+        root.setPadding(dp(22), dp(18), dp(22), dp(14));
 
         TextView heading = new TextView(requireContext());
         heading.setText(categoryTitle());
@@ -193,7 +193,7 @@ public class ModrinthBrowserFragment extends Fragment {
         root.addView(accentRule, ruleParams);
 
         TextView sub = new TextView(requireContext());
-        sub.setText("Browse real Modrinth projects. Install only versions compatible with your selected profile.");
+        sub.setText(categoryDescription());
         sub.setTextColor(MUTED);
         sub.setTextSize(13);
         LinearLayout.LayoutParams subParams = new LinearLayout.LayoutParams(-1, -2);
@@ -204,7 +204,7 @@ public class ModrinthBrowserFragment extends Fragment {
         LinearLayout searchRow = new LinearLayout(requireContext());
         searchRow.setOrientation(LinearLayout.HORIZONTAL);
         searchRow.setGravity(Gravity.CENTER_VERTICAL);
-        searchRow.setPadding(dp(8), dp(8), dp(8), dp(8));
+        searchRow.setPadding(dp(6), dp(6), dp(6), dp(6));
         searchRow.setBackground(rounded(Color.rgb(8, 32, 46), 16, Color.rgb(25, 82, 101), 1));
         LinearLayout.LayoutParams searchRowParams = new LinearLayout.LayoutParams(-1, -2);
         searchRowParams.topMargin = dp(10);
@@ -221,7 +221,7 @@ public class ModrinthBrowserFragment extends Fragment {
         search.setPadding(dp(14), 0, dp(14), 0);
         searchRow.addView(search, new LinearLayout.LayoutParams(0, dp(44), 1f));
         Button searchButton = button("Search");
-        LinearLayout.LayoutParams buttonParams = new LinearLayout.LayoutParams(dp(104), dp(44));
+        LinearLayout.LayoutParams buttonParams = new LinearLayout.LayoutParams(dp(96), dp(44));
         buttonParams.leftMargin = dp(8);
         searchRow.addView(searchButton, buttonParams);
         searchButton.setOnClickListener(v -> loadProjects(search.getText().toString().trim()));
@@ -271,6 +271,21 @@ public class ModrinthBrowserFragment extends Fragment {
             case "shader": return "Shaders";
             case "world": return "Worlds";
             default: return "Mods";
+        }
+    }
+
+    private String categoryDescription() {
+        switch (category) {
+            case "resourcepack":
+                return "Refresh Minecraft’s look with textures that match your game version.";
+            case "modpack":
+                return "Explore curated collections and install them into a Minecraft profile.";
+            case "shader":
+                return "Find lighting and visual effects. Check game and device compatibility before installing.";
+            case "world":
+                return "Discover maps and worlds to add new places to explore.";
+            default:
+                return "Find mods for your profile. Compatible versions are checked before installation.";
         }
     }
 
