@@ -132,10 +132,12 @@ public final class ModrinthLauncherView extends View {
                 "https://www.minecraft.net/content/dam/minecraftnet/games/minecraft/screenshots/vv_Tundra_AG_02_1280x720.jpg",
                 bitmap -> { backgroundArtwork = bitmap; invalidate(); }
         );
-        // The hero banner has its own single, continuous ocean scene; it is not
-        // cropped from the full-screen launcher background or composed from halves.
+        // Use a known Minecraft landscape asset for the hero banner. Keep the
+        // bundled hero artwork as an immediate offline fallback so this area never
+        // starts as an empty black rectangle while network artwork is loading.
+        heroBannerArtwork = heroArtwork;
         loadRemoteArtwork(
-                "https://www.minecraft.net/content/dam/minecraftnet/games/minecraft/screenshots/ATB_WarmOcean_header.jpg",
+                "https://www.minecraft.net/content/dam/minecraftnet/games/minecraft/screenshots/MCV_ChaseTheSkies_Swamp02_VV_.net_1280x720.jpg",
                 bitmap -> { heroBannerArtwork = bitmap; invalidate(); }
         );
 
@@ -523,8 +525,10 @@ public final class ModrinthLauncherView extends View {
     private void drawRealisticHeroImage(Canvas c,float x,float y,float w,float h) {
         // Use one complete dedicated banner image, never a split comparison or
         // the full-screen launcher background as a substitute unless offline.
-        Bitmap artwork = isUsableArtwork(heroBannerArtwork) ? heroBannerArtwork
-                : isUsableArtwork(heroArtwork) ? heroArtwork : backgroundArtwork;
+        // The bundled landscape is guaranteed to be available before any network
+        // request completes; don't reject it based on image-brightness heuristics.
+        Bitmap artwork = heroBannerArtwork != null ? heroBannerArtwork
+                : heroArtwork != null ? heroArtwork : backgroundArtwork;
         if (artwork != null) {
             android.graphics.ColorMatrix shaderTextureGrade = new android.graphics.ColorMatrix(new float[]{
                     1.18f, 0.02f, 0, 0, 5,
