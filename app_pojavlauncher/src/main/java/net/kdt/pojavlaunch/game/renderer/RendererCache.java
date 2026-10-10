@@ -43,18 +43,15 @@ public class RendererCache {
                 continue;
             }
 
-            // A renderer must have its required native library/plugin and pass the
-            // device capability probe before it can be selected. Showing unavailable
-            // backends as normal choices makes them look broken and can only end in a
-            // failed native setup followed by a GL4ES fallback.
-            if (!isCompatibleSafely(spec, context)) {
-                logProbeFailure("Hiding unavailable renderer: " + renderer + " (" + spec.name()
-                        + "). Check its native library/plugin and device support.", null);
-                continue;
-            }
-
+            boolean compatible = isCompatibleSafely(spec, context);
+            // Keep every registered renderer visible in Settings. Some backends need
+            // optional native libraries/plugins or device support that may be absent.
             rendererIds.add(renderer);
-            rendererNames.add(resources.getString(spec.displayName()));
+            String displayName = resources.getString(spec.displayName());
+            if (!compatible) {
+                displayName += " — unavailable (check device support / renderer plugin)";
+            }
+            rendererNames.add(displayName);
         }
         rendererIds.trimToSize();
         rendererNames.trimToSize();
