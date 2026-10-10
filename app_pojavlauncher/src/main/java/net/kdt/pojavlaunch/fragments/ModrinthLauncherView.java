@@ -138,7 +138,11 @@ public final class ModrinthLauncherView extends View {
         heroBannerArtwork = heroArtwork;
         loadRemoteArtwork(
                 "https://www.minecraft.net/content/dam/minecraftnet/games/minecraft/screenshots/MCV_ChaseTheSkies_Swamp02_VV_.net_1280x720.jpg",
-                bitmap -> { heroBannerArtwork = bitmap; invalidate(); }
+                bitmap -> {
+                    // Ignore decoded but empty/dark placeholders from remote hosts.
+                    if (isUsableArtwork(bitmap)) heroBannerArtwork = bitmap;
+                    invalidate();
+                }
         );
 
         // Verified official Minecraft biome artwork. Each card gets a different biome
@@ -529,7 +533,10 @@ public final class ModrinthLauncherView extends View {
         // request completes; don't reject it based on image-brightness heuristics.
         Bitmap artwork = heroBannerArtwork != null ? heroBannerArtwork
                 : heroArtwork != null ? heroArtwork : backgroundArtwork;
-        if (artwork != null) {
+        // A non-null bitmap is not necessarily valid artwork: failed image hosts
+        // can return tiny/blank images that decode successfully. Reject those and
+        // draw the offline landscape so a black banner cannot mask the fallback.
+        if (isUsableArtwork(artwork)) {
             android.graphics.ColorMatrix shaderTextureGrade = new android.graphics.ColorMatrix(new float[]{
                     1.18f, 0.02f, 0, 0, 5,
                     0.01f, 1.12f, 0, 0, 3,
