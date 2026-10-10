@@ -1,6 +1,7 @@
 package net.kdt.pojavlaunch.game.renderer;
 
 import static net.kdt.pojavlaunch.game.renderer.def.Renderers.FREEDRENO_RENDERER;
+import static net.kdt.pojavlaunch.game.renderer.def.Renderers.FREEDRENO_GALLIUM_RENDERER;
 import static net.kdt.pojavlaunch.game.renderer.def.Renderers.GL4ES_RENDERER;
 import static net.kdt.pojavlaunch.game.renderer.def.Renderers.KRYPTON_RENDERER;
 import static net.kdt.pojavlaunch.game.renderer.def.Renderers.LEGACYZINK_RENDERER;
@@ -75,6 +76,7 @@ public class GameRenderer {
             case VIRGL_RENDERER: return new MesaRenderSpec.VirGLRenderSpec();
             case PANFROST_RENDERER: return new MesaRenderSpec.PanfrostRenderSpec();
             case FREEDRENO_RENDERER: return new MesaRenderSpec.FreedrenoRenderSpec();
+            case FREEDRENO_GALLIUM_RENDERER: return new MesaRenderSpec.GalliumFreedrenoRenderSpec();
             case MESA_RENDERER: return new MesaRenderSpec();
             case MESA_RENDERER_EXT: return new MesaRenderSpec.ExtMesaRenderSpec();
             case LEGACYZINK_RENDERER: return new MesaRenderSpec.LegacyZinkRenderSpec();
