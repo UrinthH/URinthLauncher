@@ -360,6 +360,22 @@ public final class ModrinthLauncherView extends View {
         text(c,"Modrinth",67,651,14,TEXT,true);
     }
 
+    // Give every sidebar destination a quick pop-in transition without changing
+    // how that destination is opened or altering the rest of the launcher UI.
+    private void playCategoryPopAnimation() {
+        animate().cancel();
+        setScaleX(0.975f);
+        setScaleY(0.975f);
+        setAlpha(0.78f);
+        animate()
+                .scaleX(1f)
+                .scaleY(1f)
+                .alpha(1f)
+                .setDuration(220L)
+                .setInterpolator(new android.view.animation.DecelerateInterpolator())
+                .start();
+    }
+
     private void drawMain(Canvas c) {
         float left=menuOpen?242:18, right=1215;
         float width=right-left;
@@ -1105,6 +1121,7 @@ public final class ModrinthLauncherView extends View {
             else if(idx==3){selectedPage=3;openContentCategory("resourcepack");}
             else if(idx==4){selectedPage=4;}
             else if(idx==5){selectedPage=5; MainMenuFragment host = getMainMenuHost(); if (host != null) host.showCenterFragment(LauncherPreferenceFragment.class, LauncherActivity.SETTING_FRAGMENT_TAG, null);}
+            playCategoryPopAnimation();
             invalidate(); return true;
         }
         if(menuOpen && x<228 && y>=378 && y<522){
@@ -1112,6 +1129,7 @@ public final class ModrinthLauncherView extends View {
             if(idx==0){selectedPage=6;openContentCategory("modpack");}
             else if(idx==1){selectedPage=7;openContentCategory("shader");}
             else if(idx==2){selectedPage=8;openContentCategory("world");}
+            playCategoryPopAnimation();
             invalidate();
             return true;
         }
