@@ -38,13 +38,22 @@ public class RendererCache {
         for (String renderer : renderers) {
             RenderSpec spec = GameRenderer.getKnownRenderer(renderer);
             if (spec == null) {
-                // A broken registry entry must not crash the Settings screen in release builds.
+                // Skip only invalid registry entries; never silently hide a registered backend.
                 logProbeFailure("No RenderSpec registered for renderer ID: " + renderer, null);
                 continue;
             }
-            if (!isCompatibleSafely(spec, context)) continue;
+
+            boolean compatible = isCompatibleSafely(spec, context);
             rendererIds.add(renderer);
-            rendererNames.add(resources.getString(spec.displayName()));
+            String displayName = resources.getString(spec.displayName());
+            // Show every registered renderer in Settings, including optional/plugin backends
+            // that are not currently installed or supported by this device. This lets users
+            // see the full renderer list instead of making the picker appear to contain only
+            // GL4ES and LTW. Availability is explicitly disclosed in the label.
+            if (!compatible) {
+                displayName += " — unavailable (check device support / renderer plugin)";
+            }
+            rendererNames.add(displayName);
         }
         rendererIds.trimToSize();
         rendererNames.trimToSize();
