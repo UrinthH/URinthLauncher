@@ -546,9 +546,71 @@ public final class ModrinthLauncherView extends View {
             c.drawRect(x, y, x+w, y+h, p);
             p.setShader(null);
         } else {
-            p.setColor(Color.rgb(24, 52, 60));
-            c.drawRect(x, y, x+w, y+h, p);
+            // Last-resort offline renderer: always draw a visible Minecraft-like
+            // landscape instead of leaving a flat black hero banner.
+            drawFallbackHeroLandscape(c, x, y, w, h);
         }
+    }
+
+    private void drawFallbackHeroLandscape(Canvas c, float x, float y, float w, float h) {
+        p.setShader(new LinearGradient(x, y, x, y+h,
+                Color.rgb(64, 104, 139), Color.rgb(245, 151, 94), Shader.TileMode.CLAMP));
+        c.drawRect(x, y, x+w, y+h, p);
+        p.setShader(null);
+
+        // Sun and soft glow.
+        p.setShader(new RadialGradient(x+w*0.72f, y+h*0.34f, h*0.46f,
+                new int[]{Color.argb(145,255,221,151), Color.TRANSPARENT},
+                null, Shader.TileMode.CLAMP));
+        c.drawCircle(x+w*0.72f, y+h*0.34f, h*0.46f, p);
+        p.setShader(null);
+        p.setColor(Color.rgb(255, 230, 166));
+        c.drawCircle(x+w*0.72f, y+h*0.34f, h*0.105f, p);
+
+        // Distant blocky mountain silhouettes.
+        Path far = new Path();
+        far.moveTo(x, y+h*0.67f);
+        far.lineTo(x+w*0.10f, y+h*0.40f); far.lineTo(x+w*0.18f, y+h*0.55f);
+        far.lineTo(x+w*0.31f, y+h*0.29f); far.lineTo(x+w*0.43f, y+h*0.60f);
+        far.lineTo(x+w*0.55f, y+h*0.38f); far.lineTo(x+w*0.68f, y+h*0.62f);
+        far.lineTo(x+w*0.82f, y+h*0.43f); far.lineTo(x+w, y+h*0.64f);
+        far.lineTo(x+w, y+h); far.lineTo(x, y+h); far.close();
+        p.setColor(Color.rgb(58, 83, 91)); c.drawPath(far, p);
+
+        // Forested shoreline.
+        Path near = new Path();
+        near.moveTo(x, y+h*0.69f);
+        near.lineTo(x+w*0.08f, y+h*0.56f); near.lineTo(x+w*0.19f, y+h*0.68f);
+        near.lineTo(x+w*0.30f, y+h*0.50f); near.lineTo(x+w*0.42f, y+h*0.70f);
+        near.lineTo(x+w*0.55f, y+h*0.58f); near.lineTo(x+w*0.67f, y+h*0.71f);
+        near.lineTo(x+w*0.80f, y+h*0.54f); near.lineTo(x+w, y+h*0.69f);
+        near.lineTo(x+w, y+h); near.lineTo(x, y+h); near.close();
+        p.setColor(Color.rgb(18, 64, 62)); c.drawPath(near, p);
+
+        // Reflective water with warm sun path.
+        p.setShader(new LinearGradient(x, y+h*0.66f, x, y+h,
+                Color.rgb(40, 107, 119), Color.rgb(6, 40, 57), Shader.TileMode.CLAMP));
+        c.drawRect(x, y+h*0.66f, x+w, y+h, p);
+        p.setShader(null);
+        p.setColor(Color.argb(145, 255, 205, 130));
+        for (int i=0; i<7; i++) {
+            float yy=y+h*(0.70f+i*0.038f);
+            float rw=w*(0.025f+i*0.012f);
+            c.drawRoundRect(x+w*0.72f-rw, yy, x+w*0.72f+rw, yy+Math.max(1.5f,h*0.012f),
+                    2, 2, p);
+        }
+        p.setColor(Color.argb(80, 197, 231, 228));
+        for (int i=0; i<12; i++) {
+            float yy=y+h*(0.72f+i*0.022f);
+            float xx=x+w*((i*37%100)/100f);
+            float rw=w*(0.012f+(i%3)*0.008f);
+            c.drawRect(xx, yy, xx+rw, yy+1.5f, p);
+        }
+        // Light atmospheric shading for contrast behind the headline.
+        p.setShader(new LinearGradient(x, y, x+w*0.58f, y,
+                Color.argb(135, 2, 16, 28), Color.TRANSPARENT, Shader.TileMode.CLAMP));
+        c.drawRect(x, y, x+w, y+h, p);
+        p.setShader(null);
     }
 
     private void drawRealisticInstanceImage(Canvas c,float x,float y,float w,float h,int index) {
