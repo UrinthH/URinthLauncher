@@ -43,15 +43,15 @@ public class RendererCache {
                 continue;
             }
 
-            boolean compatible = isCompatibleSafely(spec, context);
-            // Keep every registered renderer visible in Settings. Some backends need
-            // optional native libraries/plugins or device support that may be absent.
-            rendererIds.add(renderer);
-            String displayName = resources.getString(spec.displayName());
-            if (!compatible) {
-                displayName += " — unavailable (check device support / renderer plugin)";
+            // Keep every registered renderer visible in Settings with its plain name. Some
+            // backends need optional native libraries/plugins that may be absent; if one is
+            // selected without its library, the launcher logs it and falls back to GL4ES.
+            if (!isCompatibleSafely(spec, context)) {
+                logProbeNote("Renderer listed but not currently usable on this device: "
+                        + spec.name() + " (" + renderer + ")");
             }
-            rendererNames.add(displayName);
+            rendererIds.add(renderer);
+            rendererNames.add(resources.getString(spec.displayName()));
         }
         rendererIds.trimToSize();
         rendererNames.trimToSize();
@@ -67,6 +67,14 @@ public class RendererCache {
     private static void logProbeFailure(String message, Throwable error) {
         try {
             android.util.Log.e("Renderer", message, error);
+        } catch (RuntimeException ignored) {
+            // Platform logging is unavailable in plain JVM unit tests.
+        }
+    }
+
+    private static void logProbeNote(String message) {
+        try {
+            android.util.Log.i("Renderer", message);
         } catch (RuntimeException ignored) {
             // Platform logging is unavailable in plain JVM unit tests.
         }

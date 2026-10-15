@@ -7,6 +7,8 @@ import java.io.File;
 import java.io.IOException;
 
 public class CheckFileOnDiskTask extends DownloaderTask {
+    /** How many times a file that fails verification after download is deleted and fetched again. */
+    private static final int MAX_REDOWNLOADS = 3;
     private final boolean mAfterDownload;
     CheckFileOnDiskTask(TaskMetadata mMetadata, Downloader mHostDownloader) {
         super(mMetadata, mHostDownloader);
@@ -24,10 +26,32 @@ public class CheckFileOnDiskTask extends DownloaderTask {
         if(checkResult) {
             if(!mAfterDownload) mDownloader.addSize(mMetadata.size);
             mDownloader.fileComplete();
+        }else if(!mAfterDownload) {
+            mDownloader.submitFileForDownload(mMetadata);
+        }else if(mMetadata.verifyFailures < MAX_REDOWNLOADS) {
+            // A resumed, truncated or otherwise bad download can leave a corrupt file behind.
+            // Delete it and download the whole file again instead of failing the launch at once.
+            mMetadata.verifyFailures++;
+            File localFile = mMetadata.path;
+            long badLength = localFile.exists() ? localFile.length() : 0;
+            if(localFile.exists() && !localFile.delete()) {
+                throw new VerificationException("Failed to verify and could not delete the bad file: "
+                        + describeFailure());
+            }
+            // The failed attempt already counted these bytes as downloaded; take them back.
+            mDownloader.addSize(-badLength);
+            mDownloader.submitFileForDownload(mMetadata);
         }else {
-            if(!mAfterDownload) mDownloader.submitFileForDownload(mMetadata);
-            else throw new VerificationException("Failed to verify "+mMetadata.toString());
+            throw new VerificationException("Failed to verify after " + MAX_REDOWNLOADS
+                    + " re-downloads: " + describeFailure());
         }
+    }
+
+    /** Describe what was expected and what is actually on disk, to make bad downloads diagnosable. */
+    private String describeFailure() {
+        File localFile = mMetadata.path;
+        String found = localFile.exists() ? localFile.length() + " bytes" : "file missing";
+        return mMetadata + "\nfound on disk: " + found;
     }
 
     private boolean checkFile() throws IOException {

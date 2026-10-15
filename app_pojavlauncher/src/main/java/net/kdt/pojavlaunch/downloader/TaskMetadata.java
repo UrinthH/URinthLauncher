@@ -11,6 +11,8 @@ public class TaskMetadata {
     public final int mirrorType;
     public long size;
     public String sha1Hash;
+    /** How many times this file failed verification right after being downloaded. */
+    public volatile int verifyFailures;
 
     public TaskMetadata(File path, URL url, int mirrorType) {
         this.path = path;
