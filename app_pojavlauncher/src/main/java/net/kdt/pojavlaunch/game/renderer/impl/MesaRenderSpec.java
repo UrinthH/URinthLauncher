@@ -23,14 +23,61 @@ import git.artdeell.mojoexec.MojoExec;
  * Mesa3D RenderSpec. Provides desktop Mesa, zink & freedreno
  */
 public class MesaRenderSpec implements RenderSpec {
+    /**
+     * Mesa plugin packages that can supply libEGL_mesa.so when the launcher does not
+     * bundle it (this launcher only bundles GL4ES). Shared by Zink and Freedreno (KGSL).
+     */
+    private static final String[] MESA_PLUGIN_PACKAGES = {
+            LibraryPlugin.ID_MESA_PLUGIN,
+            LibraryPlugin.ID_MESA_PLUGIN_FCL,
+            LibraryPlugin.ID_MESA_PLUGIN_MIO_2500,
+            LibraryPlugin.ID_MESA_PLUGIN_MIO_2500_RC1,
+            LibraryPlugin.ID_MESA_PLUGIN_MIO_2434,
+            LibraryPlugin.ID_MESA_PLUGIN_MIO_2427,
+            LibraryPlugin.ID_MESA_PLUGIN_MIO_2319
+    };
+    private LibraryPlugin fallbackMesaPlugin;
+
     public String library() {
         return "libEGL_mesa.so";
     }
     public void setupEnvironment(Context context, Map<String, String> envMap) {
+        // Re-resolve the plugin for the actual launch instance; it may have been removed
+        // after the Settings list was built.
+        discoverFallbackMesaPlugin(context);
         envMap.put("MESA_GLSL_CACHE_DIR", Tools.DIR_CACHE.getAbsolutePath());
     }
     protected boolean hasMesa() {
         return SDK_INT >= 29 && new File(Tools.NATIVE_LIB_DIR, this.library()).exists();
+    }
+    /**
+     * Looks for an installed Mesa plugin that provides this renderer's library. Only used
+     * when the launcher itself has no bundled copy.
+     */
+    protected final boolean discoverFallbackMesaPlugin(Context context) {
+        if (SDK_INT < 29 || context == null) return false;
+        if (fallbackMesaPlugin != null && fallbackMesaPlugin.checkLibraries(library())) return true;
+        fallbackMesaPlugin = null;
+        for (String packageName : MESA_PLUGIN_PACKAGES) {
+            LibraryPlugin candidate = LibraryPlugin.discoverPlugin(context, packageName);
+            if (candidate != null && candidate.checkLibraries(library())) {
+                fallbackMesaPlugin = candidate;
+                return true;
+            }
+        }
+        return false;
+    }
+    /** True when the bundled library is missing and an installed Mesa plugin will be used. */
+    private boolean usingFallbackMesaPlugin() {
+        return !hasMesa() && fallbackMesaPlugin != null
+                && fallbackMesaPlugin.checkLibraries(library());
+    }
+    /** Available either from the launcher's own native dir or from an installed Mesa plugin. */
+    protected final boolean hasMesaOrPlugin(Context context) {
+        return hasMesa() || discoverFallbackMesaPlugin(context);
+    }
+    public String librarySearchPath() {
+        return usingFallbackMesaPlugin() ? fallbackMesaPlugin.getLibraryPath() : null;
     }
     public boolean compatibleDevice(Context context) {
         return hasMesa() && GpuUtils.checkChromebook(context.getPackageManager());
@@ -45,6 +92,11 @@ public class MesaRenderSpec implements RenderSpec {
         return Renderers.MESA_RENDERER;
     }
     public boolean setupRenderer() {
+        if (usingFallbackMesaPlugin()) {
+            // Same call shape the external Mesa backends use for plugin-provided libraries.
+            return MojoExec.prepareEgl(
+                    fallbackMesaPlugin.resolveAbsolutePath(library()), true, false, 0);
+        }
         return MojoExec.prepareEgl(library(), true, false, 3);
     }
 
@@ -75,7 +127,7 @@ public class MesaRenderSpec implements RenderSpec {
             return super.setupRenderer();
         }
         public boolean compatibleDevice(Context context) {
-            return hasMesa() && GpuUtils.checkVulkanSupport(context.getPackageManager());
+            return hasMesaOrPlugin(context) && GpuUtils.checkVulkanSupport(context.getPackageManager());
         }
     }
 
@@ -91,7 +143,7 @@ public class MesaRenderSpec implements RenderSpec {
         }
         public boolean compatibleDevice(Context context) {
             GpuUtils.GLInfo info = GpuUtils.getGlInfo();
-            return hasMesa() && info != null && info.isAdreno();
+            return hasMesaOrPlugin(context) && info != null && info.isAdreno();
         }
         public void setupEnvironment(Context context, Map<String, String> envMap) {
             if (LauncherPreferences.PREF_FREEDRENO_SYSMEM) envMap.put("FD_MESA_DEBUG", "sysmem");
@@ -196,7 +248,7 @@ public class MesaRenderSpec implements RenderSpec {
         @Override protected String plugin() { return LibraryPlugin.ID_MESA_PLUGIN; }
         @Override public String name() { return "Freedreno (Gallium / Adreno)"; }
         @Override public String tag() { return Renderers.FREEDRENO_GALLIUM_RENDERER; }
-        @Override public int displayName() { return R.string.mcl_setting_renderer_freedreno_kgsl; }
+        @Override public int displayName() { return R.string.mcl_setting_renderer_freedreno_gallium; }
         @Override public String library() { return "libOSMesa_8.so"; }
         @Override public boolean compatibleDevice(Context context) {
             GpuUtils.GLInfo info = GpuUtils.getGlInfo();

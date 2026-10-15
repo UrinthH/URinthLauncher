@@ -32,6 +32,17 @@ public class RendererRegistryTest {
     }
 
     @Test
+    public void everyListedRendererHasADistinctSettingsName() {
+        Set<Integer> displayNames = new HashSet<>();
+        for (String rendererId : Renderers.allRendererIds()) {
+            RenderSpec spec = GameRenderer.getKnownRenderer(rendererId);
+            assertNotNull("Missing RenderSpec for renderer ID: " + rendererId, spec);
+            assertTrue("Two renderers share the same Settings name (renderer ID: " + rendererId + ")",
+                    displayNames.add(spec.displayName()));
+        }
+    }
+
+    @Test
     public void registryReturnsDefensiveCopy() {
         String[] rendererIds = Renderers.allRendererIds();
         String originalFirstId = rendererIds[0];

@@ -74,6 +74,7 @@
     <string name="mcl_setting_renderer_vulkan_zink">Zink (Vulkan) - all versions</string>
     <string name="mcl_setting_renderer_vulkan_lzink">Legacy Zink (Vulkan) - all versions, low performance</string>
     <string name="mcl_setting_renderer_freedreno_kgsl">Freedreno (KGSL) - all versions</string>
+    <string name="mcl_setting_renderer_freedreno_gallium">Freedreno (Gallium, Adreno, external Mesa plugin required)</string>
     <string name="mcl_setting_renderer_mesa_desktop">Mesa (DRM) - all versions</string>
     <string name="mcl_setting_renderer_mesa_desktop_ext">Mesa (DRM, external) - all versions</string>
     <string name="mcl_setting_veroption_release">Release</string>
