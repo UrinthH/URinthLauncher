@@ -22,6 +22,7 @@ import android.util.Log;
 
 import net.kdt.pojavlaunch.Logger;
 import net.kdt.pojavlaunch.Tools;
+import net.kdt.pojavlaunch.game.renderer.impl.ApkRendererScanner;
 import net.kdt.pojavlaunch.game.renderer.impl.GLESRenderSpec;
 import net.kdt.pojavlaunch.game.renderer.impl.MesaRenderSpec;
 import net.kdt.pojavlaunch.game.renderer.impl.MobileGluesRenderSpec;
@@ -82,6 +83,9 @@ public class GameRenderer {
             case LEGACYZINK_RENDERER: return new MesaRenderSpec.LegacyZinkRenderSpec();
             case MOBILEGLUES_RENDERER: return new MobileGluesRenderSpec();
             default:
+                // Renderer plugin apps are identified by their package name.
+                RenderSpec installed = ApkRendererScanner.find(renderer);
+                if (installed != null) return installed;
                 logRendererFailure("Unknown renderer " + renderer, null);
                 return null;
         }

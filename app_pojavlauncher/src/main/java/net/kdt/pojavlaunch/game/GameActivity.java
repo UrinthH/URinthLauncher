@@ -47,6 +47,7 @@ import com.kdt.LoggerView;
 import net.kdt.pojavlaunch.BaseActivity;
 import net.kdt.pojavlaunch.CallbackBridge;
 import net.kdt.pojavlaunch.game.renderer.GameRenderer;
+import net.kdt.pojavlaunch.game.renderer.impl.ApkRendererScanner;
 import net.kdt.pojavlaunch.game.renderer.URinthRender;
 import net.kdt.pojavlaunch.utils.GpuUtils;
 import net.kdt.pojavlaunch.utils.KeycodeUtils;
@@ -125,6 +126,7 @@ public class GameActivity extends BaseActivity implements ControlButtonMenuListe
             finish();
             return;
         }
+        ApkRendererScanner.scan(this);
         mGameRenderer = new GameRenderer(instance.getLaunchRenderer());
         URinthRender.startThermalMonitoring(getApplicationContext());
 

@@ -14,6 +14,7 @@ import net.kdt.pojavlaunch.JVersionList;
 import net.kdt.pojavlaunch.Tools;
 import net.kdt.pojavlaunch.authenticator.accounts.Account;
 import net.kdt.pojavlaunch.game.renderer.def.Renderers;
+import net.kdt.pojavlaunch.game.renderer.impl.ApkRenderSpec;
 import net.kdt.pojavlaunch.game.renderer.impl.GLESRenderSpec;
 import net.kdt.pojavlaunch.instances.Instance;
 import net.kdt.pojavlaunch.lifecycle.LifecycleAwareAlertDialog;
@@ -134,6 +135,11 @@ public class GameRunner {
         return DateUtils.dateBefore(DateUtils.getOriginalReleaseDate(version), 2025, 1, 7);
     }
 
+    /** The Minecraft version a launch uses: the parent version for mod loaders, otherwise the id. */
+    private static String minecraftVersionOf(JVersionList.Version version) {
+        return version.inheritsFrom != null ? version.inheritsFrom : version.id;
+    }
+
     /** MobileGlues' published launcher metadata requires Minecraft 1.17 or newer. */
     private static boolean isMobileGluesSupportedVersion(JVersionList.Version version) {
         if (version == null) return false;
@@ -244,6 +250,15 @@ public class GameRunner {
         versionInfo.downloads = null;
 
         RenderSpec renderer = gameRenderer.getCurrentRenderer();
+
+        // A renderer plugin declares the Minecraft versions it supports. Outside that range, use
+        // GL4ES for this launch and say so, rather than starting a renderer that will not work.
+        if (renderer instanceof ApkRenderSpec
+                && !((ApkRenderSpec) renderer).supportsMinecraft(minecraftVersionOf(versionInfo))) {
+            switchRendererIfSupported(true, GameRenderer.getKnownRenderer(Renderers.GL4ES_RENDERER),
+                    gameRenderer, instance, activity, 0);
+            renderer = gameRenderer.getCurrentRenderer();
+        }
 
         // MobileGlues publishes Minecraft 1.17+ compatibility metadata. Enforce the
         // version gate before EGL setup; do not silently switch the user's renderer.

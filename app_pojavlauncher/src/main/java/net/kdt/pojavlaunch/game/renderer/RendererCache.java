@@ -4,6 +4,8 @@ import android.content.Context;
 import android.content.res.Resources;
 
 import net.kdt.pojavlaunch.game.renderer.def.Renderers;
+import net.kdt.pojavlaunch.game.renderer.impl.ApkRenderSpec;
+import net.kdt.pojavlaunch.game.renderer.impl.ApkRendererScanner;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -32,6 +34,8 @@ public class RendererCache {
     public static RendererCache getCompatibleRenderers(Context context) {
         if (sCompatibleRenderers != null) return sCompatibleRenderers;
         Resources resources = context.getResources();
+        // Renderer plugin apps installed now are listed too; a plugin uninstalled later is dropped.
+        ApkRendererScanner.scan(context);
         String[] renderers = Renderers.settingsRendererIds();
         ArrayList<String> rendererIds = new ArrayList<>(renderers.length);
         ArrayList<String> rendererNames = new ArrayList<>(renderers.length);
@@ -52,6 +56,10 @@ public class RendererCache {
             }
             rendererIds.add(renderer);
             rendererNames.add(resources.getString(spec.displayName()));
+        }
+        for (ApkRenderSpec plugin : ApkRendererScanner.installed()) {
+            rendererIds.add(plugin.tag());
+            rendererNames.add(plugin.label());
         }
         rendererIds.trimToSize();
         rendererNames.trimToSize();
