@@ -5,15 +5,15 @@
     android:background="@drawable/urinth_screen_bg"
     android:orientation="vertical">
 
-    <!-- Top bar -->
+    <!-- Top bar: menu, logo and name, then the header buttons -->
     <LinearLayout
         android:id="@+id/urinth_topbar"
         android:layout_width="match_parent"
-        android:layout_height="52dp"
+        android:layout_height="44dp"
         android:background="@drawable/urinth_topbar_bg"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingStart="6dp"
+        android:paddingStart="4dp"
         android:paddingEnd="6dp">
 
         <ImageView
@@ -22,13 +22,13 @@
             android:layout_height="40dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="@string/urinth_menu_desc"
-            android:padding="8dp"
+            android:padding="9dp"
             android:src="@drawable/ic_urinth_menu" />
 
         <ImageView
             android:id="@+id/urinth_logo"
-            android:layout_width="26dp"
-            android:layout_height="26dp"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
             android:layout_marginStart="4dp"
             android:contentDescription="@null"
             android:src="@drawable/urinth_home_block" />
@@ -45,7 +45,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/urinth_brand"
                 android:textColor="#F2F8FA"
-                android:textSize="17sp"
+                android:textSize="16sp"
                 android:textStyle="bold" />
 
             <TextView
@@ -119,7 +119,7 @@
         <!-- Sidebar -->
         <LinearLayout
             android:id="@+id/urinth_sidebar"
-            android:layout_width="118dp"
+            android:layout_width="112dp"
             android:layout_height="match_parent"
             android:background="#B0061019"
             android:orientation="vertical"
@@ -201,7 +201,8 @@
                 android:textSize="9sp" />
         </LinearLayout>
 
-        <!-- Centre: hero, news, installations. The center fragment host sits on top when a screen opens. -->
+        <!-- Main area. The home scroll and the centre container share this host, so a settings or
+             editor screen replaces the whole home page. -->
         <FrameLayout
             android:id="@+id/urinth_center_host"
             android:layout_width="0dp"
@@ -218,218 +219,573 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="10dp">
+                    android:paddingStart="8dp"
+                    android:paddingTop="8dp"
+                    android:paddingEnd="8dp"
+                    android:paddingBottom="10dp">
 
-                    <FrameLayout
+                    <!-- Row 1: hero, with the account and quick links column beside it -->
+                    <LinearLayout
                         android:layout_width="match_parent"
-                        android:layout_height="150dp"
-                        android:background="@drawable/urinth_panel_bg">
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
 
-                        <ImageView
-                            android:layout_width="match_parent"
-                            android:layout_height="match_parent"
-                            android:contentDescription="@null"
-                            android:scaleType="centerCrop"
-                            android:src="@drawable/urinth_hero" />
+                        <FrameLayout
+                            android:layout_width="0dp"
+                            android:layout_height="136dp"
+                            android:layout_weight="1"
+                            android:background="@drawable/urinth_panel_bg"
+                            android:clipToOutline="true">
 
-                        <View
-                            android:layout_width="match_parent"
-                            android:layout_height="match_parent"
-                            android:background="@drawable/urinth_hero_fade" />
+                            <!-- Real photo: drop a file named urinth_photo_hero into res/drawable. Until then this is a plain dark panel. -->
+                            <ImageView
+                                android:id="@+id/urinth_hero_image"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:background="#FF0E1E28"
+                                android:contentDescription="@null"
+                                android:scaleType="centerCrop" />
 
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="match_parent"
-                            android:gravity="bottom"
-                            android:orientation="vertical"
-                            android:paddingStart="14dp"
-                            android:paddingEnd="14dp"
-                            android:paddingTop="12dp"
-                            android:paddingBottom="12dp">
+                            <View
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:background="@drawable/urinth_hero_fade" />
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:gravity="bottom"
+                                android:orientation="vertical"
+                                android:paddingStart="14dp"
+                                android:paddingTop="12dp"
+                                android:paddingEnd="14dp"
+                                android:paddingBottom="18dp">
+
+                                <TextView
+                                    android:id="@+id/urinth_hero_brand"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/urinth_brand"
+                                    android:textColor="#F2F8FA"
+                                    android:textSize="24sp"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/urinth_hero_title"
+                                    android:textColor="#F2F8FA"
+                                    android:textSize="12sp" />
+
+                                <LinearLayout
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="8dp"
+                                    android:gravity="center_vertical"
+                                    android:orientation="horizontal">
+
+                                    <TextView
+                                        android:id="@+id/urinth_play"
+                                        android:layout_width="120dp"
+                                        android:layout_height="34dp"
+                                        android:background="@drawable/urinth_play_bg"
+                                        android:drawablePadding="6dp"
+                                        android:drawableStart="@drawable/ic_urinth_play"
+                                        android:gravity="center"
+                                        android:text="@string/urinth_play"
+                                        android:textColor="#FFFFFF"
+                                        android:textSize="14sp"
+                                        android:textStyle="bold" />
+
+                                    <LinearLayout
+                                        android:id="@+id/urinth_last_played_btn"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="34dp"
+                                        android:layout_marginStart="8dp"
+                                        android:background="@drawable/urinth_pill_bg"
+                                        android:gravity="center_vertical"
+                                        android:orientation="horizontal"
+                                        android:paddingStart="10dp"
+                                        android:paddingEnd="8dp">
+
+                                        <ImageView
+                                            android:layout_width="16dp"
+                                            android:layout_height="16dp"
+                                            android:contentDescription="@null"
+                                            android:src="@drawable/ic_urinth_clock" />
+
+                                        <TextView
+                                            android:id="@+id/urinth_last_played_name"
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:layout_marginStart="6dp"
+                                            android:ellipsize="end"
+                                            android:maxWidth="100dp"
+                                            android:singleLine="true"
+                                            android:text="@string/urinth_last_played"
+                                            android:textColor="#F2F8FA"
+                                            android:textSize="11sp" />
+
+                                        <ImageView
+                                            android:layout_width="12dp"
+                                            android:layout_height="12dp"
+                                            android:layout_marginStart="4dp"
+                                            android:contentDescription="@null"
+                                            android:src="@drawable/ic_urinth_chevron" />
+                                    </LinearLayout>
+                                </LinearLayout>
+                            </LinearLayout>
 
                             <TextView
+                                android:id="@+id/urinth_explore_worlds"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
+                                android:layout_gravity="end|top"
+                                android:layout_margin="8dp"
                                 android:background="@drawable/urinth_pill_bg"
-                                android:paddingStart="8dp"
-                                android:paddingEnd="8dp"
-                                android:paddingTop="2dp"
-                                android:paddingBottom="2dp"
-                                android:text="@string/urinth_brand"
-                                android:textColor="#1FC77A"
-                                android:textSize="9sp" />
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="6dp"
-                                android:text="@string/urinth_hero_title"
+                                android:paddingStart="10dp"
+                                android:paddingTop="5dp"
+                                android:paddingEnd="10dp"
+                                android:paddingBottom="5dp"
+                                android:text="@string/urinth_explore_worlds"
                                 android:textColor="#F2F8FA"
-                                android:textSize="20sp"
-                                android:textStyle="bold" />
+                                android:textSize="10sp" />
 
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="@string/urinth_hero_sub"
-                                android:textColor="#ABC0CB"
-                                android:textSize="11sp" />
+                            <ImageView
+                                android:layout_width="22dp"
+                                android:layout_height="22dp"
+                                android:layout_gravity="end|center_vertical"
+                                android:layout_marginEnd="10dp"
+                                android:contentDescription="@null"
+                                android:src="@drawable/ic_urinth_arrow"
+                                android:tint="#1FC77A" />
 
                             <LinearLayout
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:layout_marginTop="10dp"
-                                android:gravity="center_vertical"
+                                android:layout_gravity="bottom|center_horizontal"
+                                android:layout_marginBottom="6dp"
                                 android:orientation="horizontal">
 
-                                <TextView
-                                    android:id="@+id/urinth_play"
-                                    android:layout_width="124dp"
-                                    android:layout_height="40dp"
-                                    android:background="@drawable/urinth_play_bg"
-                                    android:drawablePadding="6dp"
-                                    android:drawableStart="@drawable/ic_urinth_play"
-                                    android:gravity="center"
-                                    android:text="@string/urinth_play"
-                                    android:textColor="#FFFFFF"
-                                    android:textSize="14sp"
-                                    android:textStyle="bold" />
+                                <View
+                                    android:layout_width="6dp"
+                                    android:layout_height="6dp"
+                                    android:background="@drawable/urinth_dot" />
+
+                                <View
+                                    android:layout_width="6dp"
+                                    android:layout_height="6dp"
+                                    android:layout_marginStart="5dp"
+                                    android:alpha="0.35"
+                                    android:background="@drawable/urinth_dot" />
+
+                                <View
+                                    android:layout_width="6dp"
+                                    android:layout_height="6dp"
+                                    android:layout_marginStart="5dp"
+                                    android:alpha="0.35"
+                                    android:background="@drawable/urinth_dot" />
+
+                                <View
+                                    android:layout_width="6dp"
+                                    android:layout_height="6dp"
+                                    android:layout_marginStart="5dp"
+                                    android:alpha="0.35"
+                                    android:background="@drawable/urinth_dot" />
+                            </LinearLayout>
+                        </FrameLayout>
+
+                        <!-- Account, installed versions and quick links -->
+                        <LinearLayout
+                            android:layout_width="150dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:orientation="vertical">
+
+                            <LinearLayout
+                                android:id="@+id/urinth_account_card"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:background="@drawable/urinth_panel_bg"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal"
+                                android:padding="8dp">
+
+                                <ImageView
+                                    android:id="@+id/urinth_account_avatar"
+                                    android:layout_width="32dp"
+                                    android:layout_height="32dp"
+                                    android:contentDescription="@null"
+                                    android:scaleType="centerInside"
+                                    android:src="@drawable/urinth_home_block" />
 
                                 <LinearLayout
-                                    android:id="@+id/urinth_last_played_btn"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="40dp"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
                                     android:layout_marginStart="8dp"
-                                    android:background="@drawable/urinth_pill_bg"
+                                    android:layout_weight="1"
+                                    android:orientation="vertical">
+
+                                    <TextView
+                                        android:id="@+id/urinth_account_name"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:ellipsize="end"
+                                        android:singleLine="true"
+                                        android:textColor="#F2F8FA"
+                                        android:textSize="11sp"
+                                        android:textStyle="bold" />
+
+                                    <TextView
+                                        android:id="@+id/urinth_account_status"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:ellipsize="end"
+                                        android:singleLine="true"
+                                        android:textColor="#ABC0CB"
+                                        android:textSize="9sp" />
+                                </LinearLayout>
+
+                                <ImageView
+                                    android:layout_width="12dp"
+                                    android:layout_height="12dp"
+                                    android:contentDescription="@null"
+                                    android:src="@drawable/ic_urinth_chevron" />
+                            </LinearLayout>
+
+                            <LinearLayout
+                                android:id="@+id/urinth_versions_row"
+                                android:layout_width="match_parent"
+                                android:layout_height="36dp"
+                                android:layout_marginTop="6dp"
+                                android:background="@drawable/urinth_panel_bg"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal"
+                                android:paddingStart="8dp"
+                                android:paddingEnd="8dp">
+
+                                <ImageView
+                                    android:layout_width="16dp"
+                                    android:layout_height="16dp"
+                                    android:contentDescription="@null"
+                                    android:src="@drawable/urinth_home_block" />
+
+                                <TextView
+                                    android:id="@+id/urinth_versions_text"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="6dp"
+                                    android:layout_weight="1"
+                                    android:ellipsize="end"
+                                    android:singleLine="true"
+                                    android:textColor="#F2F8FA"
+                                    android:textSize="9sp" />
+
+                                <ImageView
+                                    android:layout_width="12dp"
+                                    android:layout_height="12dp"
+                                    android:contentDescription="@null"
+                                    android:src="@drawable/ic_urinth_chevron" />
+                            </LinearLayout>
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="6dp"
+                                android:background="@drawable/urinth_panel_bg"
+                                android:orientation="vertical"
+                                android:paddingTop="2dp"
+                                android:paddingBottom="2dp">
+
+                                <LinearLayout
+                                    android:id="@+id/urinth_link_quick"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="28dp"
+                                    android:background="?attr/selectableItemBackground"
                                     android:gravity="center_vertical"
                                     android:orientation="horizontal"
                                     android:paddingStart="10dp"
                                     android:paddingEnd="8dp">
 
                                     <ImageView
-                                        android:layout_width="16dp"
-                                        android:layout_height="16dp"
+                                        android:layout_width="13dp"
+                                        android:layout_height="13dp"
                                         android:contentDescription="@null"
-                                        android:src="@drawable/ic_urinth_clock" />
+                                        android:src="@drawable/ic_px_zap"
+                                        android:tint="#F2F8FA" />
 
                                     <TextView
-                                        android:id="@+id/urinth_last_played_name"
-                                        android:layout_width="wrap_content"
+                                        android:layout_width="0dp"
                                         android:layout_height="wrap_content"
-                                        android:layout_marginStart="6dp"
-                                        android:maxWidth="110dp"
-                                        android:singleLine="true"
-                                        android:ellipsize="end"
-                                        android:text="@string/urinth_last_played"
+                                        android:layout_marginStart="8dp"
+                                        android:layout_weight="1"
+                                        android:text="@string/urinth_link_quick"
                                         android:textColor="#F2F8FA"
-                                        android:textSize="11sp" />
+                                        android:textSize="10sp" />
 
                                     <ImageView
-                                        android:layout_width="14dp"
-                                        android:layout_height="14dp"
-                                        android:layout_marginStart="4dp"
+                                        android:layout_width="11dp"
+                                        android:layout_height="11dp"
                                         android:contentDescription="@null"
-                                        android:src="@drawable/ic_urinth_chevron" />
+                                        android:src="@drawable/ic_urinth_external"
+                                        android:tint="#ABC0CB" />
+                                </LinearLayout>
+
+                                <LinearLayout
+                                    android:id="@+id/urinth_link_website"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="28dp"
+                                    android:background="?attr/selectableItemBackground"
+                                    android:gravity="center_vertical"
+                                    android:orientation="horizontal"
+                                    android:paddingStart="10dp"
+                                    android:paddingEnd="8dp">
+
+                                    <ImageView
+                                        android:layout_width="13dp"
+                                        android:layout_height="13dp"
+                                        android:contentDescription="@null"
+                                        android:src="@drawable/ic_urinth_globe"
+                                        android:tint="#F2F8FA" />
+
+                                    <TextView
+                                        android:layout_width="0dp"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginStart="8dp"
+                                        android:layout_weight="1"
+                                        android:text="@string/urinth_link_website"
+                                        android:textColor="#F2F8FA"
+                                        android:textSize="10sp" />
+
+                                    <ImageView
+                                        android:layout_width="11dp"
+                                        android:layout_height="11dp"
+                                        android:contentDescription="@null"
+                                        android:src="@drawable/ic_urinth_external"
+                                        android:tint="#ABC0CB" />
+                                </LinearLayout>
+
+                                <LinearLayout
+                                    android:id="@+id/urinth_link_discord"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="28dp"
+                                    android:background="?attr/selectableItemBackground"
+                                    android:gravity="center_vertical"
+                                    android:orientation="horizontal"
+                                    android:paddingStart="10dp"
+                                    android:paddingEnd="8dp">
+
+                                    <ImageView
+                                        android:layout_width="13dp"
+                                        android:layout_height="13dp"
+                                        android:contentDescription="@null"
+                                        android:src="@drawable/ic_discord" />
+
+                                    <TextView
+                                        android:layout_width="0dp"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginStart="8dp"
+                                        android:layout_weight="1"
+                                        android:text="@string/urinth_link_discord"
+                                        android:textColor="#F2F8FA"
+                                        android:textSize="10sp" />
+
+                                    <ImageView
+                                        android:layout_width="11dp"
+                                        android:layout_height="11dp"
+                                        android:contentDescription="@null"
+                                        android:src="@drawable/ic_urinth_external"
+                                        android:tint="#ABC0CB" />
+                                </LinearLayout>
+
+                                <LinearLayout
+                                    android:id="@+id/urinth_link_docs"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="28dp"
+                                    android:background="?attr/selectableItemBackground"
+                                    android:gravity="center_vertical"
+                                    android:orientation="horizontal"
+                                    android:paddingStart="10dp"
+                                    android:paddingEnd="8dp">
+
+                                    <ImageView
+                                        android:layout_width="13dp"
+                                        android:layout_height="13dp"
+                                        android:contentDescription="@null"
+                                        android:src="@drawable/ic_px_book"
+                                        android:tint="#F2F8FA" />
+
+                                    <TextView
+                                        android:layout_width="0dp"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginStart="8dp"
+                                        android:layout_weight="1"
+                                        android:text="@string/urinth_link_docs"
+                                        android:textColor="#F2F8FA"
+                                        android:textSize="10sp" />
+
+                                    <ImageView
+                                        android:layout_width="11dp"
+                                        android:layout_height="11dp"
+                                        android:contentDescription="@null"
+                                        android:src="@drawable/ic_urinth_external"
+                                        android:tint="#ABC0CB" />
                                 </LinearLayout>
                             </LinearLayout>
                         </LinearLayout>
-
-                        <TextView
-                            android:id="@+id/urinth_explore_worlds"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_gravity="end|top"
-                            android:layout_margin="10dp"
-                            android:background="@drawable/urinth_pill_bg"
-                            android:paddingStart="10dp"
-                            android:paddingEnd="10dp"
-                            android:paddingTop="5dp"
-                            android:paddingBottom="5dp"
-                            android:text="@string/urinth_explore_worlds"
-                            android:textColor="#F2F8FA"
-                            android:textSize="10sp" />
-                    </FrameLayout>
-
-                    <!-- Latest news -->
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal">
-
-                        <ImageView
-                            android:layout_width="16dp"
-                            android:layout_height="16dp"
-                            android:contentDescription="@null"
-                            android:src="@drawable/ic_px_book"
-                            android:tint="#1FC77A" />
-
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="6dp"
-                            android:layout_weight="1"
-                            android:text="@string/urinth_news_title"
-                            android:textColor="#F2F8FA"
-                            android:textSize="13sp"
-                            android:textStyle="bold" />
-
-                        <TextView
-                            android:id="@+id/urinth_news_all"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:padding="4dp"
-                            android:text="@string/urinth_news_all"
-                            android:textColor="#1FC77A"
-                            android:textSize="11sp" />
                     </LinearLayout>
 
+                    <!-- Row 2: latest news and add-ons on the left, installations and activity on the right -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp"
+                        android:layout_marginTop="8dp"
                         android:orientation="horizontal">
 
-                        <include
-                            android:id="@+id/urinth_news_1"
-                            layout="@layout/item_urinth_news"
+                        <LinearLayout
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
-                            android:layout_marginEnd="6dp"
-                            android:layout_weight="1" />
+                            android:layout_weight="1.3"
+                            android:orientation="vertical">
 
-                        <include
-                            android:id="@+id/urinth_news_2"
-                            layout="@layout/item_urinth_news"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_marginEnd="6dp"
-                            android:layout_weight="1" />
+                            <!-- Latest news header -->
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal">
 
-                        <include
-                            android:id="@+id/urinth_news_3"
-                            layout="@layout/item_urinth_news"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1" />
-                    </LinearLayout>
+                                <ImageView
+                                    android:layout_width="14dp"
+                                    android:layout_height="14dp"
+                                    android:contentDescription="@null"
+                                    android:src="@drawable/ic_px_book"
+                                    android:tint="#1FC77A" />
 
-                    <!-- Add-ons banner -->
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="10dp"
-                        android:background="@drawable/urinth_panel_bg"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal"
-                        android:padding="10dp">
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="6dp"
+                                    android:layout_weight="1"
+                                    android:text="@string/urinth_news_title"
+                                    android:textColor="#F2F8FA"
+                                    android:textSize="11sp"
+                                    android:textStyle="bold" />
 
-                        <ImageView
-                            android:layout_width="22dp"
-                            android:layout_height="22dp"
-                            android:contentDescription="@null"
-                            android:src="@drawable/urinth_home_block" />
+                                <TextView
+                                    android:id="@+id/urinth_news_all"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:padding="2dp"
+                                    android:text="@string/urinth_news_all"
+                                    android:textColor="#1FC77A"
+                                    android:textSize="10sp" />
+                            </LinearLayout>
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="6dp"
+                                android:orientation="horizontal">
+
+                                <include
+                                    android:id="@+id/urinth_news_1"
+                                    layout="@layout/item_urinth_news"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginEnd="6dp"
+                                    android:layout_weight="1" />
+
+                                <include
+                                    android:id="@+id/urinth_news_2"
+                                    layout="@layout/item_urinth_news"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginEnd="6dp"
+                                    android:layout_weight="1" />
+
+                                <include
+                                    android:id="@+id/urinth_news_3"
+                                    layout="@layout/item_urinth_news"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1" />
+                            </LinearLayout>
+
+                            <!-- Add-ons banner. Real photo: urinth_photo_banner. -->
+                            <FrameLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="44dp"
+                                android:layout_marginTop="8dp"
+                                android:background="@drawable/urinth_panel_bg"
+                                android:clipToOutline="true">
+
+                                <ImageView
+                                    android:id="@+id/urinth_banner_image"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="match_parent"
+                                    android:background="#FF0E1E28"
+                                    android:contentDescription="@null"
+                                    android:scaleType="centerCrop" />
+
+                                <View
+                                    android:layout_width="match_parent"
+                                    android:layout_height="match_parent"
+                                    android:background="@drawable/urinth_hero_fade" />
+
+                                <LinearLayout
+                                    android:layout_width="match_parent"
+                                    android:layout_height="match_parent"
+                                    android:gravity="center_vertical"
+                                    android:orientation="horizontal"
+                                    android:paddingStart="10dp"
+                                    android:paddingEnd="10dp">
+
+                                    <ImageView
+                                        android:layout_width="18dp"
+                                        android:layout_height="18dp"
+                                        android:contentDescription="@null"
+                                        android:src="@drawable/ic_urinth_crown"
+                                        android:tint="#1FC77A" />
+
+                                    <LinearLayout
+                                        android:layout_width="0dp"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginStart="8dp"
+                                        android:layout_weight="1"
+                                        android:orientation="vertical">
+
+                                        <TextView
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:text="@string/urinth_addons_title"
+                                            android:textColor="#F2F8FA"
+                                            android:textSize="10sp"
+                                            android:textStyle="bold" />
+
+                                        <TextView
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:text="@string/urinth_addons_sub"
+                                            android:textColor="#ABC0CB"
+                                            android:textSize="8sp" />
+                                    </LinearLayout>
+
+                                    <TextView
+                                        android:id="@+id/urinth_addons_btn"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:background="@drawable/urinth_pill_bg"
+                                        android:paddingStart="10dp"
+                                        android:paddingTop="5dp"
+                                        android:paddingEnd="10dp"
+                                        android:paddingBottom="5dp"
+                                        android:text="@string/urinth_addons_btn"
+                                        android:textColor="#1FC77A"
+                                        android:textSize="9sp" />
+                                </LinearLayout>
+                            </FrameLayout>
+                        </LinearLayout>
 
                         <LinearLayout
                             android:layout_width="0dp"
@@ -438,83 +794,100 @@
                             android:layout_weight="1"
                             android:orientation="vertical">
 
-                            <TextView
-                                android:layout_width="wrap_content"
+                            <!-- Your installations -->
+                            <LinearLayout
+                                android:id="@+id/urinth_installations_card"
+                                android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:text="@string/urinth_addons_title"
-                                android:textColor="#F2F8FA"
-                                android:textSize="11sp"
-                                android:textStyle="bold" />
+                                android:background="@drawable/urinth_panel_bg"
+                                android:orientation="vertical"
+                                android:padding="8dp">
 
-                            <TextView
-                                android:layout_width="wrap_content"
+                                <LinearLayout
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:gravity="center_vertical"
+                                    android:orientation="horizontal">
+
+                                    <ImageView
+                                        android:layout_width="16dp"
+                                        android:layout_height="16dp"
+                                        android:contentDescription="@null"
+                                        android:src="@drawable/urinth_home_block" />
+
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginStart="6dp"
+                                        android:text="@string/urinth_installations_title"
+                                        android:textColor="#F2F8FA"
+                                        android:textSize="11sp"
+                                        android:textStyle="bold" />
+                                </LinearLayout>
+
+                                <LinearLayout
+                                    android:id="@+id/urinth_installations_list"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:orientation="vertical" />
+
+                                <TextView
+                                    android:id="@+id/urinth_installations_empty"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="4dp"
+                                    android:text="@string/urinth_installations_empty"
+                                    android:textColor="#ABC0CB"
+                                    android:textSize="10sp" />
+                            </LinearLayout>
+
+                            <!-- Recent activity -->
+                            <LinearLayout
+                                android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:text="@string/urinth_addons_sub"
-                                android:textColor="#ABC0CB"
-                                android:textSize="9sp" />
+                                android:layout_marginTop="8dp"
+                                android:background="@drawable/urinth_panel_bg"
+                                android:orientation="vertical"
+                                android:padding="8dp">
+
+                                <LinearLayout
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:gravity="center_vertical"
+                                    android:orientation="horizontal">
+
+                                    <ImageView
+                                        android:layout_width="14dp"
+                                        android:layout_height="14dp"
+                                        android:contentDescription="@null"
+                                        android:src="@drawable/ic_urinth_clock" />
+
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginStart="6dp"
+                                        android:text="@string/urinth_activity_title"
+                                        android:textColor="#F2F8FA"
+                                        android:textSize="11sp"
+                                        android:textStyle="bold" />
+                                </LinearLayout>
+
+                                <LinearLayout
+                                    android:id="@+id/urinth_activity_list"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:orientation="vertical" />
+
+                                <TextView
+                                    android:id="@+id/urinth_activity_empty"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="4dp"
+                                    android:text="@string/urinth_activity_empty"
+                                    android:textColor="#ABC0CB"
+                                    android:textSize="10sp" />
+                            </LinearLayout>
                         </LinearLayout>
-
-                        <TextView
-                            android:id="@+id/urinth_addons_btn"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:background="@drawable/urinth_pill_bg"
-                            android:paddingStart="10dp"
-                            android:paddingEnd="10dp"
-                            android:paddingTop="6dp"
-                            android:paddingBottom="6dp"
-                            android:text="@string/urinth_addons_btn"
-                            android:textColor="#1FC77A"
-                            android:textSize="10sp" />
-                    </LinearLayout>
-
-                    <!-- Your installations -->
-                    <LinearLayout
-                        android:id="@+id/urinth_installations_card"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="10dp"
-                        android:background="@drawable/urinth_panel_bg"
-                        android:orientation="vertical"
-                        android:padding="10dp">
-
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:gravity="center_vertical"
-                            android:orientation="horizontal">
-
-                            <ImageView
-                                android:layout_width="18dp"
-                                android:layout_height="18dp"
-                                android:contentDescription="@null"
-                                android:src="@drawable/urinth_home_block" />
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginStart="6dp"
-                                android:text="@string/urinth_installations_title"
-                                android:textColor="#F2F8FA"
-                                android:textSize="13sp"
-                                android:textStyle="bold" />
-                        </LinearLayout>
-
-                        <LinearLayout
-                            android:id="@+id/urinth_installations_list"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="6dp"
-                            android:orientation="vertical" />
-
-                        <TextView
-                            android:id="@+id/urinth_installations_empty"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="6dp"
-                            android:text="@string/urinth_installations_empty"
-                            android:textColor="#ABC0CB"
-                            android:textSize="11sp" />
                     </LinearLayout>
                 </LinearLayout>
             </ScrollView>
@@ -527,202 +900,5 @@
                 android:background="#FF0B1A24"
                 android:visibility="gone" />
         </FrameLayout>
-
-        <!-- Right column -->
-        <ScrollView
-            android:id="@+id/urinth_right_scroll"
-            android:layout_width="196dp"
-            android:layout_height="match_parent"
-            android:fillViewport="true">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:paddingStart="6dp"
-                android:paddingEnd="10dp"
-                android:paddingTop="10dp"
-                android:paddingBottom="10dp">
-
-                <!-- Account -->
-                <LinearLayout
-                    android:id="@+id/urinth_account_card"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:background="@drawable/urinth_panel_bg"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal"
-                    android:padding="10dp">
-
-                    <ImageView
-                        android:id="@+id/urinth_account_avatar"
-                        android:layout_width="36dp"
-                        android:layout_height="36dp"
-                        android:contentDescription="@null"
-                        android:scaleType="centerInside"
-                        android:src="@drawable/urinth_home_block" />
-
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
-                        android:layout_weight="1"
-                        android:orientation="vertical">
-
-                        <TextView
-                            android:id="@+id/urinth_account_name"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:ellipsize="end"
-                            android:singleLine="true"
-                            android:textColor="#F2F8FA"
-                            android:textSize="13sp"
-                            android:textStyle="bold" />
-
-                        <TextView
-                            android:id="@+id/urinth_account_status"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:ellipsize="end"
-                            android:singleLine="true"
-                            android:textColor="#ABC0CB"
-                            android:textSize="10sp" />
-                    </LinearLayout>
-
-                    <ImageView
-                        android:layout_width="16dp"
-                        android:layout_height="16dp"
-                        android:contentDescription="@null"
-                        android:src="@drawable/ic_urinth_chevron" />
-                </LinearLayout>
-
-                <!-- Installed versions -->
-                <LinearLayout
-                    android:id="@+id/urinth_versions_row"
-                    android:layout_width="match_parent"
-                    android:layout_height="44dp"
-                    android:layout_marginTop="8dp"
-                    android:background="@drawable/urinth_panel_bg"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal"
-                    android:paddingStart="10dp"
-                    android:paddingEnd="10dp">
-
-                    <ImageView
-                        android:layout_width="18dp"
-                        android:layout_height="18dp"
-                        android:contentDescription="@null"
-                        android:src="@drawable/urinth_home_block" />
-
-                    <TextView
-                        android:id="@+id/urinth_versions_text"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
-                        android:layout_weight="1"
-                        android:ellipsize="end"
-                        android:singleLine="true"
-                        android:textColor="#F2F8FA"
-                        android:textSize="11sp" />
-
-                    <ImageView
-                        android:layout_width="14dp"
-                        android:layout_height="14dp"
-                        android:contentDescription="@null"
-                        android:src="@drawable/ic_urinth_chevron" />
-                </LinearLayout>
-
-                <!-- Quick links -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:background="@drawable/urinth_panel_bg"
-                    android:orientation="vertical"
-                    android:paddingTop="4dp"
-                    android:paddingBottom="4dp">
-
-                    <LinearLayout
-                        android:id="@+id/urinth_link_quick"
-                        style="@style/UrinthLinkRow">
-                        <ImageView style="@style/UrinthLinkIcon" android:src="@drawable/ic_px_zap" android:tint="#F2F8FA" />
-                        <TextView style="@style/UrinthLinkText" android:text="@string/urinth_link_quick" />
-                        <ImageView style="@style/UrinthLinkChevron" />
-                    </LinearLayout>
-
-                    <LinearLayout
-                        android:id="@+id/urinth_link_website"
-                        style="@style/UrinthLinkRow">
-                        <ImageView style="@style/UrinthLinkIcon" android:src="@drawable/ic_urinth_globe" android:tint="#F2F8FA" />
-                        <TextView style="@style/UrinthLinkText" android:text="@string/urinth_link_website" />
-                        <ImageView style="@style/UrinthLinkChevron" />
-                    </LinearLayout>
-
-                    <LinearLayout
-                        android:id="@+id/urinth_link_discord"
-                        style="@style/UrinthLinkRow">
-                        <ImageView style="@style/UrinthLinkIcon" android:src="@drawable/ic_discord" />
-                        <TextView style="@style/UrinthLinkText" android:text="@string/urinth_link_discord" />
-                        <ImageView style="@style/UrinthLinkChevron" />
-                    </LinearLayout>
-
-                    <LinearLayout
-                        android:id="@+id/urinth_link_docs"
-                        style="@style/UrinthLinkRow">
-                        <ImageView style="@style/UrinthLinkIcon" android:src="@drawable/ic_px_book" android:tint="#F2F8FA" />
-                        <TextView style="@style/UrinthLinkText" android:text="@string/urinth_link_docs" />
-                        <ImageView style="@style/UrinthLinkChevron" />
-                    </LinearLayout>
-                </LinearLayout>
-
-                <!-- Recent activity -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:background="@drawable/urinth_panel_bg"
-                    android:orientation="vertical"
-                    android:padding="10dp">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal">
-
-                        <ImageView
-                            android:layout_width="16dp"
-                            android:layout_height="16dp"
-                            android:contentDescription="@null"
-                            android:src="@drawable/ic_urinth_clock" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="6dp"
-                            android:text="@string/urinth_activity_title"
-                            android:textColor="#F2F8FA"
-                            android:textSize="12sp"
-                            android:textStyle="bold" />
-                    </LinearLayout>
-
-                    <LinearLayout
-                        android:id="@+id/urinth_activity_list"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp"
-                        android:orientation="vertical" />
-
-                    <TextView
-                        android:id="@+id/urinth_activity_empty"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp"
-                        android:text="@string/urinth_activity_empty"
-                        android:textColor="#ABC0CB"
-                        android:textSize="10sp" />
-                </LinearLayout>
-            </LinearLayout>
-        </ScrollView>
     </LinearLayout>
 </LinearLayout>

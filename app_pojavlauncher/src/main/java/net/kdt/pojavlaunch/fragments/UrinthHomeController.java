@@ -97,10 +97,10 @@ public final class UrinthHomeController {
         activityList = root.findViewById(R.id.urinth_activity_list);
         activityEmpty = root.findViewById(R.id.urinth_activity_empty);
 
-        TextView brand = root.findViewById(R.id.urinth_brand);
-        SpannableString brandText = new SpannableString(brand.getText());
-        brandText.setSpan(new ForegroundColorSpan(GREEN), 6, brandText.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
-        brand.setText(brandText);
+        colourUltra(root.findViewById(R.id.urinth_brand));
+        colourUltra(root.findViewById(R.id.urinth_hero_brand));
+        setPhoto(root.findViewById(R.id.urinth_hero_image), "urinth_photo_hero");
+        setPhoto(root.findViewById(R.id.urinth_banner_image), "urinth_photo_banner");
 
         bindActions(root);
         bindNews(root);
@@ -158,16 +158,16 @@ public final class UrinthHomeController {
 
     /** Placeholder news cards until a news feed is connected. Dates say "Not set up yet" rather than inventing one. */
     private void bindNews(View root) {
-        bindNewsCard(root.findViewById(R.id.urinth_news_1), R.drawable.urinth_cherry,
+        bindNewsCard(root.findViewById(R.id.urinth_news_1), "urinth_photo_news_1",
                 R.string.urinth_news_1_title, R.string.urinth_news_1_desc);
-        bindNewsCard(root.findViewById(R.id.urinth_news_2), R.drawable.urinth_badlands,
+        bindNewsCard(root.findViewById(R.id.urinth_news_2), "urinth_photo_news_2",
                 R.string.urinth_news_2_title, R.string.urinth_news_2_desc);
-        bindNewsCard(root.findViewById(R.id.urinth_news_3), R.drawable.urinth_snow,
+        bindNewsCard(root.findViewById(R.id.urinth_news_3), "urinth_photo_news_3",
                 R.string.urinth_news_3_title, R.string.urinth_news_3_desc);
     }
 
-    private void bindNewsCard(View card, int image, int title, int description) {
-        ((ImageView) card.findViewById(R.id.urinth_news_image)).setImageResource(image);
+    private void bindNewsCard(View card, String photoName, int title, int description) {
+        setPhoto((ImageView) card.findViewById(R.id.urinth_news_image), photoName);
         ((TextView) card.findViewById(R.id.urinth_news_title)).setText(title);
         ((TextView) card.findViewById(R.id.urinth_news_desc)).setText(description);
         ((TextView) card.findViewById(R.id.urinth_news_date)).setText(R.string.urinth_not_set_up);
@@ -429,6 +429,24 @@ public final class UrinthHomeController {
                 })
                 .setNegativeButton(android.R.string.cancel, null)
                 .show();
+    }
+
+    /** Gives the green "Ultra" part of the UrinthUltra name. Both name labels start it at character 6. */
+    private static void colourUltra(TextView view) {
+        SpannableString text = new SpannableString(view.getText());
+        text.setSpan(new ForegroundColorSpan(GREEN), 6, text.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+        view.setText(text);
+    }
+
+    /**
+     * Shows the real photo drawable with this name (for example urinth_photo_hero) when the project
+     * has one in res/drawable. Without that file the view stays a plain dark panel, so no artwork is
+     * drawn in its place.
+     */
+    private void setPhoto(ImageView view, String name) {
+        int id = context.getResources().getIdentifier(name, "drawable", context.getPackageName());
+        if (id != 0) view.setImageResource(id);
+        else view.setImageDrawable(null);
     }
 
     private void toast(int messageRes) {
