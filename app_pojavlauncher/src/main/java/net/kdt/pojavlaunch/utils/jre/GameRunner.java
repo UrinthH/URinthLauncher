@@ -148,7 +148,20 @@ public class GameRunner {
             if (minorDigits.isEmpty()) return false;
             return Integer.parseInt(minorDigits) >= 17;
         } catch (NumberFormatException ignored) {
-            // Unknown snapshot/custom version strings are not auto-switched to MobileGlues.
+            // Snapshot ids (for example 25w10a) are not plain version numbers. Judge them by
+            // the original release date instead, so snapshots newer than 1.17 are not rejected.
+            return isReleasedOnOrAfter117(version);
+        }
+    }
+
+    /** True when the game version's original release date is on or after 1.17's release (2021-06-08). */
+    private static boolean isReleasedOnOrAfter117(JVersionList.Version version) {
+        try {
+            java.util.Date releaseDate = DateUtils.getOriginalReleaseDate(version);
+            // Month is zero-based, so 5 means June.
+            return releaseDate != null && !DateUtils.dateBefore(releaseDate, 2021, 5, 8);
+        } catch (Exception error) {
+            Log.w("GameRunner", "Could not read release date for MobileGlues version check", error);
             return false;
         }
     }
