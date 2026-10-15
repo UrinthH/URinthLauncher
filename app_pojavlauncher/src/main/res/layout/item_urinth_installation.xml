@@ -5,19 +5,19 @@
     android:background="?attr/selectableItemBackground"
     android:gravity="center_vertical"
     android:orientation="horizontal"
-    android:paddingTop="5dp"
-    android:paddingBottom="5dp">
+    android:paddingTop="2dp"
+    android:paddingBottom="2dp">
 
     <ImageView
-        android:layout_width="26dp"
-        android:layout_height="26dp"
+        android:layout_width="22dp"
+        android:layout_height="22dp"
         android:contentDescription="@null"
         android:src="@drawable/urinth_home_block" />
 
     <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginStart="8dp"
+        android:layout_marginStart="6dp"
         android:layout_weight="1"
         android:orientation="vertical">
 
@@ -28,7 +28,7 @@
             android:ellipsize="end"
             android:singleLine="true"
             android:textColor="#F2F8FA"
-            android:textSize="10.5sp"
+            android:textSize="10sp"
             android:textStyle="bold" />
 
         <TextView
@@ -38,28 +38,28 @@
             android:ellipsize="end"
             android:singleLine="true"
             android:textColor="#ABC0CB"
-            android:textSize="8.5sp" />
+            android:textSize="8sp" />
     </LinearLayout>
 
     <TextView
         android:id="@+id/urinth_row_play"
-        android:layout_width="56dp"
-        android:layout_height="26dp"
+        android:layout_width="52dp"
+        android:layout_height="24dp"
         android:background="@drawable/urinth_play_bg"
         android:gravity="center"
         android:text="@string/urinth_play"
         android:textColor="#FFFFFF"
-        android:textSize="9.5sp"
+        android:textSize="9sp"
         android:textStyle="bold" />
 
     <ImageView
         android:id="@+id/urinth_row_more"
-        android:layout_width="26dp"
-        android:layout_height="26dp"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
         android:layout_marginStart="2dp"
         android:background="?attr/selectableItemBackgroundBorderless"
         android:contentDescription="@string/urinth_btn_more_desc"
-        android:padding="6dp"
+        android:padding="5dp"
         android:src="@drawable/ic_urinth_more"
         android:tint="#F2F8FA" />
 </LinearLayout>

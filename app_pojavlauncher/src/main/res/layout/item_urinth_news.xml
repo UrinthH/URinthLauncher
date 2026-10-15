@@ -1,16 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- A news card. The parent gives it its height; the content is sized to fit in it. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:background="@drawable/urinth_panel_bg"
     android:orientation="vertical"
-    android:padding="5dp">
+    android:padding="4dp">
 
     <!-- Real photo: urinth_photo_news_1/2/3 in res/drawable. Until then this is a plain dark panel. -->
     <ImageView
         android:id="@+id/urinth_news_image"
         android:layout_width="match_parent"
-        android:layout_height="46dp"
+        android:layout_height="36dp"
         android:background="#FF142631"
         android:contentDescription="@null"
         android:scaleType="centerCrop" />
@@ -19,7 +20,7 @@
         android:id="@+id/urinth_news_title"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="5dp"
+        android:layout_marginTop="3dp"
         android:ellipsize="end"
         android:singleLine="true"
         android:textColor="#F2F8FA"
@@ -33,18 +34,18 @@
         android:ellipsize="end"
         android:maxLines="2"
         android:textColor="#ABC0CB"
-        android:textSize="8.5sp" />
+        android:textSize="8sp" />
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="3dp"
+        android:layout_marginTop="2dp"
         android:gravity="center_vertical"
         android:orientation="horizontal">
 
         <ImageView
-            android:layout_width="10dp"
-            android:layout_height="10dp"
+            android:layout_width="9dp"
+            android:layout_height="9dp"
             android:contentDescription="@null"
             android:src="@drawable/ic_urinth_calendar"
             android:tint="#ABC0CB" />
@@ -53,16 +54,16 @@
             android:id="@+id/urinth_news_date"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="4dp"
+            android:layout_marginStart="3dp"
             android:layout_weight="1"
             android:ellipsize="end"
             android:singleLine="true"
             android:textColor="#ABC0CB"
-            android:textSize="8sp" />
+            android:textSize="7.5sp" />
 
         <ImageView
-            android:layout_width="10dp"
-            android:layout_height="10dp"
+            android:layout_width="9dp"
+            android:layout_height="9dp"
             android:contentDescription="@null"
             android:src="@drawable/ic_urinth_arrow"
             android:tint="#1FC77A" />

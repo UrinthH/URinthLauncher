@@ -10,7 +10,6 @@ import android.view.View;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.PopupMenu;
-import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -45,8 +44,9 @@ import git.artdeell.mojo.R;
  * settings and browsers open in the centre host, and account changes use Accounts.
  */
 public final class UrinthHomeController {
-    private static final int MAX_HOME_INSTALLATIONS = 5;
-    private static final int MAX_HOME_ACTIVITY = 4;
+    /** The home page does not scroll, so the lists show only what fits the card: one installation and three activity rows. */
+    private static final int MAX_HOME_INSTALLATIONS = 1;
+    private static final int MAX_HOME_ACTIVITY = 3;
     private static final int GREEN = 0xFF1FC77A;
 
     private final FragmentActivity activity;
@@ -54,7 +54,6 @@ public final class UrinthHomeController {
     private final Context context;
 
     private final View sidebar;
-    private final ScrollView homeScroll;
     private final TextView statusText;
     private final TextView playButton;
     private final TextView lastPlayedName;
@@ -84,7 +83,6 @@ public final class UrinthHomeController {
         this.context = root.getContext();
 
         sidebar = root.findViewById(R.id.urinth_sidebar);
-        homeScroll = root.findViewById(R.id.urinth_home_scroll);
         statusText = root.findViewById(R.id.urinth_status_text);
         playButton = root.findViewById(R.id.urinth_play);
         lastPlayedName = root.findViewById(R.id.urinth_last_played_name);
@@ -138,7 +136,10 @@ public final class UrinthHomeController {
 
         root.findViewById(R.id.urinth_btn_more).setOnClickListener(this::showMoreMenu);
 
-        root.findViewById(R.id.urinth_nav_home).setOnClickListener(v -> homeScroll.smoothScrollTo(0, 0));
+        // Home closes any screen opened over the page; the page itself is always the home screen.
+        root.findViewById(R.id.urinth_nav_home).setOnClickListener(v -> {
+            if (host != null) host.closeCenterContent();
+        });
         root.findViewById(R.id.urinth_nav_news).setOnClickListener(v -> toast(R.string.urinth_news_not_set_up));
         root.findViewById(R.id.urinth_news_all).setOnClickListener(v -> toast(R.string.urinth_news_not_set_up));
         root.findViewById(R.id.urinth_news_1).setOnClickListener(v -> toast(R.string.urinth_news_not_set_up));
