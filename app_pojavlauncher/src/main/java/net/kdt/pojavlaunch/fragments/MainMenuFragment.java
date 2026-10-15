@@ -17,9 +17,19 @@ import net.kdt.pojavlaunch.contracts.OpenDocumentWithExtension;
 import net.kdt.pojavlaunch.Tools;
 import com.kdt.mcgui.AccountSpinner;
 
+import git.artdeell.mojo.R;
+
 public class MainMenuFragment extends Fragment {
     public static final String TAG = "MainMenuFragment";
+
+    /**
+     * true: the UrinthUltra home screen built from standard views (view_urinth_home.xml).
+     * false: the previous hand-drawn home screen (ModrinthLauncherView). Set this to false to go back.
+     */
+    static final boolean USE_NEW_HOME = true;
+
     private ModrinthLauncherView launcherView;
+    private UrinthHomeController homeController;
     private FrameLayout centerContainer;
     public static final int CENTER_CONTAINER_ID = 0x00f0a11;
 
@@ -31,15 +41,28 @@ public class MainMenuFragment extends Fragment {
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
-        com.kdt.mcgui.mcVersionSpinner spinner = new com.kdt.mcgui.mcVersionSpinner(requireContext());
-        spinner.setVisibility(View.INVISIBLE);
-
         FrameLayout root = new FrameLayout(requireContext());
         AccountSpinner accountSpinner = new AccountSpinner(requireContext());
         accountSpinner.setAlpha(0f);
         FrameLayout.LayoutParams accountParams = new FrameLayout.LayoutParams(1, 1);
         accountParams.leftMargin = 1;
         accountParams.topMargin = 1;
+
+        if (USE_NEW_HOME) {
+            View home = inflater.inflate(R.layout.view_urinth_home, root, false);
+            root.addView(home, new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+            // The centre host in the layout is where Settings, the editor and the browsers open.
+            centerContainer = home.findViewById(R.id.urinth_center_container);
+            centerContainer.setId(CENTER_CONTAINER_ID);
+            root.addView(accountSpinner, accountParams);
+            homeController = new UrinthHomeController(requireActivity(), this, home);
+            addBackStackListener();
+            return root;
+        }
+
+        com.kdt.mcgui.mcVersionSpinner spinner = new com.kdt.mcgui.mcVersionSpinner(requireContext());
+        spinner.setVisibility(View.INVISIBLE);
 
         launcherView = new ModrinthLauncherView(
                 requireActivity(), spinner, accountSpinner, () -> {
@@ -69,6 +92,11 @@ public class MainMenuFragment extends Fragment {
             params.height = Math.round(height * (686f - 62f) / 686f);
             centerContainer.setLayoutParams(params);
         });
+        addBackStackListener();
+        return root;
+    }
+
+    private void addBackStackListener() {
         getChildFragmentManager().addOnBackStackChangedListener(() -> {
             if (centerContainer != null && getChildFragmentManager().getBackStackEntryCount() == 0) {
                 centerContainer.animate().cancel();
@@ -78,7 +106,6 @@ public class MainMenuFragment extends Fragment {
                 if (launcherView != null) launcherView.onCenterContentClosed();
             }
         });
-        return root;
     }
 
     @Override
@@ -95,8 +122,25 @@ public class MainMenuFragment extends Fragment {
         getChildFragmentManager().addOnBackStackChangedListener(() -> callback.setEnabled(isCenterContentVisible()));
     }
 
+    @Override
+    public void onResume() {
+        super.onResume();
+        // Installations, accounts and activity can change while a game or a screen was open.
+        if (homeController != null) homeController.refresh();
+    }
+
+    @Override
+    public void onDestroyView() {
+        if (homeController != null) {
+            homeController.release();
+            homeController = null;
+        }
+        super.onDestroyView();
+    }
+
     public void showAuthChooser() {
         if (launcherView != null) launcherView.showAuthChooser();
+        else if (homeController != null) homeController.showAccountPicker();
     }
 
     public boolean isCenterContentVisible() {
