@@ -32,7 +32,7 @@ public class RendererCache {
     public static RendererCache getCompatibleRenderers(Context context) {
         if (sCompatibleRenderers != null) return sCompatibleRenderers;
         Resources resources = context.getResources();
-        String[] renderers = Renderers.allRendererIds();
+        String[] renderers = Renderers.settingsRendererIds();
         ArrayList<String> rendererIds = new ArrayList<>(renderers.length);
         ArrayList<String> rendererNames = new ArrayList<>(renderers.length);
         for (String renderer : renderers) {

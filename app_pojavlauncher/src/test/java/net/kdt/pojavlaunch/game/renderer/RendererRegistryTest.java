@@ -43,6 +43,18 @@ public class RendererRegistryTest {
     }
 
     @Test
+    public void settingsListsOnlyGl4esAndLtw() {
+        String[] settings = Renderers.settingsRendererIds();
+        assertEquals(2, settings.length);
+        assertEquals(Renderers.GL4ES_RENDERER, settings[0]);
+        assertEquals(Renderers.LTW_RENDERER, settings[1]);
+        Set<String> registered = new HashSet<>(java.util.Arrays.asList(Renderers.allRendererIds()));
+        for (String id : settings) {
+            assertTrue("Settings renderer must be registered: " + id, registered.contains(id));
+        }
+    }
+
+    @Test
     public void registryReturnsDefensiveCopy() {
         String[] rendererIds = Renderers.allRendererIds();
         String originalFirstId = rendererIds[0];

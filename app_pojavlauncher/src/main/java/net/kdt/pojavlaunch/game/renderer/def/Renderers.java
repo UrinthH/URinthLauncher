@@ -37,9 +37,23 @@ public final class Renderers {
             MOBILEGLUES_RENDERER
     };
 
+    /**
+     * Renderers offered in Settings. Only these two are listed; the other registered backends
+     * are hidden until a plugin-based list is added back.
+     */
+    private static final String[] SETTINGS_RENDERERS = {
+            GL4ES_RENDERER,
+            LTW_RENDERER
+    };
+
     /** Return a copy so callers cannot mutate the canonical renderer registry. */
     public static String[] allRendererIds() {
         return ALL_RENDERERS.clone();
+    }
+
+    /** Renderer IDs shown in Settings. Return a copy. */
+    public static String[] settingsRendererIds() {
+        return SETTINGS_RENDERERS.clone();
     }
 
     private Renderers() {
