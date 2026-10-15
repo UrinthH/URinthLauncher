@@ -71,6 +71,11 @@ public abstract class GLESRenderSpec implements RenderSpec {
         }
 
         @Override
+        public String[] pluginPackages() {
+            return new String[] { LibraryPlugin.ID_LTW_PLUGIN_FCL, LibraryPlugin.ID_LTW_PLUGIN_MIO };
+        }
+
+        @Override
         public String librarySearchPath() {
             return externalProvider == null ? null : externalProvider.getLibraryPath();
         }
@@ -195,6 +200,9 @@ public abstract class GLESRenderSpec implements RenderSpec {
 
         @Override public boolean compatibleDevice(Context context) {
             return JREUtils.getDetectedVersion() >= 3 && discover(context);
+        }
+        @Override public String[] pluginPackages() {
+            return new String[] { LibraryPlugin.ID_KRYPTON_PLUGIN, LibraryPlugin.ID_KRYPTON_ANGLELESS_PLUGIN };
         }
         @Override public String name() { return "Krypton Wrapper"; }
         @Override public int displayName() { return R.string.mcl_setting_renderer_krypton; }

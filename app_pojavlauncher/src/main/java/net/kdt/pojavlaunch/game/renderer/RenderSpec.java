@@ -53,6 +53,15 @@ public interface RenderSpec {
     }
 
     /**
+     * Package names of the installed apps this renderer's library can come from. Used to tell
+     * the player what to install when the renderer cannot be loaded.
+     * @return package names (empty if the renderer is built into the launcher)
+     */
+    default String[] pluginPackages() {
+        return new String[0];
+    }
+
+    /**
      * Prepare renderer usage in the game. Sets up environment and some other things
      *
      * @param context application context

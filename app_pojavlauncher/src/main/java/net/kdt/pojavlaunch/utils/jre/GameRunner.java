@@ -362,6 +362,7 @@ public class GameRunner {
         final String requestedTag = gameRenderer.getCurrentRenderer().tag();
         final String requestedName = gameRenderer.getCurrentRenderer().name();
         final String requestedLibrary = gameRenderer.getCurrentRenderer().library();
+        final String requestedPlugins = android.text.TextUtils.join(", ", gameRenderer.getCurrentRenderer().pluginPackages());
         gameRenderer.setupEnvironment(activity, isMobileGluesSupportedVersion(versionInfo));
         JREUtils.setGameEnvironment(activity);
         JREUtils.chdir(instance.getGameDirectory().getAbsolutePath());
@@ -377,7 +378,8 @@ public class GameRunner {
             final String usedName = usedRenderer.name();
             LifecycleAwareAlertDialog.DialogCreator fallbackDialog = (dialog, builder) ->
                     builder.setMessage(activity.getString(R.string.renderer_fallback_notice,
-                                    requestedName, usedName, requestedLibrary))
+                                    requestedName, usedName, requestedLibrary,
+                                    requestedPlugins.isEmpty() ? "-" : requestedPlugins))
                             .setCancelable(false)
                             .setPositiveButton(android.R.string.ok, (d, w) -> {});
             if(LifecycleAwareAlertDialog.haltOnDialog(activity.getLifecycle(), activity, fallbackDialog)) return;

@@ -79,6 +79,9 @@ public class MesaRenderSpec implements RenderSpec {
     public String librarySearchPath() {
         return usingFallbackMesaPlugin() ? fallbackMesaPlugin.getLibraryPath() : null;
     }
+    public String[] pluginPackages() {
+        return MESA_PLUGIN_PACKAGES.clone();
+    }
     public boolean compatibleDevice(Context context) {
         return hasMesa() && GpuUtils.checkChromebook(context.getPackageManager());
     }
@@ -171,6 +174,12 @@ public class MesaRenderSpec implements RenderSpec {
             // A plugin can be removed after the Settings list was populated.
             // Keep launch setup null-safe so the normal GL4ES fallback can run.
             return provider == null ? null : provider.getLibraryPath();
+        }
+        @Override
+        public String[] pluginPackages() {
+            // Mesa-based backends accept several Mesa plugin builds; Legacy Zink needs the Zink plugin.
+            return LibraryPlugin.ID_MESA_PLUGIN.equals(plugin())
+                    ? MESA_PLUGIN_PACKAGES.clone() : new String[] { plugin() };
         }
         public String tag() {
             return Renderers.MESA_RENDERER_EXT;

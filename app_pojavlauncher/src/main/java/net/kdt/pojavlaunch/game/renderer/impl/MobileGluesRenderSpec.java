@@ -90,6 +90,15 @@ public final class MobileGluesRenderSpec implements RenderSpec {
     }
 
     @Override
+    public String[] pluginPackages() {
+        return new String[] {
+                LibraryPlugin.ID_MOBILEGLUES_PLUGIN,
+                LibraryPlugin.ID_MOBILEGLUES_PLUGIN_FCL,
+                LibraryPlugin.ID_MOBILEGLUES_PLUGIN_MIO
+        };
+    }
+
+    @Override
     public String librarySearchPath() {
         LibraryPlugin plugin = provider;
         return plugin == null ? null : plugin.getLibraryPath();
