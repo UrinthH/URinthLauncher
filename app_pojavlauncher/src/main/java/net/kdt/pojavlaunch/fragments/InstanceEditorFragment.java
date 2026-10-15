@@ -168,7 +168,10 @@ public class InstanceEditorFragment extends Fragment implements CropperUtils.Cro
         mDefaultRuntime.setSelection(jvmIndex);
 
         // Renderer spinner
-        int rendererIndex = mRenderNames.indexOf(instance.getLaunchRenderer());
+        // Use the instance's own stored renderer here, not the effective one: otherwise an
+        // instance with no renderer set shows (and on Save pins) the global renderer.
+        int rendererIndex = Tools.isValidString(instance.renderer)
+                ? mRenderNames.indexOf(instance.renderer) : -1;
         if(rendererIndex == -1) {
             rendererIndex = mDefaultRenderer.getAdapter().getCount() - 1;
         }

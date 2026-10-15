@@ -74,6 +74,8 @@
     <string name="mcl_setting_renderer_vulkan_zink">Zink (Vulkan) - all versions</string>
     <string name="mcl_setting_renderer_vulkan_lzink">Legacy Zink (Vulkan) - all versions, low performance</string>
     <string name="mcl_setting_renderer_freedreno_kgsl">Freedreno (KGSL) - all versions</string>
+    <string name="renderer_fallback_notice">%1$s could not be loaded (%3$s is missing or failed to start). Running with %2$s instead. Install the matching renderer plugin to use %1$s.</string>
+    <string name="renderer_autoswitch_notice">%1$s cannot run this game version or mods, so %2$s is used for this launch. Your renderer setting was not changed.</string>
     <string name="mcl_setting_renderer_freedreno_gallium">Freedreno (Gallium, Adreno, external Mesa plugin required)</string>
     <string name="mcl_setting_renderer_mesa_desktop">Mesa (DRM) - all versions</string>
     <string name="mcl_setting_renderer_mesa_desktop_ext">Mesa (DRM, external) - all versions</string>

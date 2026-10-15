@@ -187,9 +187,14 @@ public class GameRunner {
                                                   AppCompatActivity activity,
                                                   int resId) throws InterruptedException, IOException {
         if(support) {
-            instance.renderer = renderer.tag();
-            instance.write();
+            // Applies to this launch only. Do not write it onto the instance: a stored
+            // instance renderer overrides the renderer chosen in Settings from then on.
+            String previousName = gameRenderer.getCurrentRenderer().name();
             gameRenderer.setCurrentRenderer(renderer);
+            String newName = renderer.name();
+            activity.runOnUiThread(() -> Toast.makeText(activity,
+                    activity.getString(R.string.renderer_autoswitch_notice, previousName, newName),
+                    Toast.LENGTH_LONG).show());
         }else {
             showDialog(activity, resId);
             System.exit(0);
@@ -354,6 +359,9 @@ public class GameRunner {
 
         javaArgList.addAll(JREUtils.parseJavaArguments(instance.getLaunchArgs()));
         // TODO: this should be decoupled from GameRunner completely
+        final String requestedTag = gameRenderer.getCurrentRenderer().tag();
+        final String requestedName = gameRenderer.getCurrentRenderer().name();
+        final String requestedLibrary = gameRenderer.getCurrentRenderer().library();
         gameRenderer.setupEnvironment(activity, isMobileGluesSupportedVersion(versionInfo));
         JREUtils.setGameEnvironment(activity);
         JREUtils.chdir(instance.getGameDirectory().getAbsolutePath());
@@ -361,6 +369,18 @@ public class GameRunner {
         if(!gameRenderer.maybeSetupRenderer()) {
             if(showDialog(activity, R.string.gr_err_renderer_load_Failed)) return;
             System.exit(0);
+        }
+        // If the selected renderer could not be loaded, the launcher fell back to GL4ES.
+        // Say so clearly, so a different renderer is never silently used in its place.
+        final RenderSpec usedRenderer = gameRenderer.getCurrentRenderer();
+        if(!requestedTag.equals(usedRenderer.tag())) {
+            final String usedName = usedRenderer.name();
+            LifecycleAwareAlertDialog.DialogCreator fallbackDialog = (dialog, builder) ->
+                    builder.setMessage(activity.getString(R.string.renderer_fallback_notice,
+                                    requestedName, usedName, requestedLibrary))
+                            .setCancelable(false)
+                            .setPositiveButton(android.R.string.ok, (d, w) -> {});
+            if(LifecycleAwareAlertDialog.haltOnDialog(activity.getLifecycle(), activity, fallbackDialog)) return;
         }
         javaArgList.add("-Dorg.lwjgl.opengl.libname=libGLMojo.so");
         javaArgList.add("-Dorg.lwjgl.freetype.libname="+ Tools.NATIVE_LIB_DIR+"/libfreetype.so");
