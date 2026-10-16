@@ -280,7 +280,8 @@
                                 android:adjustViewBounds="true"
                                 android:contentDescription="Minecraft Java Edition"
                                 android:scaleType="fitStart"
-                                android:src="@drawable/urinth_java_logo" />
+                                android:visibility="gone"
+                                android:src="@drawable/urinth_home_block" />
 
                             <LinearLayout
                                 android:layout_width="wrap_content"
