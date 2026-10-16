@@ -62,10 +62,11 @@ jobs:
           # Enable the official logo only after its image resource exists, so intermediate commits build.
           layout = Path('app_pojavlauncher/src/main/res/layout/view_urinth_home.xml')
           xml = layout.read_text()
-          start = xml.index('<ImageView\\n                                android:id="@+id/urinth_java_edition_logo"')
-          end = xml.index('/>', start) + 2
+          marker = xml.index('android:id="@+id/urinth_java_edition_logo"')
+          start = xml.rfind('<ImageView', 0, marker)
+          end = xml.index('/>', marker) + 2
           block = xml[start:end]
-          block = block.replace('                                android:visibility="gone"\\n', '')
+          block = block.replace('android:visibility="gone"', '')
           block = block.replace('android:src="@drawable/urinth_home_block"', 'android:src="@drawable/urinth_java_logo"')
           if 'android:src="@drawable/urinth_java_logo"' not in block:
               raise SystemExit('Could not activate official Minecraft Java logo in the home layout')
