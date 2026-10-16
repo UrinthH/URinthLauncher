@@ -270,32 +270,17 @@
                                 android:id="@+id/urinth_hero_brand"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:fontFamily="sans-serif-black"
-                                android:letterSpacing="-0.055"
-                                android:shadowColor="#CC000000"
-                                android:shadowDx="2"
-                                android:shadowDy="3"
-                                android:shadowRadius="1.5"
-                                android:singleLine="true"
-                                android:text="MINECRAFT"
-                                android:textColor="#F7F7F7"
-                                android:textSize="27sp"
-                                android:textStyle="bold" />
+                                android:visibility="gone"
+                                android:text="@string/urinth_brand" />
 
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:fontFamily="sans-serif-condensed"
-                                android:letterSpacing="0.16"
-                                android:shadowColor="#CC000000"
-                                android:shadowDx="1"
-                                android:shadowDy="2"
-                                android:shadowRadius="1"
-                                android:singleLine="true"
-                                android:text="JAVA EDITION"
-                                android:textColor="#F2F8FA"
-                                android:textSize="10sp"
-                                android:textStyle="bold" />
+                            <ImageView
+                                android:id="@+id/urinth_java_edition_logo"
+                                android:layout_width="270dp"
+                                android:layout_height="76dp"
+                                android:adjustViewBounds="true"
+                                android:contentDescription="Minecraft Java Edition"
+                                android:scaleType="fitStart"
+                                android:src="@drawable/urinth_java_logo" />
 
                             <LinearLayout
                                 android:layout_width="wrap_content"
