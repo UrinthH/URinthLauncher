@@ -274,7 +274,7 @@ public final class UrinthHomeController {
             ImageView icon = row.findViewById(R.id.urinth_activity_icon);
             if (HomeActivityLog.TYPE_PLAY.equals(entry.type)) icon.setImageResource(R.drawable.ic_urinth_play);
             else if (HomeActivityLog.TYPE_INSTALL.equals(entry.type)) icon.setImageResource(R.drawable.ic_urinth_cube);
-            else icon.setImageResource(R.drawable.ic_px_verify_hash);
+            else icon.setImageResource(R.drawable.ic_urinth_refresh);
             ((TextView) row.findViewById(R.id.urinth_activity_text)).setText(entry.text);
             ((TextView) row.findViewById(R.id.urinth_activity_age)).setText(ageLabel(now, entry.timeMillis));
             activityList.addView(row);

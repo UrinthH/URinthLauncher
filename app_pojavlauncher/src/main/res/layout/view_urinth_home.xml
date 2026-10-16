@@ -249,13 +249,35 @@
                             android:layout_height="match_parent"
                             android:background="@drawable/urinth_hero_fade" />
 
-                        <ImageView
-                            android:layout_width="24dp"
-                            android:layout_height="24dp"
+                        <!-- Green block mark with the brand pill, top left, as in the reference -->
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
                             android:layout_gravity="start|top"
                             android:layout_margin="10dp"
-                            android:contentDescription="@null"
-                            android:src="@drawable/urinth_home_block" />
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <ImageView
+                                android:layout_width="24dp"
+                                android:layout_height="24dp"
+                                android:contentDescription="@null"
+                                android:src="@drawable/urinth_home_block" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="6dp"
+                                android:background="@drawable/urinth_pill_bg"
+                                android:paddingStart="8dp"
+                                android:paddingTop="3dp"
+                                android:paddingEnd="8dp"
+                                android:paddingBottom="3dp"
+                                android:singleLine="true"
+                                android:text="@string/urinth_brand"
+                                android:textColor="#1FC77A"
+                                android:textSize="9sp" />
+                        </LinearLayout>
 
                         <LinearLayout
                             android:layout_width="match_parent"
@@ -273,7 +295,7 @@
                                 android:singleLine="true"
                                 android:text="@string/urinth_brand"
                                 android:textColor="#F2F8FA"
-                                android:textSize="22sp"
+                                android:textSize="26sp"
                                 android:textStyle="bold" />
 
                             <TextView
@@ -520,7 +542,7 @@
                                     android:layout_width="11dp"
                                     android:layout_height="11dp"
                                     android:contentDescription="@null"
-                                    android:src="@drawable/ic_px_zap"
+                                    android:src="@drawable/ic_urinth_link"
                                     android:tint="#F2F8FA" />
 
                                 <TextView
