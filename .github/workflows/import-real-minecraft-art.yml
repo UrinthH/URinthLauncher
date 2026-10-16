@@ -25,7 +25,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p /tmp/minecraft-art /tmp/minecraft-wallpapers app_pojavlauncher/src/main/res/drawable-nodpi
-          curl -fL --retry 3 'https://www.minecraft.net/content/dam/minecraftnet/games/minecraft/logos/icon_javaeditionlogo.jpg' -o /tmp/minecraft-art/java-logo.jpg
+          curl --http1.1 -fL --retry 3 --retry-all-errors 'https://www.minecraft.net/content/dam/minecraftnet/games/minecraft/logos/icon_javaeditionlogo.jpg' -o /tmp/minecraft-art/java-logo.jpg
           curl -fL --retry 3 'https://www.minecraft.net/content/dam/minecraftnet/games/minecraft/software/wallpapers_minecraft_pc_bundle.zip' -o /tmp/minecraft-art/wallpapers.zip
           python3 - <<'PY'
           import os, zipfile, shutil
