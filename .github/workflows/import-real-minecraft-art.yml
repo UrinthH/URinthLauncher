@@ -59,6 +59,17 @@ jobs:
               print(f'{out} <= {src} ({src.stat().st_size} bytes)')
           shutil.copyfile('app_pojavlauncher/src/main/res/drawable-nodpi/urinth_photo_hero.jpg','app_pojavlauncher/src/main/res/drawable-nodpi/urinth_photo_banner.jpg')
           shutil.copyfile('/tmp/minecraft-art/java-logo.jpg','app_pojavlauncher/src/main/res/drawable-nodpi/urinth_java_logo.jpg')
+          # Enable the official logo only after its image resource exists, so intermediate commits build.
+          layout = Path('app_pojavlauncher/src/main/res/layout/view_urinth_home.xml')
+          xml = layout.read_text()
+          start = xml.index('<ImageView\\n                                android:id="@+id/urinth_java_edition_logo"')
+          end = xml.index('/>', start) + 2
+          block = xml[start:end]
+          block = block.replace('                                android:visibility="gone"\\n', '')
+          block = block.replace('android:src="@drawable/urinth_home_block"', 'android:src="@drawable/urinth_java_logo"')
+          if 'android:src="@drawable/urinth_java_logo"' not in block:
+              raise SystemExit('Could not activate official Minecraft Java logo in the home layout')
+          layout.write_text(xml[:start] + block + xml[end:])
           PY
       - name: Remove drawn placeholder artwork
         run: |
@@ -71,7 +82,7 @@ jobs:
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -A app_pojavlauncher/src/main/res/drawable-nodpi app_pojavlauncher/src/main/res/drawable/urinth_photo_*.xml
+          git add -A app_pojavlauncher/src/main/res/drawable-nodpi app_pojavlauncher/src/main/res/drawable/urinth_photo_*.xml app_pojavlauncher/src/main/res/layout/view_urinth_home.xml
           if git diff --cached --quiet; then
             echo 'No artwork changes to commit.'
             exit 0
