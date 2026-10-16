@@ -270,19 +270,32 @@
                                 android:id="@+id/urinth_hero_brand"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
+                                android:fontFamily="sans-serif-black"
+                                android:letterSpacing="-0.055"
+                                android:shadowColor="#CC000000"
+                                android:shadowDx="2"
+                                android:shadowDy="3"
+                                android:shadowRadius="1.5"
                                 android:singleLine="true"
-                                android:text="@string/urinth_brand"
-                                android:textColor="#F2F8FA"
-                                android:textSize="22sp"
+                                android:text="MINECRAFT"
+                                android:textColor="#F7F7F7"
+                                android:textSize="27sp"
                                 android:textStyle="bold" />
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
+                                android:fontFamily="sans-serif-condensed"
+                                android:letterSpacing="0.16"
+                                android:shadowColor="#CC000000"
+                                android:shadowDx="1"
+                                android:shadowDy="2"
+                                android:shadowRadius="1"
                                 android:singleLine="true"
-                                android:text="@string/urinth_hero_title"
+                                android:text="JAVA EDITION"
                                 android:textColor="#F2F8FA"
-                                android:textSize="11sp" />
+                                android:textSize="10sp"
+                                android:textStyle="bold" />
 
                             <LinearLayout
                                 android:layout_width="wrap_content"
