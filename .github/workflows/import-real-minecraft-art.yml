@@ -43,6 +43,7 @@ jobs:
           # Prefer actual Java/Overworld, Nether and scenic images when the bundle names them.
           groups = [
               ('urinth_photo_hero.jpg', ['java','overworld','landscape','vista','panorama','wallpaper']),
+              ('urinth_photo_banner.jpg', ['overworld','landscape','vista','panorama','wallpaper']),
               ('urinth_photo_news_1.jpg', ['overworld','landscape','vista','java']),
               ('urinth_photo_news_2.jpg', ['nether','portal','crimson']),
               ('urinth_photo_news_3.jpg', ['mountain','cave','trails','tales','landscape','vista']),
@@ -56,6 +57,7 @@ jobs:
               shutil.copyfile(src,dst)
               chosen.add(src)
               print(f'{out} <= {src} ({src.stat().st_size} bytes)')
+          shutil.copyfile('app_pojavlauncher/src/main/res/drawable-nodpi/urinth_photo_hero.jpg','app_pojavlauncher/src/main/res/drawable-nodpi/urinth_photo_banner.jpg')
           shutil.copyfile('/tmp/minecraft-art/java-logo.jpg','app_pojavlauncher/src/main/res/drawable-nodpi/urinth_java_logo.jpg')
           PY
       - name: Remove drawn placeholder artwork
@@ -69,7 +71,7 @@ jobs:
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add app_pojavlauncher/src/main/res/drawable-nodpi app_pojavlauncher/src/main/res/drawable/urinth_photo_*.xml
+          git add -A app_pojavlauncher/src/main/res/drawable-nodpi app_pojavlauncher/src/main/res/drawable/urinth_photo_*.xml
           if git diff --cached --quiet; then
             echo 'No artwork changes to commit.'
             exit 0
