@@ -3,11 +3,11 @@
          The view holding this background has its alpha animated in code to make it pulse. -->
     <gradient
         android:type="radial"
-        android:gradientRadius="260dp"
+        android:gradientRadius="280dp"
         android:centerX="0.7"
         android:centerY="0.55"
-        android:startColor="#B3FFD98C"
-        android:centerColor="#4DFFB873"
-        android:endColor="#00FFE3A3" />
+        android:startColor="#F2FFE9A8"
+        android:centerColor="#80FFB04D"
+        android:endColor="#00FF8A3D" />
     <corners android:radius="12dp"/>
 </shape>

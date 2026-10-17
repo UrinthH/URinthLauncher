@@ -75,6 +75,7 @@ public final class UrinthHomeController {
     private MediaPlayer themeMusic;
     private ValueAnimator heroGlowAnimator;
     private ValueAnimator bannerGlowAnimator;
+    private ValueAnimator edgeGlowAnimator;
 
     private final ExtraListener<Boolean> accountRefreshListener = (key, value) -> {
         refresh();
@@ -104,8 +105,9 @@ public final class UrinthHomeController {
         setPhoto(root.findViewById(R.id.urinth_hero_image), "urinth_photo_hero");
         setPhoto(root.findViewById(R.id.urinth_banner_image), "urinth_photo_banner");
         startMusic();
-        heroGlowAnimator = startGlowPulse(root.findViewById(R.id.urinth_hero_glow));
-        bannerGlowAnimator = startGlowPulse(root.findViewById(R.id.urinth_banner_glow));
+        heroGlowAnimator = startGlowPulse(root.findViewById(R.id.urinth_hero_glow), 0.15f, 1f, 1800);
+        bannerGlowAnimator = startGlowPulse(root.findViewById(R.id.urinth_banner_glow), 0.15f, 1f, 1800);
+        edgeGlowAnimator = startGlowPulse(root.findViewById(R.id.urinth_red_edge_glow), 0.25f, 0.9f, 1500);
 
         bindActions(root);
         bindNews(root);
@@ -135,6 +137,10 @@ public final class UrinthHomeController {
             bannerGlowAnimator.cancel();
             bannerGlowAnimator = null;
         }
+        if (edgeGlowAnimator != null) {
+            edgeGlowAnimator.cancel();
+            edgeGlowAnimator = null;
+        }
     }
 
     /** Starts the looping home-screen theme (res/raw/urinth_theme). Safe to call once. */
@@ -156,6 +162,7 @@ public final class UrinthHomeController {
         if (themeMusic != null && themeMusic.isPlaying()) themeMusic.pause();
         if (heroGlowAnimator != null) heroGlowAnimator.pause();
         if (bannerGlowAnimator != null) bannerGlowAnimator.pause();
+        if (edgeGlowAnimator != null) edgeGlowAnimator.pause();
     }
 
     /** Resume the theme and the glow pulses when the app comes back to the foreground. */
@@ -164,16 +171,17 @@ public final class UrinthHomeController {
         if (themeMusic != null && !themeMusic.isPlaying()) themeMusic.start();
         if (heroGlowAnimator != null) heroGlowAnimator.resume();
         if (bannerGlowAnimator != null) bannerGlowAnimator.resume();
+        if (edgeGlowAnimator != null) edgeGlowAnimator.resume();
     }
 
     /**
-     * Slowly pulses a view's alpha back and forth forever, for a soft glowing effect
-     * over the hero/banner photos. Returns null (and does nothing) if the view is missing.
+     * Pulses a view's alpha between minAlpha and maxAlpha, back and forth forever, for a
+     * repeating glow effect. Returns null (and does nothing) if the view is missing.
      */
-    private ValueAnimator startGlowPulse(View view) {
+    private ValueAnimator startGlowPulse(View view, float minAlpha, float maxAlpha, long durationMs) {
         if (view == null) return null;
-        ValueAnimator animator = ValueAnimator.ofFloat(0.25f, 0.9f);
-        animator.setDuration(2600);
+        ValueAnimator animator = ValueAnimator.ofFloat(minAlpha, maxAlpha);
+        animator.setDuration(durationMs);
         animator.setRepeatMode(ValueAnimator.REVERSE);
         animator.setRepeatCount(ValueAnimator.INFINITE);
         animator.addUpdateListener(a -> view.setAlpha((float) a.getAnimatedValue()));

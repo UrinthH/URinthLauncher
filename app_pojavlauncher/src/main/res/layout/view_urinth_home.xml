@@ -1,7 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Fixed-size home page, built for a landscape screen about 360dp tall. Nothing scrolls: every
-     block has a fixed height or a weight, and every list is capped in UrinthHomeController. -->
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+     block has a fixed height or a weight, and every list is capped in UrinthHomeController.
+     Wrapped in an outer FrameLayout so the red edge-glow overlay can sit on top of everything
+     else without affecting the vertical layout underneath. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+<LinearLayout
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/urinth_screen_bg"
@@ -872,3 +878,16 @@
         </FrameLayout>
     </LinearLayout>
 </LinearLayout>
+
+    <!-- Pulsing red glow hugging every edge of the screen. Alpha is animated in code
+         (UrinthHomeController) and the view itself never intercepts touches. -->
+    <View
+        android:id="@+id/urinth_red_edge_glow"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@drawable/urinth_red_edge_glow"
+        android:clickable="false"
+        android:duplicateParentState="false"
+        android:focusable="false" />
+
+</FrameLayout>
