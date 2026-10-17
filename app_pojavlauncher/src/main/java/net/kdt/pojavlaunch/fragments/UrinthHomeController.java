@@ -2,6 +2,7 @@ package net.kdt.pojavlaunch.fragments;
 
 import android.content.Context;
 import android.graphics.Bitmap;
+import android.media.MediaPlayer;
 import android.text.Spannable;
 import android.text.SpannableString;
 import android.text.style.ForegroundColorSpan;
@@ -71,6 +72,7 @@ public final class UrinthHomeController {
     private Account[] savedAccounts = new Account[0];
     private Bitmap avatar;
     private boolean released;
+    private MediaPlayer themeMusic;
 
     private final ExtraListener<Boolean> accountRefreshListener = (key, value) -> {
         refresh();
@@ -100,6 +102,7 @@ public final class UrinthHomeController {
         // now baked into the hero photo itself, so there's nothing left here to colour.
         setPhoto(root.findViewById(R.id.urinth_hero_image), "urinth_photo_hero");
         setPhoto(root.findViewById(R.id.urinth_banner_image), "urinth_photo_banner");
+        startMusic();
 
         bindActions(root);
         bindNews(root);
@@ -112,6 +115,40 @@ public final class UrinthHomeController {
     public void release() {
         released = true;
         ExtraCore.removeExtraListenerFromValue(ExtraConstants.REFRESH_ACCOUNT_SPINNER, accountRefreshListener);
+        if (themeMusic != null) {
+            try {
+                themeMusic.stop();
+            } catch (IllegalStateException ignored) {
+                // already stopped/released elsewhere
+            }
+            themeMusic.release();
+            themeMusic = null;
+        }
+    }
+
+    /** Starts the looping home-screen theme (res/raw/urinth_theme). Safe to call once. */
+    private void startMusic() {
+        try {
+            themeMusic = MediaPlayer.create(context, R.raw.urinth_theme);
+            if (themeMusic != null) {
+                themeMusic.setLooping(true);
+                themeMusic.start();
+            }
+        } catch (Exception e) {
+            // Missing/corrupt audio resource shouldn't break the home screen.
+            themeMusic = null;
+        }
+    }
+
+    /** Pause the theme when the app goes into the background. */
+    public void pauseMusic() {
+        if (themeMusic != null && themeMusic.isPlaying()) themeMusic.pause();
+    }
+
+    /** Resume the theme when the app comes back to the foreground. */
+    public void resumeMusic() {
+        if (released || themeMusic == null) return;
+        if (!themeMusic.isPlaying()) themeMusic.start();
     }
 
     private void bindActions(View root) {

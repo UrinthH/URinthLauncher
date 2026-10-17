@@ -126,7 +126,16 @@ public class MainMenuFragment extends Fragment {
     public void onResume() {
         super.onResume();
         // Installations, accounts and activity can change while a game or a screen was open.
-        if (homeController != null) homeController.refresh();
+        if (homeController != null) {
+            homeController.refresh();
+            homeController.resumeMusic();
+        }
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        if (homeController != null) homeController.pauseMusic();
     }
 
     @Override
