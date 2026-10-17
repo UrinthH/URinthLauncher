@@ -1,0 +1,7 @@
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <!-- A much lighter scrim than urinth_hero_fade: the hero photo carries its own branding
+         now, so this only needs to keep the bottom-left Play/Last Played controls readable,
+         not darken the whole image. -->
+    <gradient android:angle="0" android:startColor="#73040E16" android:centerColor="#30040E16" android:endColor="#00040E16" android:type="linear"/>
+    <corners android:radius="12dp"/>
+</shape>

@@ -247,14 +247,15 @@
                         <View
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
-                            android:background="@drawable/urinth_hero_fade" />
+                            android:background="@drawable/urinth_hero_fade_light" />
 
                         <!-- Branding and tagline are baked into the hero photo. Keep only launcher controls. -->
 
                             <LinearLayout
                                 android:layout_width="wrap_content"
                                 android:layout_height="30dp"
-                                android:layout_marginTop="8dp"
+                                android:layout_gravity="start|bottom"
+                                android:layout_margin="12dp"
                                 android:gravity="center_vertical"
                                 android:orientation="horizontal">
 
