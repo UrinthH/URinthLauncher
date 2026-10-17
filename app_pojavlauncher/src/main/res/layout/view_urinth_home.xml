@@ -33,7 +33,7 @@
             android:layout_height="26dp"
             android:layout_marginStart="4dp"
             android:contentDescription="@null"
-            android:src="@drawable/urinth_home_block" />
+            android:src="@drawable/ic_minecraft_grass_block" />
 
         <LinearLayout
             android:layout_width="wrap_content"
@@ -393,7 +393,7 @@
                                 android:layout_height="24dp"
                                 android:contentDescription="@null"
                                 android:scaleType="centerInside"
-                                android:src="@drawable/urinth_home_block" />
+                                android:src="@drawable/ic_minecraft_grass_block" />
 
                             <LinearLayout
                                 android:layout_width="0dp"
@@ -444,7 +444,7 @@
                                 android:layout_width="14dp"
                                 android:layout_height="14dp"
                                 android:contentDescription="@null"
-                                android:src="@drawable/urinth_home_block" />
+                                android:src="@drawable/ic_minecraft_grass_block" />
 
                             <TextView
                                 android:id="@+id/urinth_versions_text"
