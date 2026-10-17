@@ -96,7 +96,8 @@ public final class UrinthHomeController {
         activityEmpty = root.findViewById(R.id.urinth_activity_empty);
 
         colourUltra(root.findViewById(R.id.urinth_brand));
-        colourUltra(root.findViewById(R.id.urinth_hero_brand));
+        // The hero brand/tagline text view was removed from the layout — branding is
+        // now baked into the hero photo itself, so there's nothing left here to colour.
         setPhoto(root.findViewById(R.id.urinth_hero_image), "urinth_photo_hero");
         setPhoto(root.findViewById(R.id.urinth_banner_image), "urinth_photo_banner");
 
