@@ -12,7 +12,7 @@
         android:layout_width="22dp"
         android:layout_height="22dp"
         android:contentDescription="@null"
-        android:src="@drawable/urinth_home_block" />
+        android:src="@drawable/ic_minecraft_grass_block" />
 
     <LinearLayout
         android:layout_width="0dp"
