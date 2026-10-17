@@ -308,7 +308,6 @@
                                         android:src="@drawable/ic_urinth_chevron" />
                                 </LinearLayout>
                             </LinearLayout>
-                        </LinearLayout>
 
                         <TextView
                             android:id="@+id/urinth_explore_worlds"
