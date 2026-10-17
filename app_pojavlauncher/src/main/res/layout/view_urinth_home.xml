@@ -249,6 +249,13 @@
                             android:layout_height="match_parent"
                             android:background="@drawable/urinth_hero_fade_light" />
 
+                        <!-- Alpha is pulsed in code (UrinthHomeController) for a slow glowing effect. -->
+                        <View
+                            android:id="@+id/urinth_hero_glow"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:background="@drawable/urinth_glow_pulse" />
+
                         <!-- Branding and tagline are baked into the hero photo. Keep only launcher controls. -->
 
                             <LinearLayout
@@ -380,17 +387,17 @@
                         <LinearLayout
                             android:id="@+id/urinth_account_card"
                             android:layout_width="match_parent"
-                            android:layout_height="34dp"
+                            android:layout_height="66dp"
                             android:background="@drawable/urinth_panel_bg"
                             android:gravity="center_vertical"
                             android:orientation="horizontal"
-                            android:paddingStart="6dp"
-                            android:paddingEnd="6dp">
+                            android:paddingStart="8dp"
+                            android:paddingEnd="8dp">
 
                             <ImageView
                                 android:id="@+id/urinth_account_avatar"
-                                android:layout_width="24dp"
-                                android:layout_height="24dp"
+                                android:layout_width="40dp"
+                                android:layout_height="40dp"
                                 android:contentDescription="@null"
                                 android:scaleType="centerInside"
                                 android:src="@drawable/ic_minecraft_grass_block" />
@@ -398,7 +405,7 @@
                             <LinearLayout
                                 android:layout_width="0dp"
                                 android:layout_height="wrap_content"
-                                android:layout_marginStart="6dp"
+                                android:layout_marginStart="8dp"
                                 android:layout_weight="1"
                                 android:orientation="vertical">
 
@@ -409,57 +416,23 @@
                                     android:ellipsize="end"
                                     android:singleLine="true"
                                     android:textColor="#F2F8FA"
-                                    android:textSize="10sp"
+                                    android:textSize="13sp"
                                     android:textStyle="bold" />
 
                                 <TextView
                                     android:id="@+id/urinth_account_status"
                                     android:layout_width="match_parent"
                                     android:layout_height="wrap_content"
+                                    android:layout_marginTop="2dp"
                                     android:ellipsize="end"
                                     android:singleLine="true"
                                     android:textColor="#ABC0CB"
-                                    android:textSize="8sp" />
+                                    android:textSize="9.5sp" />
                             </LinearLayout>
 
                             <ImageView
-                                android:layout_width="10dp"
-                                android:layout_height="10dp"
-                                android:contentDescription="@null"
-                                android:src="@drawable/ic_urinth_chevron" />
-                        </LinearLayout>
-
-                        <LinearLayout
-                            android:id="@+id/urinth_versions_row"
-                            android:layout_width="match_parent"
-                            android:layout_height="28dp"
-                            android:layout_marginTop="4dp"
-                            android:background="@drawable/urinth_panel_bg"
-                            android:gravity="center_vertical"
-                            android:orientation="horizontal"
-                            android:paddingStart="6dp"
-                            android:paddingEnd="6dp">
-
-                            <ImageView
-                                android:layout_width="14dp"
-                                android:layout_height="14dp"
-                                android:contentDescription="@null"
-                                android:src="@drawable/ic_minecraft_grass_block" />
-
-                            <TextView
-                                android:id="@+id/urinth_versions_text"
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                android:layout_marginStart="6dp"
-                                android:layout_weight="1"
-                                android:ellipsize="end"
-                                android:singleLine="true"
-                                android:textColor="#F2F8FA"
-                                android:textSize="9sp" />
-
-                            <ImageView
-                                android:layout_width="10dp"
-                                android:layout_height="10dp"
+                                android:layout_width="12dp"
+                                android:layout_height="12dp"
                                 android:contentDescription="@null"
                                 android:src="@drawable/ic_urinth_chevron" />
                         </LinearLayout>
@@ -715,6 +688,13 @@
                                 android:layout_height="match_parent"
                                 android:background="@drawable/urinth_hero_fade" />
 
+                            <!-- Alpha is pulsed in code (UrinthHomeController) for a slow glowing effect. -->
+                            <View
+                                android:id="@+id/urinth_banner_glow"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:background="@drawable/urinth_glow_pulse" />
+
                             <LinearLayout
                                 android:layout_width="match_parent"
                                 android:layout_height="match_parent"
@@ -799,7 +779,7 @@
                                     android:layout_width="14dp"
                                     android:layout_height="14dp"
                                     android:contentDescription="@null"
-                                    android:src="@drawable/urinth_home_block" />
+                                    android:src="@drawable/ic_minecraft_grass_block" />
 
                                 <TextView
                                     android:layout_width="wrap_content"

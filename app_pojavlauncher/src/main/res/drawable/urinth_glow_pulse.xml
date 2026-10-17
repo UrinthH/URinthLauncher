@@ -1,0 +1,13 @@
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <!-- A warm radial glow, centered roughly where the sun sits in the hero/banner photos.
+         The view holding this background has its alpha animated in code to make it pulse. -->
+    <gradient
+        android:type="radial"
+        android:gradientRadius="260dp"
+        android:centerX="0.7"
+        android:centerY="0.55"
+        android:startColor="#B3FFD98C"
+        android:centerColor="#4DFFB873"
+        android:endColor="#00FFE3A3" />
+    <corners android:radius="12dp"/>
+</shape>

@@ -1,5 +1,6 @@
 package net.kdt.pojavlaunch.fragments;
 
+import android.animation.ValueAnimator;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.media.MediaPlayer;
@@ -61,7 +62,6 @@ public final class UrinthHomeController {
     private final TextView accountName;
     private final TextView accountStatus;
     private final ImageView accountAvatar;
-    private final TextView versionsText;
     private final LinearLayout installationsList;
     private final TextView installationsEmpty;
     private final LinearLayout activityList;
@@ -73,6 +73,8 @@ public final class UrinthHomeController {
     private Bitmap avatar;
     private boolean released;
     private MediaPlayer themeMusic;
+    private ValueAnimator heroGlowAnimator;
+    private ValueAnimator bannerGlowAnimator;
 
     private final ExtraListener<Boolean> accountRefreshListener = (key, value) -> {
         refresh();
@@ -91,7 +93,6 @@ public final class UrinthHomeController {
         accountName = root.findViewById(R.id.urinth_account_name);
         accountStatus = root.findViewById(R.id.urinth_account_status);
         accountAvatar = root.findViewById(R.id.urinth_account_avatar);
-        versionsText = root.findViewById(R.id.urinth_versions_text);
         installationsList = root.findViewById(R.id.urinth_installations_list);
         installationsEmpty = root.findViewById(R.id.urinth_installations_empty);
         activityList = root.findViewById(R.id.urinth_activity_list);
@@ -103,6 +104,8 @@ public final class UrinthHomeController {
         setPhoto(root.findViewById(R.id.urinth_hero_image), "urinth_photo_hero");
         setPhoto(root.findViewById(R.id.urinth_banner_image), "urinth_photo_banner");
         startMusic();
+        heroGlowAnimator = startGlowPulse(root.findViewById(R.id.urinth_hero_glow));
+        bannerGlowAnimator = startGlowPulse(root.findViewById(R.id.urinth_banner_glow));
 
         bindActions(root);
         bindNews(root);
@@ -124,6 +127,14 @@ public final class UrinthHomeController {
             themeMusic.release();
             themeMusic = null;
         }
+        if (heroGlowAnimator != null) {
+            heroGlowAnimator.cancel();
+            heroGlowAnimator = null;
+        }
+        if (bannerGlowAnimator != null) {
+            bannerGlowAnimator.cancel();
+            bannerGlowAnimator = null;
+        }
     }
 
     /** Starts the looping home-screen theme (res/raw/urinth_theme). Safe to call once. */
@@ -140,15 +151,34 @@ public final class UrinthHomeController {
         }
     }
 
-    /** Pause the theme when the app goes into the background. */
+    /** Pause the theme and the glow pulses when the app goes into the background. */
     public void pauseMusic() {
         if (themeMusic != null && themeMusic.isPlaying()) themeMusic.pause();
+        if (heroGlowAnimator != null) heroGlowAnimator.pause();
+        if (bannerGlowAnimator != null) bannerGlowAnimator.pause();
     }
 
-    /** Resume the theme when the app comes back to the foreground. */
+    /** Resume the theme and the glow pulses when the app comes back to the foreground. */
     public void resumeMusic() {
-        if (released || themeMusic == null) return;
-        if (!themeMusic.isPlaying()) themeMusic.start();
+        if (released) return;
+        if (themeMusic != null && !themeMusic.isPlaying()) themeMusic.start();
+        if (heroGlowAnimator != null) heroGlowAnimator.resume();
+        if (bannerGlowAnimator != null) bannerGlowAnimator.resume();
+    }
+
+    /**
+     * Slowly pulses a view's alpha back and forth forever, for a soft glowing effect
+     * over the hero/banner photos. Returns null (and does nothing) if the view is missing.
+     */
+    private ValueAnimator startGlowPulse(View view) {
+        if (view == null) return null;
+        ValueAnimator animator = ValueAnimator.ofFloat(0.25f, 0.9f);
+        animator.setDuration(2600);
+        animator.setRepeatMode(ValueAnimator.REVERSE);
+        animator.setRepeatCount(ValueAnimator.INFINITE);
+        animator.addUpdateListener(a -> view.setAlpha((float) a.getAnimatedValue()));
+        animator.start();
+        return animator;
     }
 
     private void bindActions(View root) {
@@ -166,7 +196,6 @@ public final class UrinthHomeController {
 
         View.OnClickListener newInstallation = v -> createVanillaInstallation();
         root.findViewById(R.id.urinth_btn_download).setOnClickListener(newInstallation);
-        root.findViewById(R.id.urinth_versions_row).setOnClickListener(newInstallation);
 
         View.OnClickListener settings = v -> openSettings();
         root.findViewById(R.id.urinth_btn_settings).setOnClickListener(settings);
@@ -259,9 +288,6 @@ public final class UrinthHomeController {
         renderLastPlayed();
 
         statusText.setText(instances.isEmpty() ? R.string.urinth_status_none : R.string.urinth_status_ready);
-        versionsText.setText(instances.isEmpty()
-                ? context.getString(R.string.urinth_versions_none)
-                : context.getString(R.string.urinth_versions_count, instances.size()));
     }
 
     private void renderAccount() {
