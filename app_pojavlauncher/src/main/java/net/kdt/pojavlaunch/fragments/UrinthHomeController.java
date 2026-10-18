@@ -518,7 +518,7 @@ public final class UrinthHomeController {
         LinearLayout rows = themedDialogBody(dialog);
         String current = HomeActivityLog.lastPlayedName(context);
         for (DisplayInstance instance : instances) {
-            addDialogRow(rows, instance.name, instance.name.equals(current), v -> {
+            addDialogRow(rows, instance.name, current != null && current.equals(instance.name), v -> {
                 HomeActivityLog.setLastPlayedName(context, instance.name);
                 renderLastPlayed();
                 dialog.dismiss();
