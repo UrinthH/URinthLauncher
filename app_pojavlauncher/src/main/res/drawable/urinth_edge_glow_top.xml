@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- One strip of the red edge glow. A straight linear fade from a bright edge to transparent,
+     so it lines up perfectly with the real screen edge instead of a stroke centered on its own
+     bounds (which clipped half its width and looked misaligned). -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <gradient
+        android:angle="270"
+        android:startColor="#FFFF3B30"
+        android:centerColor="#80FF3B30"
+        android:endColor="#00FF3B30" />
+</shape>

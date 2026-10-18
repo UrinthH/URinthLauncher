@@ -879,15 +879,42 @@
     </LinearLayout>
 </LinearLayout>
 
-    <!-- Pulsing red glow hugging every edge of the screen. Alpha is animated in code
-         (UrinthHomeController) and the view itself never intercepts touches. -->
-    <View
+    <!-- Pulsing red glow hugging every edge of the screen: four separate strips, each a clean
+         edge-to-transparent fade, so every strip lines up exactly with the real screen edge
+         instead of a stroke centered on its own bounds. The whole group's alpha is animated in
+         code (UrinthHomeController) and nothing here intercepts touches. -->
+    <FrameLayout
         android:id="@+id/urinth_red_edge_glow"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="@drawable/urinth_red_edge_glow"
         android:clickable="false"
         android:duplicateParentState="false"
-        android:focusable="false" />
+        android:focusable="false">
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="46dp"
+            android:layout_gravity="top"
+            android:background="@drawable/urinth_edge_glow_top" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="46dp"
+            android:layout_gravity="bottom"
+            android:background="@drawable/urinth_edge_glow_bottom" />
+
+        <View
+            android:layout_width="46dp"
+            android:layout_height="match_parent"
+            android:layout_gravity="left"
+            android:background="@drawable/urinth_edge_glow_left" />
+
+        <View
+            android:layout_width="46dp"
+            android:layout_height="match_parent"
+            android:layout_gravity="right"
+            android:background="@drawable/urinth_edge_glow_right" />
+
+    </FrameLayout>
 
 </FrameLayout>

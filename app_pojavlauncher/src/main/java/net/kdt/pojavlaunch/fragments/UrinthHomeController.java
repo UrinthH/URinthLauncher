@@ -1,9 +1,11 @@
 package net.kdt.pojavlaunch.fragments;
 
-import android.animation.ValueAnimator;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.media.MediaPlayer;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.SystemClock;
 import android.text.Spannable;
 import android.text.SpannableString;
 import android.text.style.ForegroundColorSpan;
@@ -73,9 +75,19 @@ public final class UrinthHomeController {
     private Bitmap avatar;
     private boolean released;
     private MediaPlayer themeMusic;
-    private ValueAnimator heroGlowAnimator;
-    private ValueAnimator bannerGlowAnimator;
-    private ValueAnimator edgeGlowAnimator;
+
+    // The glow pulse is driven by hand with a Handler loop instead of ValueAnimator: on a lot of
+    // devices (especially ones people tweak for performance) "Developer options > Animator
+    // duration scale" is set to Off, which makes every ValueAnimator jump straight to its end
+    // value instead of animating — the glow would just sit there fully lit. A plain Handler timer
+    // runs on real wall-clock time and ignores that setting entirely, so the pulse always animates.
+    private View heroGlowView;
+    private View bannerGlowView;
+    private View edgeGlowView;
+    private final Handler glowHandler = new Handler(Looper.getMainLooper());
+    private boolean glowPulsing;
+    private long glowStartUptime;
+    private final Runnable glowTick = this::onGlowTick;
 
     private final ExtraListener<Boolean> accountRefreshListener = (key, value) -> {
         refresh();
@@ -105,9 +117,13 @@ public final class UrinthHomeController {
         setPhoto(root.findViewById(R.id.urinth_hero_image), "urinth_photo_hero");
         setPhoto(root.findViewById(R.id.urinth_banner_image), "urinth_photo_banner");
         startMusic();
-        heroGlowAnimator = startGlowPulse(root.findViewById(R.id.urinth_hero_glow), 0.15f, 1f, 1800);
-        bannerGlowAnimator = startGlowPulse(root.findViewById(R.id.urinth_banner_glow), 0.15f, 1f, 1800);
-        edgeGlowAnimator = startGlowPulse(root.findViewById(R.id.urinth_red_edge_glow), 0.25f, 0.9f, 1500);
+        heroGlowView = root.findViewById(R.id.urinth_hero_glow);
+        bannerGlowView = root.findViewById(R.id.urinth_banner_glow);
+        edgeGlowView = root.findViewById(R.id.urinth_red_edge_glow);
+        // The edge-glow group is 4 overlapping strips; render it as one flattened layer so the
+        // pulsed alpha applies evenly across the whole border instead of double-darkening corners.
+        if (edgeGlowView != null) edgeGlowView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+        startGlowLoop();
 
         bindActions(root);
         bindNews(root);
@@ -129,18 +145,7 @@ public final class UrinthHomeController {
             themeMusic.release();
             themeMusic = null;
         }
-        if (heroGlowAnimator != null) {
-            heroGlowAnimator.cancel();
-            heroGlowAnimator = null;
-        }
-        if (bannerGlowAnimator != null) {
-            bannerGlowAnimator.cancel();
-            bannerGlowAnimator = null;
-        }
-        if (edgeGlowAnimator != null) {
-            edgeGlowAnimator.cancel();
-            edgeGlowAnimator = null;
-        }
+        stopGlowLoop();
     }
 
     /** Starts the looping home-screen theme (res/raw/urinth_theme). Safe to call once. */
@@ -160,33 +165,71 @@ public final class UrinthHomeController {
     /** Pause the theme and the glow pulses when the app goes into the background. */
     public void pauseMusic() {
         if (themeMusic != null && themeMusic.isPlaying()) themeMusic.pause();
-        if (heroGlowAnimator != null) heroGlowAnimator.pause();
-        if (bannerGlowAnimator != null) bannerGlowAnimator.pause();
-        if (edgeGlowAnimator != null) edgeGlowAnimator.pause();
+        pauseGlowLoop();
     }
 
     /** Resume the theme and the glow pulses when the app comes back to the foreground. */
     public void resumeMusic() {
         if (released) return;
         if (themeMusic != null && !themeMusic.isPlaying()) themeMusic.start();
-        if (heroGlowAnimator != null) heroGlowAnimator.resume();
-        if (bannerGlowAnimator != null) bannerGlowAnimator.resume();
-        if (edgeGlowAnimator != null) edgeGlowAnimator.resume();
+        resumeGlowLoop();
+    }
+
+    /** Starts the self-driven glow pulse loop (see the field comment on glowHandler for why). */
+    private void startGlowLoop() {
+        glowPulsing = true;
+        glowStartUptime = SystemClock.uptimeMillis();
+        glowHandler.removeCallbacks(glowTick);
+        glowHandler.post(glowTick);
+    }
+
+    private void pauseGlowLoop() {
+        glowPulsing = false;
+        glowHandler.removeCallbacks(glowTick);
+    }
+
+    private void resumeGlowLoop() {
+        if (released || glowPulsing) return;
+        // Shift the start time so the pulse continues smoothly instead of jumping on resume.
+        glowStartUptime = SystemClock.uptimeMillis() - glowElapsedAtPause;
+        glowPulsing = true;
+        glowHandler.removeCallbacks(glowTick);
+        glowHandler.post(glowTick);
+    }
+
+    private void stopGlowLoop() {
+        glowPulsing = false;
+        glowHandler.removeCallbacks(glowTick);
+        heroGlowView = null;
+        bannerGlowView = null;
+        edgeGlowView = null;
+    }
+
+    private long glowElapsedAtPause;
+
+    private void onGlowTick() {
+        if (!glowPulsing || released) return;
+        long elapsed = SystemClock.uptimeMillis() - glowStartUptime;
+        glowElapsedAtPause = elapsed;
+        applyGlowAlpha(heroGlowView, 0.12f, 1f, 1800L, elapsed, 0L);
+        applyGlowAlpha(bannerGlowView, 0.12f, 1f, 1800L, elapsed, 0L);
+        applyGlowAlpha(edgeGlowView, 0.2f, 1f, 1500L, elapsed, 150L);
+        // ~60fps; smooth enough for an alpha pulse without burning battery like a tight loop would.
+        glowHandler.postDelayed(glowTick, 16L);
     }
 
     /**
-     * Pulses a view's alpha between minAlpha and maxAlpha, back and forth forever, for a
-     * repeating glow effect. Returns null (and does nothing) if the view is missing.
+     * Sets a view's alpha to a smooth, continuously repeating brighter-then-dimmer-then-brighter
+     * wave between minAlpha and maxAlpha. A sine easing is used so the pulse accelerates into and
+     * out of each peak instead of ticking linearly. Does nothing if the view is missing.
      */
-    private ValueAnimator startGlowPulse(View view, float minAlpha, float maxAlpha, long durationMs) {
-        if (view == null) return null;
-        ValueAnimator animator = ValueAnimator.ofFloat(minAlpha, maxAlpha);
-        animator.setDuration(durationMs);
-        animator.setRepeatMode(ValueAnimator.REVERSE);
-        animator.setRepeatCount(ValueAnimator.INFINITE);
-        animator.addUpdateListener(a -> view.setAlpha((float) a.getAnimatedValue()));
-        animator.start();
-        return animator;
+    private static void applyGlowAlpha(View view, float minAlpha, float maxAlpha, long periodMs,
+                                        long elapsedMs, long phaseOffsetMs) {
+        if (view == null) return;
+        double progress = ((elapsedMs + phaseOffsetMs) % periodMs) / (double) periodMs; // 0..1
+        double wave = (1 - Math.cos(progress * Math.PI * 2)) / 2; // 0 -> 1 -> 0, eased
+        float alpha = (float) (minAlpha + (maxAlpha - minAlpha) * wave);
+        view.setAlpha(alpha);
     }
 
     private void bindActions(View root) {
