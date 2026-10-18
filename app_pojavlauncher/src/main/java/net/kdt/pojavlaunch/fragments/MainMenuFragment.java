@@ -104,8 +104,25 @@ public class MainMenuFragment extends Fragment {
                 centerContainer.setAlpha(1f);
                 centerContainer.setTranslationY(0f);
                 if (launcherView != null) launcherView.onCenterContentClosed();
+                // Returning to the home screen from the editor, the installer or anywhere else
+                // that could have added/removed/renamed an installation. onResume() alone isn't
+                // enough here: closing a screen that lives inside this fragment's own child
+                // FragmentManager doesn't trigger this fragment's onResume, so without this the
+                // "Your Installations" card only caught up the next time the whole app resumed.
+                if (homeController != null) {
+                    homeController.refresh();
+                    // Whatever screen was open (editor, installer, settings...) is gone now, so
+                    // the sidebar highlight should land back on Home instead of staying stuck on
+                    // whichever category opened it.
+                    homeController.markHomeActive();
+                }
             }
         });
+    }
+
+    /** Lets a child screen (e.g. the installation creator) ask the home card to catch up right away. */
+    public void notifyInstancesChanged() {
+        if (homeController != null) homeController.refresh();
     }
 
     @Override

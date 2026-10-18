@@ -32,9 +32,7 @@ import net.kdt.pojavlaunch.home.HomeActivityLog;
 import net.kdt.pojavlaunch.instances.DisplayInstance;
 import net.kdt.pojavlaunch.instances.Instances;
 import net.kdt.pojavlaunch.prefs.screens.LauncherPreferenceFragment;
-import net.kdt.pojavlaunch.profiles.VersionSelectorDialog;
 
-import java.io.IOException;
 import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -92,6 +90,12 @@ public final class UrinthHomeController {
     /** The faint drifting ash/snow specks; drives its own frame loop, see ParticleOverlayView. */
     private ParticleOverlayView particleView;
 
+    /** The shimmering "Made by" credit line in the top bar; drives its own frame loop too. */
+    private ShimmerTextView creditName;
+
+    /** The 5 sidebar categories, in the same order as the layout, for the active-highlight. */
+    private View navHome, navNews, navInstallations, navSkins, navSettings;
+
     private final ExtraListener<Boolean> accountRefreshListener = (key, value) -> {
         refresh();
         return false;
@@ -129,6 +133,15 @@ public final class UrinthHomeController {
         startGlowLoop();
         particleView = root.findViewById(R.id.urinth_particles);
         if (particleView != null) particleView.start();
+        creditName = root.findViewById(R.id.urinth_credit_name);
+        if (creditName != null) creditName.start();
+
+        navHome = root.findViewById(R.id.urinth_nav_home);
+        navNews = root.findViewById(R.id.urinth_nav_news);
+        navInstallations = root.findViewById(R.id.urinth_nav_installations);
+        navSkins = root.findViewById(R.id.urinth_nav_skins);
+        navSettings = root.findViewById(R.id.urinth_nav_settings);
+        markHomeActive();
 
         bindActions(root);
         bindNews(root);
@@ -154,6 +167,10 @@ public final class UrinthHomeController {
         if (particleView != null) {
             particleView.release();
             particleView = null;
+        }
+        if (creditName != null) {
+            creditName.stop();
+            creditName = null;
         }
     }
 
@@ -247,29 +264,34 @@ public final class UrinthHomeController {
         root.findViewById(R.id.urinth_menu_btn).setOnClickListener(v ->
                 sidebar.setVisibility(sidebar.getVisibility() == View.VISIBLE ? View.GONE : View.VISIBLE));
 
-        View.OnClickListener installations = v -> openSelectedInstallation();
-        root.findViewById(R.id.urinth_btn_folder).setOnClickListener(installations);
-        root.findViewById(R.id.urinth_nav_installations).setOnClickListener(installations);
-
-        View.OnClickListener accounts = v -> showAccountPicker();
-        root.findViewById(R.id.urinth_btn_people).setOnClickListener(accounts);
-        root.findViewById(R.id.urinth_nav_skins).setOnClickListener(accounts);
-        root.findViewById(R.id.urinth_account_card).setOnClickListener(accounts);
-
-        View.OnClickListener newInstallation = v -> createVanillaInstallation();
-        root.findViewById(R.id.urinth_btn_download).setOnClickListener(newInstallation);
-
-        View.OnClickListener settings = v -> openSettings();
-        root.findViewById(R.id.urinth_btn_settings).setOnClickListener(settings);
-        root.findViewById(R.id.urinth_nav_settings).setOnClickListener(settings);
-
-        root.findViewById(R.id.urinth_btn_more).setOnClickListener(this::showMoreMenu);
+        // Accounts are reached from the account card itself now that the top bar's icon row
+        // (folder/people/download/settings/more) was replaced with the credit line.
+        root.findViewById(R.id.urinth_account_card).setOnClickListener(v -> showAccountPicker());
 
         // Home closes any screen opened over the page; the page itself is always the home screen.
-        root.findViewById(R.id.urinth_nav_home).setOnClickListener(v -> {
+        navHome.setOnClickListener(v -> {
             if (host != null) host.closeCenterContent();
+            markHomeActive();
         });
-        root.findViewById(R.id.urinth_nav_news).setOnClickListener(v -> toast(R.string.urinth_news_not_set_up));
+        // "Installations" is the entry point for creating a new one (pick Vanilla/a loader);
+        // managing an existing installation happens from its row on the home card below.
+        navInstallations.setOnClickListener(v -> {
+            setActiveNav(navInstallations);
+            if (host != null) {
+                host.showCenterFragment(ProfileTypeSelectFragment.class, ProfileTypeSelectFragment.TAG, null);
+            } else {
+                toast(R.string.urinth_not_set_up);
+            }
+        });
+        // Downloads and Servers aren't built yet, so they stay on the home screen and just say so
+        // rather than moving the active highlight somewhere nothing actually opened.
+        navNews.setOnClickListener(v -> toast(R.string.urinth_news_not_set_up));
+        navSkins.setOnClickListener(v -> toast(R.string.urinth_not_set_up));
+        navSettings.setOnClickListener(v -> {
+            setActiveNav(navSettings);
+            openSettings();
+        });
+
         root.findViewById(R.id.urinth_news_all).setOnClickListener(v -> toast(R.string.urinth_news_not_set_up));
         root.findViewById(R.id.urinth_news_1).setOnClickListener(v -> toast(R.string.urinth_news_not_set_up));
         root.findViewById(R.id.urinth_news_2).setOnClickListener(v -> toast(R.string.urinth_news_not_set_up));
@@ -284,6 +306,20 @@ public final class UrinthHomeController {
         root.findViewById(R.id.urinth_link_website).setOnClickListener(v -> toast(R.string.urinth_not_set_up));
         root.findViewById(R.id.urinth_link_discord).setOnClickListener(v -> toast(R.string.urinth_not_set_up));
         root.findViewById(R.id.urinth_link_docs).setOnClickListener(v -> toast(R.string.urinth_not_set_up));
+    }
+
+    /** Highlights the given sidebar category and un-highlights the rest. */
+    private void setActiveNav(View active) {
+        View[] all = {navHome, navNews, navInstallations, navSkins, navSettings};
+        for (View item : all) {
+            if (item == null) continue;
+            item.setBackgroundResource(item == active ? R.drawable.urinth_nav_active : R.drawable.urinth_nav_idle);
+        }
+    }
+
+    /** Moves the sidebar highlight back to Home, e.g. once a screen opened over the page closes. */
+    public void markHomeActive() {
+        if (navHome != null) setActiveNav(navHome);
     }
 
     /** Placeholder news cards until a news feed is connected. Dates say "Not set up yet" rather than inventing one. */
@@ -382,7 +418,8 @@ public final class UrinthHomeController {
             String version = instance.versionId == null ? "" : instance.versionId;
             ((TextView) row.findViewById(R.id.urinth_row_version))
                     .setText(context.getString(R.string.urinth_row_version, version));
-            row.findViewById(R.id.urinth_row_play).setOnClickListener(v -> launch(instance));
+            // The hero Play button already starts this installation; the row's own Play button
+            // was removed (item_urinth_installation.xml) so only Edit (the 3-dot menu) is left.
             row.findViewById(R.id.urinth_row_more).setOnClickListener(v -> openEditor(instance));
             row.setOnClickListener(v -> openEditor(instance));
             installationsList.addView(row);
@@ -445,12 +482,6 @@ public final class UrinthHomeController {
         renderActivity();
     }
 
-    private void openSelectedInstallation() {
-        DisplayInstance target = pickPlayTarget();
-        if (target == null) toast(R.string.urinth_create_first);
-        else openEditor(target);
-    }
-
     private void openEditor(DisplayInstance instance) {
         Instances.setSelectedInstance(instance);
         if (host != null) {
@@ -477,35 +508,6 @@ public final class UrinthHomeController {
         args.putString(ModrinthBrowserFragment.ARG_CATEGORY, category);
         args.putString(ModrinthBrowserFragment.ARG_QUERY, "");
         host.showCenterFragment(ModrinthBrowserFragment.class, ModrinthBrowserFragment.TAG, args);
-    }
-
-    private void createVanillaInstallation() {
-        VersionSelectorDialog.open(context, false, (id, snapshot) -> {
-            try {
-                Instances.createInstance(instance -> {
-                    instance.name = "Vanilla " + id;
-                    instance.versionId = id;
-                    instance.sharedData = true;
-                }, "Vanilla");
-                HomeActivityLog.record(context, HomeActivityLog.TYPE_INSTALL,
-                        context.getString(R.string.urinth_installed, "Vanilla " + id));
-                refresh();
-            } catch (IOException e) {
-                Toast.makeText(context, "Could not create installation: " + e.getMessage(), Toast.LENGTH_LONG).show();
-            }
-        });
-    }
-
-    private void showMoreMenu(View anchor) {
-        PopupMenu menu = new PopupMenu(context, anchor);
-        menu.getMenu().add(0, 1, 0, R.string.urinth_menu_new);
-        menu.getMenu().add(0, 2, 1, R.string.urinth_menu_settings);
-        menu.setOnMenuItemClickListener(item -> {
-            if (item.getItemId() == 1) createVanillaInstallation();
-            else if (item.getItemId() == 2) openSettings();
-            return true;
-        });
-        menu.show();
     }
 
     private void showLastPlayedMenu(View anchor) {

@@ -41,17 +41,8 @@
             android:textSize="8sp" />
     </LinearLayout>
 
-    <TextView
-        android:id="@+id/urinth_row_play"
-        android:layout_width="52dp"
-        android:layout_height="24dp"
-        android:background="@drawable/urinth_play_bg"
-        android:gravity="center"
-        android:text="@string/urinth_play"
-        android:textColor="#FFFFFF"
-        android:textSize="9sp"
-        android:textStyle="bold" />
-
+    <!-- The hero Play button already starts this installation; the row only needs Edit (the
+         3-dot menu below), so the row's own Play button was removed. -->
     <ImageView
         android:id="@+id/urinth_row_more"
         android:layout_width="24dp"

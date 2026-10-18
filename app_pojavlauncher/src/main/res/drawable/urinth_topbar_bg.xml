@@ -1,3 +1,18 @@
-<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
-    <solid android:color="#E6061019"/>
-</shape>
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A soft gradient instead of a flat fill, with a faint green hairline along the bottom edge
+     to separate it from the content below. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:angle="270"
+                android:startColor="#E60C1A24"
+                android:endColor="#E6061019" />
+        </shape>
+    </item>
+    <item android:height="1dp" android:gravity="bottom">
+        <shape android:shape="rectangle">
+            <solid android:color="#331FC77A" />
+        </shape>
+    </item>
+</layer-list>
