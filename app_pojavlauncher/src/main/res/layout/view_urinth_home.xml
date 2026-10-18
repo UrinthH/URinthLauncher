@@ -903,24 +903,24 @@
 
         <View
             android:layout_width="match_parent"
-            android:layout_height="46dp"
+            android:layout_height="14dp"
             android:layout_gravity="top"
             android:background="@drawable/urinth_edge_glow_top" />
 
         <View
             android:layout_width="match_parent"
-            android:layout_height="46dp"
+            android:layout_height="14dp"
             android:layout_gravity="bottom"
             android:background="@drawable/urinth_edge_glow_bottom" />
 
         <View
-            android:layout_width="46dp"
+            android:layout_width="14dp"
             android:layout_height="match_parent"
             android:layout_gravity="left"
             android:background="@drawable/urinth_edge_glow_left" />
 
         <View
-            android:layout_width="46dp"
+            android:layout_width="14dp"
             android:layout_height="match_parent"
             android:layout_gravity="right"
             android:background="@drawable/urinth_edge_glow_right" />
