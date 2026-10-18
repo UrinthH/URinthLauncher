@@ -13,7 +13,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.PopupMenu;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -515,49 +514,170 @@ public final class UrinthHomeController {
             toast(R.string.urinth_create_first);
             return;
         }
-        PopupMenu menu = new PopupMenu(context, anchor);
-        for (int i = 0; i < instances.size(); i++) {
-            menu.getMenu().add(0, i, i, instances.get(i).name);
+        AlertDialog dialog = themedDialog(R.string.urinth_last_played_choose);
+        LinearLayout rows = themedDialogBody(dialog);
+        String current = HomeActivityLog.lastPlayedName(context);
+        for (DisplayInstance instance : instances) {
+            addDialogRow(rows, instance.name, instance.name.equals(current), v -> {
+                HomeActivityLog.setLastPlayedName(context, instance.name);
+                renderLastPlayed();
+                dialog.dismiss();
+            }, null);
         }
-        menu.setOnMenuItemClickListener(item -> {
-            DisplayInstance chosen = instances.get(item.getItemId());
-            HomeActivityLog.setLastPlayedName(context, chosen.name);
-            renderLastPlayed();
-            return true;
-        });
-        menu.show();
+        dialog.show();
     }
 
-    /** Lets the player pick a saved account, or add one with the existing sign-in options. */
+    /** Lets the player pick a saved account, delete one, or add one with the existing sign-in options. */
     public void showAccountPicker() {
-        List<String> labels = new ArrayList<>();
-        for (Account account : savedAccounts) labels.add(account.username);
-        labels.add(context.getString(R.string.urinth_account_add));
+        AlertDialog dialog = themedDialog(R.string.urinth_account_title);
+        LinearLayout rows = themedDialogBody(dialog);
+        for (Account account : savedAccounts) {
+            boolean isCurrent = currentAccount != null && currentAccount.username.equals(account.username);
+            addDialogRow(rows, account.username, isCurrent, v -> {
+                Accounts.setCurrent(account);
+                refresh();
+                dialog.dismiss();
+            }, v -> {
+                dialog.dismiss();
+                confirmDeleteAccount(account);
+            });
+        }
+        addDialogRow(rows, context.getString(R.string.urinth_account_add), false, v -> {
+            dialog.dismiss();
+            showSignInOptions();
+        }, null, R.drawable.ic_urinth_plus);
+        dialog.show();
+    }
+
+    private void confirmDeleteAccount(Account account) {
         new AlertDialog.Builder(activity)
-                .setTitle(R.string.urinth_account_title)
-                .setItems(labels.toArray(new String[0]), (dialog, which) -> {
-                    if (which < savedAccounts.length) {
-                        Accounts.setCurrent(savedAccounts[which]);
-                        refresh();
-                    } else {
-                        showSignInOptions();
-                    }
+                .setTitle(R.string.urinth_account_delete_title)
+                .setMessage(context.getString(R.string.urinth_account_delete_message, account.username))
+                .setPositiveButton(R.string.urinth_account_delete_confirm, (d, w) -> {
+                    Accounts.delete(account);
+                    refresh();
                 })
                 .setNegativeButton(android.R.string.cancel, null)
                 .show();
     }
 
     private void showSignInOptions() {
-        String[] options = {"Microsoft", "Ely.by", "Local"};
-        new AlertDialog.Builder(activity)
-                .setTitle(R.string.urinth_account_add)
-                .setItems(options, (dialog, which) -> {
-                    if (which == 0) Tools.swapFragment(activity, MicrosoftLoginFragment.class, MicrosoftLoginFragment.TAG, null);
-                    else if (which == 1) Tools.swapFragment(activity, ElyByLoginFragment.class, ElyByLoginFragment.TAG, null);
-                    else Tools.swapFragment(activity, LocalLoginFragment.class, LocalLoginFragment.TAG, null);
-                })
+        AlertDialog dialog = themedDialog(R.string.urinth_account_add);
+        LinearLayout rows = themedDialogBody(dialog);
+        addDialogRow(rows, "Microsoft", false, v -> {
+            dialog.dismiss();
+            Tools.swapFragment(activity, MicrosoftLoginFragment.class, MicrosoftLoginFragment.TAG, null);
+        }, null);
+        addDialogRow(rows, "Ely.by", false, v -> {
+            dialog.dismiss();
+            Tools.swapFragment(activity, ElyByLoginFragment.class, ElyByLoginFragment.TAG, null);
+        }, null);
+        addDialogRow(rows, "Local", false, v -> {
+            dialog.dismiss();
+            Tools.swapFragment(activity, LocalLoginFragment.class, LocalLoginFragment.TAG, null);
+        }, null);
+        dialog.show();
+    }
+
+    /**
+     * Builds an otherwise-empty AlertDialog with the dark/green card chrome
+     * (urinth_dialog_bg) instead of the plain system dialog look, and a title drawn in the
+     * same style as the rest of the launcher.
+     */
+    private AlertDialog themedDialog(int titleRes) {
+        TextView title = new TextView(context);
+        title.setText(titleRes);
+        title.setTextColor(0xFFF2F8FA);
+        title.setTextSize(16f);
+        title.setTypeface(title.getTypeface(), android.graphics.Typeface.BOLD);
+        int pad = dpToPx(18);
+        title.setPadding(pad, pad, pad, dpToPx(6));
+
+        AlertDialog dialog = new AlertDialog.Builder(activity)
+                .setCustomTitle(title)
                 .setNegativeButton(android.R.string.cancel, null)
-                .show();
+                .create();
+        dialog.getWindow().setBackgroundDrawableResource(R.drawable.urinth_dialog_bg);
+        return dialog;
+    }
+
+    /** Creates the scrollable row container for a themedDialog and attaches it as the dialog's body. */
+    private LinearLayout themedDialogBody(AlertDialog dialog) {
+        LinearLayout rows = new LinearLayout(context);
+        rows.setOrientation(LinearLayout.VERTICAL);
+        int sidePad = dpToPx(10);
+        rows.setPadding(sidePad, 0, sidePad, dpToPx(6));
+        android.widget.ScrollView scroll = new android.widget.ScrollView(context);
+        scroll.addView(rows, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+        dialog.setView(scroll);
+        return rows;
+    }
+
+    /** A single selectable row in a themed dialog, with an optional trailing delete (trash) icon. */
+    private void addDialogRow(LinearLayout container, String text, boolean highlighted,
+                               View.OnClickListener onClick, View.OnClickListener onDelete) {
+        addDialogRow(container, text, highlighted, onClick, onDelete, 0);
+    }
+
+    private void addDialogRow(LinearLayout container, String text, boolean highlighted,
+                               View.OnClickListener onClick, View.OnClickListener onDelete, int leadingIconRes) {
+        LinearLayout row = new LinearLayout(context);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        row.setBackgroundResource(highlighted ? R.drawable.urinth_dialog_row_current_bg : R.drawable.urinth_dialog_row_bg);
+        int vPad = dpToPx(12);
+        int hPad = dpToPx(12);
+        row.setPadding(hPad, vPad, hPad, vPad);
+        LinearLayout.LayoutParams rowParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        rowParams.topMargin = dpToPx(2);
+        rowParams.bottomMargin = dpToPx(2);
+        row.setLayoutParams(rowParams);
+        row.setOnClickListener(onClick);
+
+        if (leadingIconRes != 0) {
+            ImageView icon = new ImageView(context);
+            icon.setImageResource(leadingIconRes);
+            LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams(dpToPx(18), dpToPx(18));
+            iconParams.rightMargin = dpToPx(10);
+            icon.setLayoutParams(iconParams);
+            row.addView(icon);
+        }
+
+        TextView label = new TextView(context);
+        label.setText(text);
+        label.setTextColor(highlighted ? GREEN : 0xFFF2F8FA);
+        label.setTextSize(14f);
+        LinearLayout.LayoutParams labelParams = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        row.addView(label, labelParams);
+
+        if (highlighted) {
+            ImageView check = new ImageView(context);
+            check.setImageResource(R.drawable.ic_urinth_check);
+            LinearLayout.LayoutParams checkParams = new LinearLayout.LayoutParams(dpToPx(16), dpToPx(16));
+            checkParams.leftMargin = dpToPx(8);
+            row.addView(check, checkParams);
+        }
+
+        if (onDelete != null) {
+            ImageView trash = new ImageView(context);
+            trash.setImageResource(R.drawable.ic_urinth_trash);
+            trash.setBackgroundResource(R.drawable.urinth_dialog_row_bg);
+            int trashPad = dpToPx(6);
+            trash.setPadding(trashPad, trashPad, trashPad, trashPad);
+            LinearLayout.LayoutParams trashParams = new LinearLayout.LayoutParams(dpToPx(30), dpToPx(30));
+            trashParams.leftMargin = dpToPx(10);
+            trash.setLayoutParams(trashParams);
+            trash.setOnClickListener(onDelete);
+            row.addView(trash);
+        }
+
+        container.addView(row);
+    }
+
+    private int dpToPx(float dp) {
+        return Math.round(dp * context.getResources().getDisplayMetrics().density);
     }
 
     /** Gives the green "Ultra" part of the UrinthUltra name. Both name labels start it at character 6. */

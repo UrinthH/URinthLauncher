@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Shared dark/green card chrome for custom dialogs and popups (the account list, the version
+     picker), replacing the plain system AlertDialog/PopupMenu look. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <gradient
+        android:angle="315"
+        android:startColor="#F20F2130"
+        android:centerColor="#F20B1A24"
+        android:endColor="#F2070F16" />
+    <stroke android:width="1.4dp" android:color="#551FC77A" />
+    <corners android:radius="14dp" />
+</shape>

@@ -601,7 +601,7 @@
     <string name="urinth_news_2_desc">Browse them with the Add-ons and Explore worlds buttons.</string>
     <string name="urinth_news_3_title">Start your first installation</string>
     <string name="urinth_news_3_desc">Tap the download icon to choose a Minecraft version.</string>
-    <string name="urinth_news_not_set_up">News feed is not set up yet</string>
+    <string name="urinth_news_not_set_up">Not set up yet</string>
     <string name="urinth_addons_title">Get more out of UrinthUltra</string>
     <string name="urinth_addons_sub">Use mods, shaders and more.</string>
     <string name="urinth_addons_btn">Explore Add-ons</string>
@@ -619,6 +619,10 @@
     <string name="urinth_account_title">Accounts</string>
     <string name="urinth_account_choose">Choose account</string>
     <string name="urinth_account_add">Add account</string>
+    <string name="urinth_account_delete_title">Remove account?</string>
+    <string name="urinth_account_delete_message">%1$s will be signed out of this launcher. You can add it again later.</string>
+    <string name="urinth_account_delete_confirm">Remove</string>
+    <string name="urinth_last_played_choose">Choose installation</string>
     <string name="urinth_versions_none">No installed versions</string>
     <string name="urinth_versions_count">%1$d installations</string>
     <string name="urinth_activity_title">Recent Activity</string>
