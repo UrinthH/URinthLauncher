@@ -518,11 +518,20 @@ public final class UrinthHomeController {
         LinearLayout rows = themedDialogBody(dialog);
         String current = HomeActivityLog.lastPlayedName(context);
         for (DisplayInstance instance : instances) {
+            // Ignore stale installation entries left behind after versions are deleted.
+            if (instance == null || instance.name == null || instance.name.trim().isEmpty()) {
+                continue;
+            }
             addDialogRow(rows, instance.name, current != null && current.equals(instance.name), v -> {
                 HomeActivityLog.setLastPlayedName(context, instance.name);
                 renderLastPlayed();
                 dialog.dismiss();
             }, null);
+        }
+        if (rows.getChildCount() == 0) {
+            dialog.dismiss();
+            toast(R.string.urinth_create_first);
+            return;
         }
         dialog.show();
     }
