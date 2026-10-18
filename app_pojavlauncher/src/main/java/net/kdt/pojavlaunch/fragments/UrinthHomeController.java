@@ -89,6 +89,9 @@ public final class UrinthHomeController {
     private long glowStartUptime;
     private final Runnable glowTick = this::onGlowTick;
 
+    /** The faint drifting ash/snow specks; drives its own frame loop, see ParticleOverlayView. */
+    private ParticleOverlayView particleView;
+
     private final ExtraListener<Boolean> accountRefreshListener = (key, value) -> {
         refresh();
         return false;
@@ -124,6 +127,8 @@ public final class UrinthHomeController {
         // pulsed alpha applies evenly across the whole border instead of double-darkening corners.
         if (edgeGlowView != null) edgeGlowView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
         startGlowLoop();
+        particleView = root.findViewById(R.id.urinth_particles);
+        if (particleView != null) particleView.start();
 
         bindActions(root);
         bindNews(root);
@@ -146,6 +151,10 @@ public final class UrinthHomeController {
             themeMusic = null;
         }
         stopGlowLoop();
+        if (particleView != null) {
+            particleView.release();
+            particleView = null;
+        }
     }
 
     /** Starts the looping home-screen theme (res/raw/urinth_theme). Safe to call once. */
@@ -166,6 +175,7 @@ public final class UrinthHomeController {
     public void pauseMusic() {
         if (themeMusic != null && themeMusic.isPlaying()) themeMusic.pause();
         pauseGlowLoop();
+        if (particleView != null) particleView.pause();
     }
 
     /** Resume the theme and the glow pulses when the app comes back to the foreground. */
@@ -173,6 +183,7 @@ public final class UrinthHomeController {
         if (released) return;
         if (themeMusic != null && !themeMusic.isPlaying()) themeMusic.start();
         resumeGlowLoop();
+        if (particleView != null) particleView.resume();
     }
 
     /** Starts the self-driven glow pulse loop (see the field comment on glowHandler for why). */

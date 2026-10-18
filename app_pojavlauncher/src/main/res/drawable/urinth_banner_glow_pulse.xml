@@ -1,11 +1,11 @@
 <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
-    <!-- A warm radial glow, centered roughly where the sun sits in the hero/banner photos.
-         The view holding this background has its alpha animated in code to make it pulse. -->
+    <!-- Same idea as urinth_hero_glow_pulse, kept as its own file so the banner photo's sun
+         position can be tuned separately from the hero's without moving both at once. -->
     <gradient
         android:type="radial"
-        android:gradientRadius="280dp"
-        android:centerX="0.7"
-        android:centerY="0.55"
+        android:gradientRadius="220dp"
+        android:centerX="0.78"
+        android:centerY="0.3"
         android:startColor="#F2FFE9A8"
         android:centerColor="#80FFB04D"
         android:endColor="#00FF8A3D" />

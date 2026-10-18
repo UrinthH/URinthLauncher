@@ -260,7 +260,7 @@
                             android:id="@+id/urinth_hero_glow"
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
-                            android:background="@drawable/urinth_glow_pulse" />
+                            android:background="@drawable/urinth_hero_glow_pulse" />
 
                         <!-- Branding and tagline are baked into the hero photo. Keep only launcher controls. -->
 
@@ -699,7 +699,7 @@
                                 android:id="@+id/urinth_banner_glow"
                                 android:layout_width="match_parent"
                                 android:layout_height="match_parent"
-                                android:background="@drawable/urinth_glow_pulse" />
+                                android:background="@drawable/urinth_banner_glow_pulse" />
 
                             <LinearLayout
                                 android:layout_width="match_parent"
@@ -878,6 +878,16 @@
         </FrameLayout>
     </LinearLayout>
 </LinearLayout>
+
+    <!-- A faint drift of white ash/snow specks over the whole screen, driven by its own frame
+         loop in ParticleOverlayView. Kept deliberately subtle (few, small, slow, low opacity). -->
+    <net.kdt.pojavlaunch.fragments.ParticleOverlayView
+        android:id="@+id/urinth_particles"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clickable="false"
+        android:duplicateParentState="false"
+        android:focusable="false" />
 
     <!-- Pulsing red glow hugging every edge of the screen: four separate strips, each a clean
          edge-to-transparent fade, so every strip lines up exactly with the real screen edge

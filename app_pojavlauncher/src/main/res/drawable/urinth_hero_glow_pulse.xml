@@ -1,0 +1,14 @@
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <!-- A warm radial glow positioned over the sun in the hero photo, which sits in the
+         upper-right of that image, not the middle. The view holding this background has its
+         alpha pulsed in code (UrinthHomeController) to make it glow. -->
+    <gradient
+        android:type="radial"
+        android:gradientRadius="260dp"
+        android:centerX="0.84"
+        android:centerY="0.3"
+        android:startColor="#F2FFE9A8"
+        android:centerColor="#80FFB04D"
+        android:endColor="#00FF8A3D" />
+    <corners android:radius="12dp"/>
+</shape>
