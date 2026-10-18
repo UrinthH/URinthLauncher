@@ -1,4 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Create Profile screen. Rebuilt to match the rest of the launcher: dark/green Modrinth-style
+     section headers (same pill as the Settings screen's category headers, for one consistent
+     design system) and real Minecraft Java Edition button texture (the game's own beveled stone
+     button 9-patch, mine_button_unfocused/focused) recolored per loader like Modrinth's loader
+     badges, instead of the flat generic MineButton look. Every id is unchanged from before, so
+     ProfileTypeSelectFragment's click bindings still work without any Java changes. -->
 <com.kdt.DefocusableScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
@@ -7,147 +13,109 @@
 
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
         android:paddingHorizontal="@dimen/fragment_padding_medium"
-        android:orientation="vertical">
-
-
-
-        <!-- Vanilla like version -->
+        android:paddingBottom="@dimen/padding_large">
 
         <TextView
             android:id="@+id/title_textview"
-            style="@style/TextAppearance.AppCompat.Title"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/create_profile_vanilla_like_versions"
-            android:layout_gravity="center"
-            android:layout_marginTop="@dimen/padding_large"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintHorizontal_bias="0.497"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="@+id/guideline2" />
-
-        <View
-            android:id="@+id/view"
-            style="@style/ThickDivider"
             android:layout_width="match_parent"
+            android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/padding_large"
-            app:layout_constraintTop_toBottomOf="@+id/title_textview"
-            />
+            android:background="@drawable/bg_preference_category_modrinth"
+            android:fontFamily="sans-serif-medium"
+            android:gravity="center_vertical"
+            android:minHeight="42dp"
+            android:paddingStart="14dp"
+            android:paddingTop="8dp"
+            android:paddingEnd="14dp"
+            android:paddingBottom="8dp"
+            android:text="@string/create_profile_vanilla_like_versions"
+            android:textColor="#1FC77A"
+            android:textSize="13sp"
+            android:letterSpacing="0.04" />
 
         <com.kdt.mcgui.MineButton
             android:id="@+id/vanilla_profile"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginHorizontal="@dimen/padding_large"
-            android:text="@string/create_instance_vanilla"
+            style="@style/UrinthLoaderButton"
             android:layout_marginTop="@dimen/padding_large"
-            app:layout_constraintTop_toBottomOf="@+id/view" />
+            android:backgroundTint="#1FC77A"
+            android:text="@string/create_instance_vanilla" />
 
         <com.kdt.mcgui.MineButton
             android:id="@+id/optifine_profile"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginHorizontal="@dimen/padding_large"
-            android:text="@string/mod_dl_install_optifine"
-            android:layout_marginTop="@dimen/padding_large"
-            app:layout_constraintTop_toBottomOf="@+id/view" />
-
-
-
-        <!-- Modded versions -->
+            style="@style/UrinthLoaderButton"
+            android:layout_marginTop="10dp"
+            android:backgroundTint="#D9A441"
+            android:text="@string/mod_dl_install_optifine" />
 
         <TextView
             android:id="@+id/title_modded_textview"
-            style="@style/TextAppearance.AppCompat.Title"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:layout_marginTop="@dimen/padding_extra_extra_large"
-            android:text="@string/create_profile_modded_versions"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="@+id/guideline" />
-
-        <View
-            android:id="@+id/view_modded"
-            style="@style/ThickDivider"
             android:layout_width="match_parent"
-            android:layout_marginTop="@dimen/padding_large"
-            app:layout_constraintTop_toBottomOf="@+id/title_modded_textview"
-            />
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/padding_extra_extra_large"
+            android:background="@drawable/bg_preference_category_modrinth"
+            android:fontFamily="sans-serif-medium"
+            android:gravity="center_vertical"
+            android:minHeight="42dp"
+            android:paddingStart="14dp"
+            android:paddingTop="8dp"
+            android:paddingEnd="14dp"
+            android:paddingBottom="8dp"
+            android:text="@string/create_profile_modded_versions"
+            android:textColor="#1FC77A"
+            android:textSize="13sp"
+            android:letterSpacing="0.04" />
 
         <com.kdt.mcgui.MineButton
             android:id="@+id/modded_profile_fabric"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginHorizontal="@dimen/padding_large"
+            style="@style/UrinthLoaderButton"
             android:layout_marginTop="@dimen/padding_large"
+            android:backgroundTint="#4FA8E0"
             android:text="@string/modloader_dl_install_fabric_instance" />
 
         <com.kdt.mcgui.MineButton
             android:id="@+id/modded_profile_quilt"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginHorizontal="@dimen/padding_large"
-            android:layout_marginTop="@dimen/padding_large"
+            style="@style/UrinthLoaderButton"
+            android:layout_marginTop="10dp"
+            android:backgroundTint="#9B59B6"
             android:text="@string/modloader_dl_install_quilt_instance" />
 
         <com.kdt.mcgui.MineButton
             android:id="@+id/modded_profile_legacy_fabric"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginHorizontal="@dimen/padding_large"
-            android:layout_marginTop="@dimen/padding_large"
+            style="@style/UrinthLoaderButton"
+            android:layout_marginTop="10dp"
+            android:backgroundTint="#5C7A99"
             android:text="@string/modloader_dl_install_legacy_fabric_instance" />
 
         <com.kdt.mcgui.MineButton
             android:id="@+id/modded_profile_forge"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginHorizontal="@dimen/padding_large"
-            android:layout_marginTop="@dimen/padding_large"
+            style="@style/UrinthLoaderButton"
+            android:layout_marginTop="10dp"
+            android:backgroundTint="#D1793D"
             android:text="@string/modloader_dl_install_forge_instance" />
 
         <com.kdt.mcgui.MineButton
             android:id="@+id/modded_profile_neoforge"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginHorizontal="@dimen/padding_large"
-            android:layout_marginTop="@dimen/padding_large"
+            style="@style/UrinthLoaderButton"
+            android:layout_marginTop="10dp"
+            android:backgroundTint="#F08A3C"
             android:text="@string/modloader_dl_install_neoforge_instance" />
 
         <com.kdt.mcgui.MineButton
             android:id="@+id/modded_profile_modpack"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginHorizontal="@dimen/padding_large"
-            android:layout_marginTop="@dimen/padding_large"
+            style="@style/UrinthLoaderButton"
+            android:layout_marginTop="10dp"
+            android:backgroundTint="#2FB8A6"
             android:text="@string/modpack_install_instance_button" />
 
         <com.kdt.mcgui.MineButton
             android:id="@+id/modded_profile_bta"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginHorizontal="@dimen/padding_large"
-            android:layout_marginTop="@dimen/padding_large"
+            style="@style/UrinthLoaderButton"
+            android:layout_marginTop="10dp"
+            android:backgroundTint="#8A6D4B"
             android:text="@string/create_bta_instance" />
 
-        <androidx.constraintlayout.widget.Guideline
-            android:id="@+id/guideline"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            app:layout_constraintGuide_percent="0.55" />
-
-        <androidx.constraintlayout.widget.Guideline
-            android:id="@+id/guideline2"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            app:layout_constraintGuide_percent="0.25" />
     </LinearLayout>
 </com.kdt.DefocusableScrollView>
-
