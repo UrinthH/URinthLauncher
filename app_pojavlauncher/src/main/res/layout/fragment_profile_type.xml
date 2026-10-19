@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Create Profile screen. Rebuilt to match the rest of the launcher: dark/green Modrinth-style
-     section headers (same pill as the Settings screen's category headers, for one consistent
-     design system) and real Minecraft Java Edition button texture (the game's own beveled stone
-     button 9-patch, mine_button_unfocused/focused) recolored per loader like Modrinth's loader
-     badges, instead of the flat generic MineButton look. Every id is unchanged from before, so
-     ProfileTypeSelectFragment's click bindings still work without any Java changes. -->
+<!-- Create Profile screen, rebuilt as real Modrinth-style list cards: a dark rounded card per
+     loader (urinth_profile_card_bg, the same panel chrome as the rest of the launcher) with a
+     colored initial badge, a title, a one-line description and a trailing chevron — instead of
+     the previous full-width tinted stone-button bars, which flattened the Minecraft button
+     texture into plain solid-color stripes and read as ugly/generic rather than Modrinth-like.
+     Every id is unchanged, so ProfileTypeSelectFragment's click bindings still work untouched. -->
 <com.kdt.DefocusableScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
@@ -36,19 +36,37 @@
             android:textSize="13sp"
             android:letterSpacing="0.04" />
 
-        <com.kdt.mcgui.MineButton
+        <!-- Vanilla -->
+        <LinearLayout
             android:id="@+id/vanilla_profile"
-            style="@style/UrinthLoaderButton"
-            android:layout_marginTop="@dimen/padding_large"
-            android:backgroundTint="#1FC77A"
-            android:text="@string/create_instance_vanilla" />
+            style="@style/UrinthProfileCard">
+            <FrameLayout style="@style/UrinthProfileBadge">
+                <View android:layout_width="match_parent" android:layout_height="match_parent"
+                    android:background="@drawable/urinth_oval_badge" android:backgroundTint="#1FC77A" />
+                <TextView style="@style/UrinthProfileBadgeLabel" android:text="Va" />
+            </FrameLayout>
+            <LinearLayout style="@style/UrinthProfileCardText">
+                <TextView style="@style/UrinthProfileCardTitle" android:text="@string/urinth_loader_vanilla" />
+                <TextView style="@style/UrinthProfileCardDesc" android:text="@string/urinth_loader_vanilla_desc" />
+            </LinearLayout>
+            <ImageView style="@style/UrinthProfileChevron" />
+        </LinearLayout>
 
-        <com.kdt.mcgui.MineButton
+        <!-- OptiFine -->
+        <LinearLayout
             android:id="@+id/optifine_profile"
-            style="@style/UrinthLoaderButton"
-            android:layout_marginTop="10dp"
-            android:backgroundTint="#D9A441"
-            android:text="@string/mod_dl_install_optifine" />
+            style="@style/UrinthProfileCard">
+            <FrameLayout style="@style/UrinthProfileBadge">
+                <View android:layout_width="match_parent" android:layout_height="match_parent"
+                    android:background="@drawable/urinth_oval_badge" android:backgroundTint="#D9A441" />
+                <TextView style="@style/UrinthProfileBadgeLabel" android:text="OF" />
+            </FrameLayout>
+            <LinearLayout style="@style/UrinthProfileCardText">
+                <TextView style="@style/UrinthProfileCardTitle" android:text="@string/urinth_loader_optifine" />
+                <TextView style="@style/UrinthProfileCardDesc" android:text="@string/urinth_loader_optifine_desc" />
+            </LinearLayout>
+            <ImageView style="@style/UrinthProfileChevron" />
+        </LinearLayout>
 
         <TextView
             android:id="@+id/title_modded_textview"
@@ -68,54 +86,117 @@
             android:textSize="13sp"
             android:letterSpacing="0.04" />
 
-        <com.kdt.mcgui.MineButton
+        <!-- Fabric -->
+        <LinearLayout
             android:id="@+id/modded_profile_fabric"
-            style="@style/UrinthLoaderButton"
-            android:layout_marginTop="@dimen/padding_large"
-            android:backgroundTint="#4FA8E0"
-            android:text="@string/modloader_dl_install_fabric_instance" />
+            style="@style/UrinthProfileCard">
+            <FrameLayout style="@style/UrinthProfileBadge">
+                <View android:layout_width="match_parent" android:layout_height="match_parent"
+                    android:background="@drawable/urinth_oval_badge" android:backgroundTint="#4FA8E0" />
+                <TextView style="@style/UrinthProfileBadgeLabel" android:text="Fa" />
+            </FrameLayout>
+            <LinearLayout style="@style/UrinthProfileCardText">
+                <TextView style="@style/UrinthProfileCardTitle" android:text="@string/urinth_loader_fabric" />
+                <TextView style="@style/UrinthProfileCardDesc" android:text="@string/urinth_loader_fabric_desc" />
+            </LinearLayout>
+            <ImageView style="@style/UrinthProfileChevron" />
+        </LinearLayout>
 
-        <com.kdt.mcgui.MineButton
+        <!-- Quilt -->
+        <LinearLayout
             android:id="@+id/modded_profile_quilt"
-            style="@style/UrinthLoaderButton"
-            android:layout_marginTop="10dp"
-            android:backgroundTint="#9B59B6"
-            android:text="@string/modloader_dl_install_quilt_instance" />
+            style="@style/UrinthProfileCard">
+            <FrameLayout style="@style/UrinthProfileBadge">
+                <View android:layout_width="match_parent" android:layout_height="match_parent"
+                    android:background="@drawable/urinth_oval_badge" android:backgroundTint="#9B59B6" />
+                <TextView style="@style/UrinthProfileBadgeLabel" android:text="Qt" />
+            </FrameLayout>
+            <LinearLayout style="@style/UrinthProfileCardText">
+                <TextView style="@style/UrinthProfileCardTitle" android:text="@string/urinth_loader_quilt" />
+                <TextView style="@style/UrinthProfileCardDesc" android:text="@string/urinth_loader_quilt_desc" />
+            </LinearLayout>
+            <ImageView style="@style/UrinthProfileChevron" />
+        </LinearLayout>
 
-        <com.kdt.mcgui.MineButton
+        <!-- Legacy Fabric -->
+        <LinearLayout
             android:id="@+id/modded_profile_legacy_fabric"
-            style="@style/UrinthLoaderButton"
-            android:layout_marginTop="10dp"
-            android:backgroundTint="#5C7A99"
-            android:text="@string/modloader_dl_install_legacy_fabric_instance" />
+            style="@style/UrinthProfileCard">
+            <FrameLayout style="@style/UrinthProfileBadge">
+                <View android:layout_width="match_parent" android:layout_height="match_parent"
+                    android:background="@drawable/urinth_oval_badge" android:backgroundTint="#5C7A99" />
+                <TextView style="@style/UrinthProfileBadgeLabel" android:text="LF" />
+            </FrameLayout>
+            <LinearLayout style="@style/UrinthProfileCardText">
+                <TextView style="@style/UrinthProfileCardTitle" android:text="@string/urinth_loader_legacy_fabric" />
+                <TextView style="@style/UrinthProfileCardDesc" android:text="@string/urinth_loader_legacy_fabric_desc" />
+            </LinearLayout>
+            <ImageView style="@style/UrinthProfileChevron" />
+        </LinearLayout>
 
-        <com.kdt.mcgui.MineButton
+        <!-- Forge -->
+        <LinearLayout
             android:id="@+id/modded_profile_forge"
-            style="@style/UrinthLoaderButton"
-            android:layout_marginTop="10dp"
-            android:backgroundTint="#D1793D"
-            android:text="@string/modloader_dl_install_forge_instance" />
+            style="@style/UrinthProfileCard">
+            <FrameLayout style="@style/UrinthProfileBadge">
+                <View android:layout_width="match_parent" android:layout_height="match_parent"
+                    android:background="@drawable/urinth_oval_badge" android:backgroundTint="#D1793D" />
+                <TextView style="@style/UrinthProfileBadgeLabel" android:text="Fo" />
+            </FrameLayout>
+            <LinearLayout style="@style/UrinthProfileCardText">
+                <TextView style="@style/UrinthProfileCardTitle" android:text="@string/urinth_loader_forge" />
+                <TextView style="@style/UrinthProfileCardDesc" android:text="@string/urinth_loader_forge_desc" />
+            </LinearLayout>
+            <ImageView style="@style/UrinthProfileChevron" />
+        </LinearLayout>
 
-        <com.kdt.mcgui.MineButton
+        <!-- NeoForge -->
+        <LinearLayout
             android:id="@+id/modded_profile_neoforge"
-            style="@style/UrinthLoaderButton"
-            android:layout_marginTop="10dp"
-            android:backgroundTint="#F08A3C"
-            android:text="@string/modloader_dl_install_neoforge_instance" />
+            style="@style/UrinthProfileCard">
+            <FrameLayout style="@style/UrinthProfileBadge">
+                <View android:layout_width="match_parent" android:layout_height="match_parent"
+                    android:background="@drawable/urinth_oval_badge" android:backgroundTint="#F08A3C" />
+                <TextView style="@style/UrinthProfileBadgeLabel" android:text="NF" />
+            </FrameLayout>
+            <LinearLayout style="@style/UrinthProfileCardText">
+                <TextView style="@style/UrinthProfileCardTitle" android:text="@string/urinth_loader_neoforge" />
+                <TextView style="@style/UrinthProfileCardDesc" android:text="@string/urinth_loader_neoforge_desc" />
+            </LinearLayout>
+            <ImageView style="@style/UrinthProfileChevron" />
+        </LinearLayout>
 
-        <com.kdt.mcgui.MineButton
+        <!-- Modpack search -->
+        <LinearLayout
             android:id="@+id/modded_profile_modpack"
-            style="@style/UrinthLoaderButton"
-            android:layout_marginTop="10dp"
-            android:backgroundTint="#2FB8A6"
-            android:text="@string/modpack_install_instance_button" />
+            style="@style/UrinthProfileCard">
+            <FrameLayout style="@style/UrinthProfileBadge">
+                <View android:layout_width="match_parent" android:layout_height="match_parent"
+                    android:background="@drawable/urinth_oval_badge" android:backgroundTint="#2FB8A6" />
+                <TextView style="@style/UrinthProfileBadgeLabel" android:text="Mp" />
+            </FrameLayout>
+            <LinearLayout style="@style/UrinthProfileCardText">
+                <TextView style="@style/UrinthProfileCardTitle" android:text="@string/urinth_loader_modpack" />
+                <TextView style="@style/UrinthProfileCardDesc" android:text="@string/urinth_loader_modpack_desc" />
+            </LinearLayout>
+            <ImageView style="@style/UrinthProfileChevron" />
+        </LinearLayout>
 
-        <com.kdt.mcgui.MineButton
+        <!-- Beta/Alpha -->
+        <LinearLayout
             android:id="@+id/modded_profile_bta"
-            style="@style/UrinthLoaderButton"
-            android:layout_marginTop="10dp"
-            android:backgroundTint="#8A6D4B"
-            android:text="@string/create_bta_instance" />
+            style="@style/UrinthProfileCard">
+            <FrameLayout style="@style/UrinthProfileBadge">
+                <View android:layout_width="match_parent" android:layout_height="match_parent"
+                    android:background="@drawable/urinth_oval_badge" android:backgroundTint="#8A6D4B" />
+                <TextView style="@style/UrinthProfileBadgeLabel" android:text="BA" />
+            </FrameLayout>
+            <LinearLayout style="@style/UrinthProfileCardText">
+                <TextView style="@style/UrinthProfileCardTitle" android:text="@string/urinth_loader_bta" />
+                <TextView style="@style/UrinthProfileCardDesc" android:text="@string/urinth_loader_bta_desc" />
+            </LinearLayout>
+            <ImageView style="@style/UrinthProfileChevron" />
+        </LinearLayout>
 
     </LinearLayout>
 </com.kdt.DefocusableScrollView>

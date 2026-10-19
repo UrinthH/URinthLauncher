@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Modrinth-style list card for the Create Profile screen: the same dark gradient + green-
+     tinted border as urinth_panel_bg (so it matches the rest of the launcher), with a ripple for
+     tap feedback instead of the old flat-tinted stone-button bars. -->
+<ripple xmlns:android="http://schemas.android.com/apk/res/android" android:color="#331FC77A">
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:angle="315"
+                android:startColor="#F20F2130"
+                android:centerColor="#F20B1A24"
+                android:endColor="#F2070F16" />
+            <stroke android:width="1dp" android:color="#2A1FC77A" />
+            <corners android:radius="12dp" />
+        </shape>
+    </item>
+</ripple>

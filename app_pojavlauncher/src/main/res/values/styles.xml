@@ -61,13 +61,65 @@
         <item name="android:layout_height">@dimen/_66sdp</item>
     </style>
 
-    <!-- A loader button on the Create Profile screen: the game's own beveled stone button
-         texture (via MineButton), just tinted per loader like Modrinth's loader badges. -->
-    <style name="UrinthLoaderButton">
+    <!-- A loader card on the Create Profile screen: a dark rounded card (urinth_profile_card_bg)
+         with a colored initial badge, title, one-line description and a trailing chevron — the
+         same list-card language as Modrinth, built from the launcher's own panel chrome. -->
+    <style name="UrinthProfileCard">
         <item name="android:layout_width">match_parent</item>
-        <item name="android:layout_height">50dp</item>
-        <item name="android:layout_marginHorizontal">@dimen/padding_large</item>
-        <item name="android:letterSpacing">0.03</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">10dp</item>
+        <item name="android:background">@drawable/urinth_profile_card_bg</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:orientation">horizontal</item>
+        <item name="android:paddingHorizontal">14dp</item>
+        <item name="android:paddingVertical">12dp</item>
+    </style>
+
+    <style name="UrinthProfileBadge">
+        <item name="android:layout_width">38dp</item>
+        <item name="android:layout_height">38dp</item>
+    </style>
+
+    <style name="UrinthProfileBadgeLabel">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">match_parent</item>
+        <item name="android:gravity">center</item>
+        <item name="android:textColor">#0B1A24</item>
+        <item name="android:textSize">13sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="UrinthProfileCardText">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginStart">12dp</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:orientation">vertical</item>
+    </style>
+
+    <style name="UrinthProfileCardTitle">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textColor">#F2F8FA</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="UrinthProfileCardDesc">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">2dp</item>
+        <item name="android:textColor">#ABC0CB</item>
+        <item name="android:textSize">11sp</item>
+    </style>
+
+    <style name="UrinthProfileChevron">
+        <item name="android:layout_width">18dp</item>
+        <item name="android:layout_height">18dp</item>
+        <item name="android:layout_marginStart">6dp</item>
+        <item name="android:src">@drawable/ic_urinth_chevron</item>
     </style>
 
     <style name="ThickDivider">

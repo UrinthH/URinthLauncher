@@ -584,6 +584,12 @@
     <string name="urinth_loader_quilt_desc">A Fabric-based loader with extra features.</string>
     <string name="urinth_loader_legacy">Legacy</string>
     <string name="urinth_loader_legacy_desc">Older Minecraft releases and snapshots.</string>
+    <string name="urinth_loader_legacy_fabric">Legacy Fabric</string>
+    <string name="urinth_loader_legacy_fabric_desc">Fabric for old Minecraft versions.</string>
+    <string name="urinth_loader_modpack">Modpack</string>
+    <string name="urinth_loader_modpack_desc">Search and install a curated modpack.</string>
+    <string name="urinth_loader_bta">Beta / Alpha</string>
+    <string name="urinth_loader_bta_desc">\"Better than Adventure!\", a classic-era mod.</string>
     <string name="urinth_loader_coming_soon">%1$s support is coming soon</string>
     <string name="urinth_status_ready">Ready to play</string>
     <string name="urinth_status_none">No installation yet</string>
