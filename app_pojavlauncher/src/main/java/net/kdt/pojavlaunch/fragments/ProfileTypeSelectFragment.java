@@ -23,6 +23,25 @@ public class ProfileTypeSelectFragment extends Fragment {
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
+
+        // Staggered, lightweight entrance motion for the loader cards.
+        int[] cardIds = {
+                R.id.vanilla_profile, R.id.optifine_profile, R.id.modded_profile_fabric,
+                R.id.modded_profile_quilt, R.id.modded_profile_legacy_fabric,
+                R.id.modded_profile_forge, R.id.modded_profile_neoforge,
+                R.id.modded_profile_modpack, R.id.modded_profile_bta
+        };
+        for (int i = 0; i < cardIds.length; i++) {
+            View card = view.findViewById(cardIds[i]);
+            if (card == null) continue;
+            card.setAlpha(0f);
+            card.setTranslationY(10f);
+            card.animate().alpha(1f).translationY(0f)
+                    .setStartDelay(i * 28L)
+                    .setDuration(220L)
+                    .start();
+        }
+
         view.findViewById(R.id.vanilla_profile).setOnClickListener(v -> {
             try {
                 Instance instance = Instances.createDefaultInstance();
