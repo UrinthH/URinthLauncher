@@ -8,6 +8,7 @@ import net.kdt.pojavlaunch.game.renderer.impl.ApkRenderSpec;
 import net.kdt.pojavlaunch.game.renderer.impl.ApkRendererScanner;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -31,8 +32,7 @@ public class RendererCache {
      * @param context application context
      * @return cache containing all compatible renderers
      */
-    public static RendererCache getCompatibleRenderers(Context context) {
-        if (sCompatibleRenderers != null) return sCompatibleRenderers;
+    public static synchronized RendererCache getCompatibleRenderers(Context context) {
         Resources resources = context.getResources();
         // Renderer plugin apps installed now are listed too; a plugin uninstalled later is dropped.
         ApkRendererScanner.scan(context);
@@ -63,8 +63,18 @@ public class RendererCache {
         }
         rendererIds.trimToSize();
         rendererNames.trimToSize();
-        return (sCompatibleRenderers = new RendererCache(
-                rendererIds, rendererNames.toArray(new String[0])));
+        String[] displayNames = rendererNames.toArray(new String[0]);
+        // Rebuild only when installed plugins or their labels changed. This lets a plugin
+        // installed while the launcher is open appear without requiring a process restart.
+        if (sCompatibleRenderers != null
+                && sCompatibleRenderers.rendererIds.equals(rendererIds)
+                && Arrays.equals(sCompatibleRenderers.rendererDisplayNames, displayNames)) {
+            return sCompatibleRenderers;
+        }
+        if (sCompatibleRenderers != null) {
+            sCompatibleRenderers.rendererIds.clear();
+        }
+        return (sCompatibleRenderers = new RendererCache(rendererIds, displayNames));
     }
 
     /**
