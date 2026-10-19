@@ -139,6 +139,11 @@
         </service>
     </application>
     <queries>
+        <!-- Allow renderer-plugin discovery on Android 11+ without QUERY_ALL_PACKAGES. -->
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
         <package android:name="git.mojo.ffmpeg"/>
         <package android:name="git.mojo.angle"/>
         <package android:name="com.fcl.plugin.renderer.angle"/>
