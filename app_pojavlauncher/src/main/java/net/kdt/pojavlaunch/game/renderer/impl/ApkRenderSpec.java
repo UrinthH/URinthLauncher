@@ -102,11 +102,52 @@ public class ApkRenderSpec implements RenderSpec {
         }
     }
 
+    /**
+     * Renderer plugins often expose OpenGL ES rather than desktop OpenGL. Honour the
+     * plugin's LIBGL_ES metadata, with POJAV_RENDERER as a compatibility fallback.
+     * Passing false/0 here makes GLFW request a desktop OpenGL context, which causes
+     * LTW plugins (including FCL's OpenLTW) to fail with EGL_BAD_MATCH/no OpenGL support.
+     */
+    int requestedGlesVersion() {
+        String configured = pojavEnv.get("LIBGL_ES");
+        if (configured != null) {
+            int version = parseGlesVersion(configured);
+            if (version > 0) return version;
+        }
+
+        String renderer = pojavEnv.get("POJAV_RENDERER");
+        if (renderer != null) {
+            String normalized = renderer.toLowerCase(java.util.Locale.ROOT);
+            if (normalized.contains("opengles3")) return 3;
+            if (normalized.contains("opengles2")) return 2;
+        }
+        return 0;
+    }
+
+    private static int parseGlesVersion(String value) {
+        if (value == null) return 0;
+        String normalized = value.trim();
+        if (normalized.isEmpty()) return 0;
+        try {
+            int version = Integer.parseInt(normalized);
+            return version >= 2 && version <= 3 ? version : 0;
+        } catch (NumberFormatException ignored) {
+            // Accept common values such as "3.0" without guessing unsupported versions.
+            if (normalized.startsWith("3.")) return 3;
+            if (normalized.startsWith("2.")) return 2;
+            return 0;
+        }
+    }
+
     @Override
     public boolean setupRenderer() {
         String egl = new File(nativeLibraryDir, eglLibraryName).getAbsolutePath();
-        boolean ready = MojoExec.prepareEgl(egl, true, false, 0);
-        Log.i(TAG, "Plugin renderer " + packageName + " EGL setup result=" + ready + ", library=" + egl);
+        int glesVersion = requestedGlesVersion();
+        boolean forceGles = glesVersion > 0;
+        boolean ready = MojoExec.prepareEgl(egl, true, forceGles, glesVersion);
+        Log.i(TAG, "Plugin renderer " + packageName + " EGL setup result=" + ready
+                + ", library=" + egl + ", forceGles=" + forceGles
+                + ", glesVersion=" + glesVersion);
         return ready;
     }
 
