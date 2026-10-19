@@ -4,8 +4,10 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/background_card"
-    android:padding="24dp">
+    android:background="@color/background_app"
+    android:paddingHorizontal="20dp"
+    android:paddingTop="18dp"
+    android:paddingBottom="16dp">
 
 
     <TextView
@@ -13,10 +15,11 @@
         style="@style/TextAppearance.AppCompat.Title"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/padding_large"
+        android:layout_marginTop="8dp"
         android:text="@string/fabric_dl_loader_title"
         android:textColor="#F2F8FA"
-        android:textSize="24sp"
+        android:textSize="22sp"
+        android:letterSpacing="0.01"
         android:textStyle="bold"
 
         app:layout_constraintEnd_toEndOf="parent"
@@ -26,6 +29,7 @@
     <View
         android:id="@+id/view"
         style="@style/ThickDivider"
+        android:alpha="0.65"
         android:layout_width="match_parent"
         android:layout_marginTop="@dimen/padding_large"
         app:layout_constraintTop_toBottomOf="@+id/title_textview" />
@@ -44,8 +48,9 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="@dimen/padding_extra_large"
-        android:background="@drawable/background_line"
-        android:minHeight="48dp"
+        android:background="@drawable/urinth_modrinth_input_bg"
+        android:minHeight="54dp"
+        android:layout_marginBottom="8dp"
         android:paddingVertical="0dp"
         android:paddingStart="7dp"
         android:paddingEnd="7dp"
