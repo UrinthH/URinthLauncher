@@ -40,11 +40,12 @@
         <LinearLayout
             android:id="@+id/vanilla_profile"
             style="@style/UrinthProfileCard">
-            <FrameLayout style="@style/UrinthProfileBadge">
-                <View android:layout_width="match_parent" android:layout_height="match_parent"
-                    android:background="@drawable/urinth_oval_badge" android:backgroundTint="#1FC77A" />
-                <TextView style="@style/UrinthProfileBadgeLabel" android:text="Va" />
-            </FrameLayout>
+            <ImageView
+                android:layout_width="38dp"
+                android:layout_height="38dp"
+                android:contentDescription="@null"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_minecraft_grass_block" />
             <LinearLayout style="@style/UrinthProfileCardText">
                 <TextView style="@style/UrinthProfileCardTitle" android:text="@string/urinth_loader_vanilla" />
                 <TextView style="@style/UrinthProfileCardDesc" android:text="@string/urinth_loader_vanilla_desc" />
@@ -56,11 +57,12 @@
         <LinearLayout
             android:id="@+id/optifine_profile"
             style="@style/UrinthProfileCard">
-            <FrameLayout style="@style/UrinthProfileBadge">
-                <View android:layout_width="match_parent" android:layout_height="match_parent"
-                    android:background="@drawable/urinth_oval_badge" android:backgroundTint="#D9A441" />
-                <TextView style="@style/UrinthProfileBadgeLabel" android:text="OF" />
-            </FrameLayout>
+            <ImageView
+                android:layout_width="38dp"
+                android:layout_height="38dp"
+                android:contentDescription="@null"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_optifine" />
             <LinearLayout style="@style/UrinthProfileCardText">
                 <TextView style="@style/UrinthProfileCardTitle" android:text="@string/urinth_loader_optifine" />
                 <TextView style="@style/UrinthProfileCardDesc" android:text="@string/urinth_loader_optifine_desc" />
@@ -90,11 +92,12 @@
         <LinearLayout
             android:id="@+id/modded_profile_fabric"
             style="@style/UrinthProfileCard">
-            <FrameLayout style="@style/UrinthProfileBadge">
-                <View android:layout_width="match_parent" android:layout_height="match_parent"
-                    android:background="@drawable/urinth_oval_badge" android:backgroundTint="#4FA8E0" />
-                <TextView style="@style/UrinthProfileBadgeLabel" android:text="Fa" />
-            </FrameLayout>
+            <ImageView
+                android:layout_width="38dp"
+                android:layout_height="38dp"
+                android:contentDescription="@null"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_fabric" />
             <LinearLayout style="@style/UrinthProfileCardText">
                 <TextView style="@style/UrinthProfileCardTitle" android:text="@string/urinth_loader_fabric" />
                 <TextView style="@style/UrinthProfileCardDesc" android:text="@string/urinth_loader_fabric_desc" />
@@ -106,11 +109,12 @@
         <LinearLayout
             android:id="@+id/modded_profile_quilt"
             style="@style/UrinthProfileCard">
-            <FrameLayout style="@style/UrinthProfileBadge">
-                <View android:layout_width="match_parent" android:layout_height="match_parent"
-                    android:background="@drawable/urinth_oval_badge" android:backgroundTint="#9B59B6" />
-                <TextView style="@style/UrinthProfileBadgeLabel" android:text="Qt" />
-            </FrameLayout>
+            <ImageView
+                android:layout_width="38dp"
+                android:layout_height="38dp"
+                android:contentDescription="@null"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_quilt" />
             <LinearLayout style="@style/UrinthProfileCardText">
                 <TextView style="@style/UrinthProfileCardTitle" android:text="@string/urinth_loader_quilt" />
                 <TextView style="@style/UrinthProfileCardDesc" android:text="@string/urinth_loader_quilt_desc" />
@@ -122,11 +126,12 @@
         <LinearLayout
             android:id="@+id/modded_profile_legacy_fabric"
             style="@style/UrinthProfileCard">
-            <FrameLayout style="@style/UrinthProfileBadge">
-                <View android:layout_width="match_parent" android:layout_height="match_parent"
-                    android:background="@drawable/urinth_oval_badge" android:backgroundTint="#5C7A99" />
-                <TextView style="@style/UrinthProfileBadgeLabel" android:text="LF" />
-            </FrameLayout>
+            <ImageView
+                android:layout_width="38dp"
+                android:layout_height="38dp"
+                android:contentDescription="@null"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_fabric" />
             <LinearLayout style="@style/UrinthProfileCardText">
                 <TextView style="@style/UrinthProfileCardTitle" android:text="@string/urinth_loader_legacy_fabric" />
                 <TextView style="@style/UrinthProfileCardDesc" android:text="@string/urinth_loader_legacy_fabric_desc" />
@@ -138,11 +143,12 @@
         <LinearLayout
             android:id="@+id/modded_profile_forge"
             style="@style/UrinthProfileCard">
-            <FrameLayout style="@style/UrinthProfileBadge">
-                <View android:layout_width="match_parent" android:layout_height="match_parent"
-                    android:background="@drawable/urinth_oval_badge" android:backgroundTint="#D1793D" />
-                <TextView style="@style/UrinthProfileBadgeLabel" android:text="Fo" />
-            </FrameLayout>
+            <ImageView
+                android:layout_width="38dp"
+                android:layout_height="38dp"
+                android:contentDescription="@null"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_forge" />
             <LinearLayout style="@style/UrinthProfileCardText">
                 <TextView style="@style/UrinthProfileCardTitle" android:text="@string/urinth_loader_forge" />
                 <TextView style="@style/UrinthProfileCardDesc" android:text="@string/urinth_loader_forge_desc" />
@@ -154,11 +160,12 @@
         <LinearLayout
             android:id="@+id/modded_profile_neoforge"
             style="@style/UrinthProfileCard">
-            <FrameLayout style="@style/UrinthProfileBadge">
-                <View android:layout_width="match_parent" android:layout_height="match_parent"
-                    android:background="@drawable/urinth_oval_badge" android:backgroundTint="#F08A3C" />
-                <TextView style="@style/UrinthProfileBadgeLabel" android:text="NF" />
-            </FrameLayout>
+            <ImageView
+                android:layout_width="38dp"
+                android:layout_height="38dp"
+                android:contentDescription="@null"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_neoforge" />
             <LinearLayout style="@style/UrinthProfileCardText">
                 <TextView style="@style/UrinthProfileCardTitle" android:text="@string/urinth_loader_neoforge" />
                 <TextView style="@style/UrinthProfileCardDesc" android:text="@string/urinth_loader_neoforge_desc" />
@@ -170,11 +177,12 @@
         <LinearLayout
             android:id="@+id/modded_profile_modpack"
             style="@style/UrinthProfileCard">
-            <FrameLayout style="@style/UrinthProfileBadge">
-                <View android:layout_width="match_parent" android:layout_height="match_parent"
-                    android:background="@drawable/urinth_oval_badge" android:backgroundTint="#2FB8A6" />
-                <TextView style="@style/UrinthProfileBadgeLabel" android:text="Mp" />
-            </FrameLayout>
+            <ImageView
+                android:layout_width="38dp"
+                android:layout_height="38dp"
+                android:contentDescription="@null"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_curseforge" />
             <LinearLayout style="@style/UrinthProfileCardText">
                 <TextView style="@style/UrinthProfileCardTitle" android:text="@string/urinth_loader_modpack" />
                 <TextView style="@style/UrinthProfileCardDesc" android:text="@string/urinth_loader_modpack_desc" />
@@ -186,11 +194,12 @@
         <LinearLayout
             android:id="@+id/modded_profile_bta"
             style="@style/UrinthProfileCard">
-            <FrameLayout style="@style/UrinthProfileBadge">
-                <View android:layout_width="match_parent" android:layout_height="match_parent"
-                    android:background="@drawable/urinth_oval_badge" android:backgroundTint="#8A6D4B" />
-                <TextView style="@style/UrinthProfileBadgeLabel" android:text="BA" />
-            </FrameLayout>
+            <ImageView
+                android:layout_width="38dp"
+                android:layout_height="38dp"
+                android:contentDescription="@null"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_minecraft_grass_block" />
             <LinearLayout style="@style/UrinthProfileCardText">
                 <TextView style="@style/UrinthProfileCardTitle" android:text="@string/urinth_loader_bta" />
                 <TextView style="@style/UrinthProfileCardDesc" android:text="@string/urinth_loader_bta_desc" />
