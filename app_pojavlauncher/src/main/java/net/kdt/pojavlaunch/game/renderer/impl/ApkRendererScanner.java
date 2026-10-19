@@ -63,7 +63,9 @@ public final class ApkRendererScanner {
 
         List<ResolveInfo> activities;
         try {
-            activities = pm.queryIntentActivities(new Intent(Intent.ACTION_MAIN), PackageManager.GET_META_DATA);
+            activities = pm.queryIntentActivities(
+                    new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER),
+                    PackageManager.GET_META_DATA);
         } catch (RuntimeException e) {
             Log.w(TAG, "Could not list launchable apps", e);
             activities = Collections.emptyList();
