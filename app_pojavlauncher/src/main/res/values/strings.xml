@@ -69,6 +69,7 @@
     <string name="mcl_setting_renderer_ltw_legacy">LTW Legacy (OpenGL ES 3) - requires legacy renderer plugin</string>
     <string name="mcl_setting_renderer_mobileglues">MobileGlues (external plugin, GLES 3+)</string>
     <string name="compat_mobileglues_version">MobileGlues requires Minecraft 1.17 or newer in this launcher. Change the renderer in Settings to launch this Minecraft version.</string>
+    <string name="compat_mobileglues_vulkan">MobileGlues needs real Vulkan GPU support, which this device does not have, so the game cannot start with it. Change the renderer in Settings to OpenLTW or GL4ES instead.</string>
     <string name="mcl_setting_renderer_virgl">VirGL (external Mesa plugin required)</string>
     <string name="mcl_setting_renderer_panfrost">Panfrost (Mali, external Mesa plugin required)</string>
     <string name="mcl_setting_renderer_vulkan_zink">Zink (Vulkan) - all versions</string>

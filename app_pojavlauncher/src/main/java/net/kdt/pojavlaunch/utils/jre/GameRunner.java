@@ -268,6 +268,22 @@ public class GameRunner {
             return;
         }
 
+        // MobileGlues was previously selectable on devices without real Vulkan hardware,
+        // since its native library still reports a usable GLES 3 context on its own. Its
+        // internal Gallium/Zink backend then finds no GPU it can use and crashes the whole
+        // game process with a native GLFW/EGL failure ("Could not find any graphics
+        // adapters!") instead of a recoverable error. Catch that here, before native setup,
+        // so this now shows a clear in-app message and falls back instead of hard-crashing.
+        if (Renderers.MOBILEGLUES_RENDERER.equals(renderer.tag())
+                && !GpuUtils.checkVulkanSupport(activity.getPackageManager())) {
+            RenderSpec vulkanlessFallback = GameRenderer.getKnownRenderer(Renderers.LTW_RENDERER);
+            boolean fallbackSupported = vulkanlessFallback != null
+                    && vulkanlessFallback.compatibleDevice(activity);
+            switchRendererIfSupported(fallbackSupported, vulkanlessFallback, gameRenderer, instance,
+                    activity, R.string.compat_mobileglues_vulkan);
+            renderer = gameRenderer.getCurrentRenderer();
+        }
+
         // Switch renderer to GL4ES when running a compat context version on LTW
         if(isCompatContext(versionInfo) && !hasAngelica(gamedir) && renderer instanceof GLESRenderSpec.LTWRenderSpec) {
             switchRendererIfSupported(true, GameRenderer.getKnownRenderer(Renderers.GL4ES_RENDERER), gameRenderer, instance, activity, 0);
