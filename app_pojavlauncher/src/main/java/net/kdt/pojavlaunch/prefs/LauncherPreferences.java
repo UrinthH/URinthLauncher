@@ -94,6 +94,7 @@ public class LauncherPreferences {
         PREF_DISABLE_SWAP_HAND = DEFAULT_PREF.getBoolean("disableDoubleTap", false);
         PREF_RAM_ALLOCATION = DEFAULT_PREF.getInt("allocation", findBestRAMAllocation(ctx));
         PREF_CUSTOM_JAVA_ARGS = DEFAULT_PREF.getString("javaArgs", "");
+        PREF_CUSTOM_JAVA_ARGS = applyPerformanceDefaultsIfUnset(PREF_CUSTOM_JAVA_ARGS);
         PREF_SUSTAINED_PERFORMANCE = DEFAULT_PREF.getBoolean("sustainedPerformance", isDevicePowerful);
         PREF_VIRTUAL_MOUSE_START = DEFAULT_PREF.getBoolean("mouse_start", false);
         PREF_USE_ALTERNATE_SURFACE = DEFAULT_PREF.getBoolean("alternate_surface", isDevicePowerful);
@@ -154,6 +155,44 @@ public class LauncherPreferences {
      * @param ctx Context needed to get the total memory of the device.
      * @return The best default value found.
      */
+    /**
+     * Low-pause G1GC tuning flags (the same family widely used by Paper/Spigot and other
+     * performance-focused Minecraft setups to cut GC-caused lag spikes/stutter). Safe across
+     * the Java 8-21 runtimes this launcher bundles, and independent of RAM allocation,
+     * resolution and options.txt, none of which this touches.
+     */
+    private static final String PERFORMANCE_JAVA_ARGS =
+            "-XX:+UseG1GC -XX:+ParallelRefProcEnabled -XX:MaxGCPauseMillis=130 " +
+            "-XX:+UnlockExperimentalVMOptions -XX:+DisableExplicitGC -XX:+AlwaysPreTouch " +
+            "-XX:G1NewSizePercent=28 -XX:G1MaxNewSizePercent=40 -XX:G1HeapRegionSize=8M " +
+            "-XX:G1ReservePercent=20 -XX:G1HeapWastePercent=5 -XX:G1MixedGCCountTarget=4 " +
+            "-XX:InitiatingHeapOccupancyPercent=15 -XX:G1MixedGCLiveThresholdPercent=90 " +
+            "-XX:G1RSetUpdatingPauseTimePercent=5 -XX:SurvivorRatio=32 " +
+            "-XX:+PerfDisableSharedMem -XX:MaxTenuringThreshold=1";
+
+    /**
+     * Seed the tuned GC flags above into Settings' custom JVM arguments field the first time
+     * the launcher ever runs with that field empty, so lag-spike-prone default launches get a
+     * real improvement without having to touch RAM allocation, resolution or options.txt.
+     * Runs only once ever (tracked by "perfDefaultsApplied"), so a user who deliberately clears
+     * the field afterwards is left alone, and anything the user already typed there is untouched.
+     */
+    private static String applyPerformanceDefaultsIfUnset(String currentArgs) {
+        if (DEFAULT_PREF.getBoolean("perfDefaultsApplied", false)) return currentArgs;
+        if (currentArgs != null && !currentArgs.trim().isEmpty()) {
+            // The user already has custom JVM args; don't fight them. Just mark this done
+            // so we never retroactively inject flags into an args string they wrote themselves.
+            DEFAULT_PREF.edit().putBoolean("perfDefaultsApplied", true).apply();
+            return currentArgs;
+        }
+        DEFAULT_PREF.edit()
+                .putString("javaArgs", PERFORMANCE_JAVA_ARGS)
+                .putBoolean("perfDefaultsApplied", true)
+                .apply();
+        Log.i("LauncherPreferences", "Applied default low-pause GC tuning to JVM arguments");
+        return PERFORMANCE_JAVA_ARGS;
+    }
+
     private static int findBestRAMAllocation(Context ctx){
         int deviceRam = Tools.getTotalDeviceMemory(ctx);
         if (deviceRam < 1024) return 296;
