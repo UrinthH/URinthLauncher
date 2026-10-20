@@ -95,6 +95,7 @@ public class LauncherPreferences {
         PREF_RAM_ALLOCATION = DEFAULT_PREF.getInt("allocation", findBestRAMAllocation(ctx));
         PREF_CUSTOM_JAVA_ARGS = DEFAULT_PREF.getString("javaArgs", "");
         PREF_CUSTOM_JAVA_ARGS = applyPerformanceDefaultsIfUnset(PREF_CUSTOM_JAVA_ARGS);
+        PREF_CUSTOM_JAVA_ARGS = applyCrashResilienceArgsIfUnset(PREF_CUSTOM_JAVA_ARGS);
         PREF_SUSTAINED_PERFORMANCE = DEFAULT_PREF.getBoolean("sustainedPerformance", isDevicePowerful);
         PREF_VIRTUAL_MOUSE_START = DEFAULT_PREF.getBoolean("mouse_start", false);
         PREF_USE_ALTERNATE_SURFACE = DEFAULT_PREF.getBoolean("alternate_surface", isDevicePowerful);
@@ -198,6 +199,56 @@ public class LauncherPreferences {
         return PERFORMANCE_JAVA_ARGS;
     }
 
+    /**
+     * JVM flags aimed specifically at the "FPS is fine, then it just dies later with no error"
+     * failure mode on a heavy modpack and a memory-constrained device. Good frame rate only
+     * means the renderer is keeping up; it says nothing about the heap, which can still climb
+     * for minutes during normal play (new chunks, entities, cached textures/sounds) until
+     * either a real OutOfMemoryError hits, or - just as often on Android - the OS's own
+     * low-memory killer silently kills the whole process with no Java exception and nothing in
+     * latestlog.txt at all, which looks exactly like "crashes for no reason".
+     */
+    private static final String[] CRASH_RESILIENCE_JAVA_ARGS = {
+            // Minecraft/Sodium cache plenty of short-lived data (chunk render data, textures,
+            // sounds) behind SoftReferences, which by default the JVM is allowed to keep around
+            // under memory pressure far longer than is safe on a 2-4GB phone. This tells it to
+            // drop them immediately once the collector is under pressure, trading a little
+            // re-computation for a much lower chance of actually running out of memory.
+            "-XX:SoftRefLRUPolicyMSPerMB=0",
+            // Cuts memory used by duplicate strings (NBT keys, translation keys, mod ids),
+            // which adds up across a 100+ mod pack; only effective with G1 (already enabled
+            // above), and purely a memory-pressure reducer, no behavior change.
+            "-XX:+UseStringDeduplication"
+    };
+
+    /**
+     * Append any of CRASH_RESILIENCE_JAVA_ARGS that aren't already present in the user's JVM
+     * arguments. Unlike applyPerformanceDefaultsIfUnset, this always merges in on top of
+     * whatever is already there (including flags from a prior round, or flags the user added
+     * themselves) rather than only seeding an empty field, since it specifically targets
+     * installs that already exist and are actively hitting this failure mode right now.
+     * Still runs only once ever (tracked by "crashResilienceArgsApplied") so it never keeps
+     * re-adding itself, and never touches a flag the user later removes on purpose.
+     */
+    private static String applyCrashResilienceArgsIfUnset(String currentArgs) {
+        if (DEFAULT_PREF.getBoolean("crashResilienceArgsApplied", false)) return currentArgs;
+        StringBuilder merged = new StringBuilder(currentArgs == null ? "" : currentArgs);
+        boolean changed = false;
+        for (String flag : CRASH_RESILIENCE_JAVA_ARGS) {
+            if (merged.indexOf(flag) < 0) {
+                if (merged.length() > 0 && merged.charAt(merged.length() - 1) != ' ') merged.append(' ');
+                merged.append(flag);
+                changed = true;
+            }
+        }
+        DEFAULT_PREF.edit().putBoolean("crashResilienceArgsApplied", true).apply();
+        if (!changed) return currentArgs;
+        String result = merged.toString().trim();
+        DEFAULT_PREF.edit().putString("javaArgs", result).apply();
+        Log.i("LauncherPreferences", "Applied crash-resilience JVM flags (soft reference / string dedup) to reduce OOM risk under heavy modpacks");
+        return result;
+    }
+
     private static int findBestRAMAllocation(Context ctx){
         int deviceRam = Tools.getTotalDeviceMemory(ctx);
         if (deviceRam < 1024) return 296;
@@ -206,8 +257,13 @@ public class LauncherPreferences {
         // Limit the max for 32 bits devices more harshly
         if (is32BitsDevice()) return 696;
 
-        if (deviceRam < 3064) return 936;
-        if (deviceRam < 4096) return 1144;
+        // A couple hundred MB more headroom than before at these tiers: a heavy, 100+ mod
+        // pack genuinely needs more heap than a vanilla-ish setup, and these phones still
+        // keep roughly half their RAM free for Android itself at these numbers. Kept modest
+        // on purpose - allocating too aggressively just trades a Java OutOfMemoryError for
+        // Android's own low-memory killer silently ending the process instead.
+        if (deviceRam < 3064) return 1024;
+        if (deviceRam < 4096) return 1280;
         if (deviceRam < 6144) return 1536;
         return 2048; //Default RAM allocation for 64 bits
     }
