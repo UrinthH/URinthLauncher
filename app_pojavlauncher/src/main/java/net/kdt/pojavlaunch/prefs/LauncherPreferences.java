@@ -96,7 +96,14 @@ public class LauncherPreferences {
         PREF_CUSTOM_JAVA_ARGS = DEFAULT_PREF.getString("javaArgs", "");
         PREF_CUSTOM_JAVA_ARGS = applyPerformanceDefaultsIfUnset(PREF_CUSTOM_JAVA_ARGS);
         PREF_CUSTOM_JAVA_ARGS = applyCrashResilienceArgsIfUnset(PREF_CUSTOM_JAVA_ARGS);
-        PREF_SUSTAINED_PERFORMANCE = DEFAULT_PREF.getBoolean("sustainedPerformance", isDevicePowerful);
+        // Android's own thermal hint API: tells the OS to favor steady, sustainable clocks
+        // over a short burst-then-throttle curve. Previously only defaulted on for "powerful"
+        // devices, but it's exactly the budget/weaker phones - the ones that throttle hardest
+        // under a long Minecraft session - that benefit most from avoiding that throttle spiral.
+        // No-op (harmless) on a device/OEM that doesn't implement it. Migrated on for existing
+        // installs too, once, the same way the crash-resilience JVM flags were above.
+        applySustainedPerformanceDefaultIfUnset();
+        PREF_SUSTAINED_PERFORMANCE = DEFAULT_PREF.getBoolean("sustainedPerformance", true);
         PREF_VIRTUAL_MOUSE_START = DEFAULT_PREF.getBoolean("mouse_start", false);
         PREF_USE_ALTERNATE_SURFACE = DEFAULT_PREF.getBoolean("alternate_surface", isDevicePowerful);
         PREF_JAVA_SANDBOX = DEFAULT_PREF.getBoolean("java_sandbox", true);
@@ -247,6 +254,20 @@ public class LauncherPreferences {
         DEFAULT_PREF.edit().putString("javaArgs", result).apply();
         Log.i("LauncherPreferences", "Applied crash-resilience JVM flags (soft reference / string dedup) to reduce OOM risk under heavy modpacks");
         return result;
+    }
+
+    /**
+     * One-time migration that turns Sustained Performance Mode on for an install that never
+     * explicitly set it, matching the new default above. Runs once (tracked by
+     * "sustainedPerfMigrated") so it never fights a value the user deliberately changed
+     * afterwards.
+     */
+    private static void applySustainedPerformanceDefaultIfUnset() {
+        if (DEFAULT_PREF.getBoolean("sustainedPerfMigrated", false)) return;
+        DEFAULT_PREF.edit()
+                .putBoolean("sustainedPerformance", true)
+                .putBoolean("sustainedPerfMigrated", true)
+                .apply();
     }
 
     private static int findBestRAMAllocation(Context ctx){
