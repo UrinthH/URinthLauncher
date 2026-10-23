@@ -48,14 +48,13 @@ import git.artdeell.mojo.R;
  * What it does with that level is limited to what an app can do without root, and none of it
  * touches the render resolution, options.txt or the chosen renderer:
  * <ul>
- *   <li>warm and above: ask the display to run at 60 Hz instead of 90/120 Hz, which lowers how
- *       often a vsync-paced game renders, and the power the panel itself draws;</li>
- *   <li>hot and above: turn Android's Sustained Performance Mode on if the user has not already
- *       (the OS then holds CPU and GPU clocks at a level the phone can keep up indefinitely), and
- *       lower the priority of the JVM's JIT compiler threads so they stop competing with the
- *       render thread while the cores are being throttled. Garbage collector threads are left
- *       alone on purpose: starving them on a small heap can end in a long full collection.</li>
+ *   <li>hot and above: lower the priority of the JVM's JIT compiler threads so they stop
+ *       competing with the render thread while the cores are being throttled. Garbage collector
+ *       threads are left alone on purpose: starving them on a small heap can end in a long full
+ *       collection.</li>
  * </ul>
+ * It never changes the display refresh rate, the frame rate, the window or Sustained Performance
+ * Mode, because those make the frame rate drop and can make screen rotation slow.
  * Everything is undone as the phone cools. It cannot lower an unlimited frame rate by itself: a
  * game that renders without waiting for vsync is limited only by its own frame limiter.
  */
@@ -154,9 +153,7 @@ public final class ThermalGuard {
                 Log.w(TAG, "Could not listen for thermal status changes", error);
             }
         }
-        log("Started. Display cap " + (mCanCapRefreshRate ? "available" : "not needed")
-                + ", sustained performance mode "
-                + (mSustainedModeSupported ? "supported" : "not supported on this device"));
+        log("Started. Only JIT compiler thread priority is adjusted, and only when hot.");
         mHandler.postDelayed(mPollTask, FIRST_POLL_MS);
     }
 
@@ -192,8 +189,6 @@ public final class ThermalGuard {
             }
             // Re-apply on every pass, not only when the level changes: the game surface gets
             // re-created when the app is backgrounded, and the JVM starts new helper threads.
-            applyRefreshRateCap(mLevel >= LEVEL_WARM);
-            applySustainedMode(mLevel >= LEVEL_HOT);
             if (mLevel >= LEVEL_HOT) lowerBackgroundThreads();
             else restoreLoweredThreads();
         } catch (Throwable error) {
@@ -262,51 +257,6 @@ public final class ThermalGuard {
     }
 
     // ---------------------------------------------------------------- what it does about it
-
-    /**
-     * Cap the display's refresh rate while warm. On Android 11+ with a SurfaceView this is a hint
-     * on the surface itself, which only changes the refresh rate when the switch is seamless.
-     * Otherwise (older Android, or a TextureView) it is a preferred refresh rate on the window.
-     */
-    private void applyRefreshRateCap(boolean cap) {
-        if (!mCanCapRefreshRate) return;
-        Surface surface = mGameView.getCurrentSurface();
-        boolean surfaceChanged = cap && surface != mCappedSurface;
-        if (cap == mRefreshRateCapped && !surfaceChanged) return;
-
-        float rate = cap ? CAPPED_REFRESH_RATE : 0f;
-        boolean usedSurface = false;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
-                && LauncherPreferences.PREF_USE_ALTERNATE_SURFACE
-                && surface != null && surface.isValid()) {
-            surface.setFrameRate(rate, Surface.FRAME_RATE_COMPATIBILITY_DEFAULT);
-            usedSurface = true;
-        }
-        Window window = mActivity.getWindow();
-        WindowManager.LayoutParams params = window.getAttributes();
-        float windowRate = (cap && !usedSurface) ? rate : 0f;
-        if (params.preferredRefreshRate != windowRate) {
-            params.preferredRefreshRate = windowRate;
-            window.setAttributes(params);
-        }
-        boolean wasCapped = mRefreshRateCapped;
-        mRefreshRateCapped = cap;
-        mCappedSurface = cap ? surface : null;
-        // Only report a real change, not the quiet re-apply after the surface was re-created.
-        if (cap != wasCapped) {
-            log(cap ? "Display refresh rate capped at " + (int) CAPPED_REFRESH_RATE + " Hz"
-                    : "Display refresh rate cap removed");
-        }
-    }
-
-    /** Hold CPU/GPU clocks at a sustainable level while hot, unless the user already runs that way. */
-    private void applySustainedMode(boolean wanted) {
-        if (!mSustainedModeSupported || LauncherPreferences.PREF_SUSTAINED_PERFORMANCE) return;
-        if (wanted == mSustainedModeForced) return;
-        mActivity.getWindow().setSustainedPerformanceMode(wanted);
-        mSustainedModeForced = wanted;
-        log(wanted ? "Sustained performance mode on" : "Sustained performance mode off");
-    }
 
     /**
      * Let the render thread win when the cores are being throttled: the JVM's JIT compiler threads
