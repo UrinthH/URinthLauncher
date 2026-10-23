@@ -32,7 +32,7 @@ public final class URinthRender {
                 String state = thermalStatusName(status);
                 if (status >= PowerManager.THERMAL_STATUS_MODERATE) {
                     Log.w(TAG, "Thermal status=" + state
-                            + "; device throttling may affect frame pacing. No graphics settings changed.");
+                            + "; device throttling may affect frame pacing.");
                 } else {
                     Log.i(TAG, "Thermal status=" + state);
                 }

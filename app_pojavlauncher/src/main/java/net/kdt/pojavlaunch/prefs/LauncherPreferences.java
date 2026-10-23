@@ -62,6 +62,13 @@ public class LauncherPreferences {
     public static boolean PREF_DUMP_SHADERS = false;
     public static float PREF_DEADZONE_SCALE = 1f;
     public static boolean PREF_BIG_CORE_AFFINITY = false;
+    /** Watch device temperature while the game runs and ease CPU/GPU load when it gets hot. */
+    public static boolean PREF_THERMAL_GUARD = true;
+    /**
+     * Set for the lifetime of one game process that LaunchGuard put into safe launch.
+     * Never written to SharedPreferences.
+     */
+    public static boolean PREF_SAFE_LAUNCH = false;
     public static boolean PREF_ZINK_PREFER_SYSTEM_DRIVER = false;
     public static boolean PREF_VERIFY_MANIFEST = true;
     public static String PREF_DOWNLOAD_SOURCE = "default";
@@ -94,16 +101,12 @@ public class LauncherPreferences {
         PREF_DISABLE_SWAP_HAND = DEFAULT_PREF.getBoolean("disableDoubleTap", false);
         PREF_RAM_ALLOCATION = DEFAULT_PREF.getInt("allocation", findBestRAMAllocation(ctx));
         PREF_CUSTOM_JAVA_ARGS = DEFAULT_PREF.getString("javaArgs", "");
-        PREF_CUSTOM_JAVA_ARGS = applyPerformanceDefaultsIfUnset(PREF_CUSTOM_JAVA_ARGS);
-        PREF_CUSTOM_JAVA_ARGS = applyCrashResilienceArgsIfUnset(PREF_CUSTOM_JAVA_ARGS);
-        // Android's own thermal hint API: tells the OS to favor steady, sustainable clocks
-        // over a short burst-then-throttle curve. Previously only defaulted on for "powerful"
-        // devices, but it's exactly the budget/weaker phones - the ones that throttle hardest
-        // under a long Minecraft session - that benefit most from avoiding that throttle spiral.
-        // No-op (harmless) on a device/OEM that doesn't implement it. Migrated on for existing
-        // installs too, once, the same way the crash-resilience JVM flags were above.
-        applySustainedPerformanceDefaultIfUnset();
-        PREF_SUSTAINED_PERFORMANCE = DEFAULT_PREF.getBoolean("sustainedPerformance", true);
+        // Earlier builds pushed tuning defaults onto existing installs; take them back out, once.
+        PREF_CUSTOM_JAVA_ARGS = undoEarlierTuningDefaults(PREF_CUSTOM_JAVA_ARGS);
+        // The stock default: on only for devices with headroom to spare. Weaker phones get the
+        // same effect on demand from the thermal guard, which switches it on only while the
+        // device is actually hot instead of capping the clocks for the whole session.
+        PREF_SUSTAINED_PERFORMANCE = DEFAULT_PREF.getBoolean("sustainedPerformance", isDevicePowerful);
         PREF_VIRTUAL_MOUSE_START = DEFAULT_PREF.getBoolean("mouse_start", false);
         PREF_USE_ALTERNATE_SURFACE = DEFAULT_PREF.getBoolean("alternate_surface", isDevicePowerful);
         PREF_JAVA_SANDBOX = DEFAULT_PREF.getBoolean("java_sandbox", true);
@@ -119,12 +122,11 @@ public class LauncherPreferences {
         PREF_BUTTON_ALL_CAPS = DEFAULT_PREF.getBoolean("buttonAllCaps", true);
         PREF_DUMP_SHADERS = DEFAULT_PREF.getBoolean("dump_shaders", false);
         PREF_DEADZONE_SCALE = ((float) DEFAULT_PREF.getInt("gamepad_deadzone_scale", 100))/100f;
-        // Default ON: pins the game's render/JVM threads to the SoC's big cores instead of
-        // letting the scheduler spread them onto weak efficiency cores, which is a real,
-        // safe perf win on the big.LITTLE-style chips most Android phones (including budget
-        // ones) use. Only applies as the default when the user hasn't chosen a value in
-        // Settings themselves.
-        PREF_BIG_CORE_AFFINITY = DEFAULT_PREF.getBoolean("bigCoreAffinity", true);
+        // Experimental and off unless the user turns it on in Settings. It pins a thread to one
+        // core picked from sysfs max frequencies, which is the wrong choice on chips whose
+        // cores all report the same maximum frequency.
+        PREF_BIG_CORE_AFFINITY = DEFAULT_PREF.getBoolean("bigCoreAffinity", false);
+        PREF_THERMAL_GUARD = DEFAULT_PREF.getBoolean("thermalGuard", true);
         PREF_ZINK_PREFER_SYSTEM_DRIVER = DEFAULT_PREF.getBoolean("zinkPreferSystemDriver", false);
         PREF_DOWNLOAD_SOURCE = DEFAULT_PREF.getString("downloadSource", "default");
         PREF_VERIFY_MANIFEST = DEFAULT_PREF.getBoolean("verifyManifest", true);
@@ -147,6 +149,8 @@ public class LauncherPreferences {
                     PREF_CUSTOM_JAVA_ARGS.replace(arg, "")).apply();
             }
         }
+        // Keep this ahead of the early return below, so a reload never undoes safe launch.
+        if(PREF_SAFE_LAUNCH) applySafeLaunchOverrides(ctx);
         if(DEFAULT_PREF.contains("defaultRuntime")) {
             PREF_DEFAULT_RUNTIME = DEFAULT_PREF.getString("defaultRuntime","");
         }else{
@@ -160,6 +164,70 @@ public class LauncherPreferences {
     }
 
     /**
+     * One-time cleanup (gate: "tuningDefaultsUndoneV1") of what earlier builds forced onto an
+     * install: the JVM flags listed in {@link EarlierTuningArgs}, Sustained Performance Mode
+     * switched on for every device, and CPU big-core pinning switched on by default. Nothing is
+     * added back, and it does nothing on an install those builds never touched. Java arguments
+     * the user typed themselves are kept: a token is only removed when it matches what the
+     * launcher wrote.
+     *
+     * @param currentArgs the Java arguments as stored in Settings
+     * @return the Java arguments to use, with the launcher-written tokens removed
+     */
+    private static String undoEarlierTuningDefaults(String currentArgs) {
+        if (DEFAULT_PREF.getBoolean("tuningDefaultsUndoneV1", false)) return currentArgs;
+        String result = currentArgs == null ? "" : currentArgs;
+
+        boolean javaArgsTouched = DEFAULT_PREF.contains("perfDefaultsApplied")
+                || DEFAULT_PREF.contains("crashResilienceArgsApplied");
+        boolean earlierBuildRanHere = javaArgsTouched || DEFAULT_PREF.contains("sustainedPerfMigrated");
+        SharedPreferences.Editor editor = DEFAULT_PREF.edit();
+
+        if (javaArgsTouched && !result.trim().isEmpty()) {
+            result = EarlierTuningArgs.removeFrom(result);
+            editor.putString("javaArgs", result);
+            Log.i("LauncherPreferences", "Removed launcher-seeded JVM tuning flags from Java arguments");
+        }
+
+        if (earlierBuildRanHere) {
+            // 55ad98d wrote sustainedPerformance=true for every install. Dropping the key restores
+            // the stock default; the thermal guard covers the "device is hot" case on demand.
+            if (DEFAULT_PREF.contains("sustainedPerfMigrated")
+                    && DEFAULT_PREF.getBoolean("sustainedPerformance", false)) {
+                editor.remove("sustainedPerformance");
+            }
+            // 086e91d made big-core pinning default on; it is an experimental, opt-in setting.
+            if (DEFAULT_PREF.getBoolean("bigCoreAffinity", false)) {
+                editor.putBoolean("bigCoreAffinity", false);
+            }
+        }
+
+        editor.putBoolean("tuningDefaultsUndoneV1", true).apply();
+        return result;
+    }
+
+    /**
+     * Put this process into the plain "safe launch" configuration. Used by LaunchGuard after a
+     * launch that died within seconds of starting, so the next attempt does not repeat the same
+     * configuration. Only affects this process; nothing is written to SharedPreferences, so the
+     * next normal launch is unchanged.
+     */
+    public static void enableSafeLaunch(Context ctx) {
+        PREF_SAFE_LAUNCH = true;
+        applySafeLaunchOverrides(ctx);
+    }
+
+    private static void applySafeLaunchOverrides(Context ctx) {
+        PREF_CUSTOM_JAVA_ARGS = "";
+        PREF_BIG_CORE_AFFINITY = false;
+        PREF_SUSTAINED_PERFORMANCE = false;
+        PREF_THERMAL_GUARD = false;
+        // Roughly what the stock RAM tiers hand a 4 GB phone: leaves Android room to breathe.
+        int cap = Math.max(448, (int) (Tools.getTotalDeviceMemory(ctx) * 0.28f));
+        if (PREF_RAM_ALLOCATION > cap) PREF_RAM_ALLOCATION = cap;
+    }
+
+    /**
      * This functions aims at finding the best default RAM amount,
      * according to the RAM amount of the physical device.
      * Put not enough RAM ? Minecraft will lag and crash.
@@ -168,108 +236,6 @@ public class LauncherPreferences {
      * @param ctx Context needed to get the total memory of the device.
      * @return The best default value found.
      */
-    /**
-     * Low-pause G1GC tuning flags (the same family widely used by Paper/Spigot and other
-     * performance-focused Minecraft setups to cut GC-caused lag spikes/stutter). Safe across
-     * the Java 8-21 runtimes this launcher bundles, and independent of RAM allocation,
-     * resolution and options.txt, none of which this touches.
-     */
-    private static final String PERFORMANCE_JAVA_ARGS =
-            "-XX:+UseG1GC -XX:+ParallelRefProcEnabled -XX:MaxGCPauseMillis=130 " +
-            "-XX:+UnlockExperimentalVMOptions -XX:+DisableExplicitGC -XX:+AlwaysPreTouch " +
-            "-XX:G1NewSizePercent=28 -XX:G1MaxNewSizePercent=40 -XX:G1HeapRegionSize=8M " +
-            "-XX:G1ReservePercent=20 -XX:G1HeapWastePercent=5 -XX:G1MixedGCCountTarget=4 " +
-            "-XX:InitiatingHeapOccupancyPercent=15 -XX:G1MixedGCLiveThresholdPercent=90 " +
-            "-XX:G1RSetUpdatingPauseTimePercent=5 -XX:SurvivorRatio=32 " +
-            "-XX:+PerfDisableSharedMem -XX:MaxTenuringThreshold=1";
-
-    /**
-     * Seed the tuned GC flags above into Settings' custom JVM arguments field the first time
-     * the launcher ever runs with that field empty, so lag-spike-prone default launches get a
-     * real improvement without having to touch RAM allocation, resolution or options.txt.
-     * Runs only once ever (tracked by "perfDefaultsApplied"), so a user who deliberately clears
-     * the field afterwards is left alone, and anything the user already typed there is untouched.
-     */
-    private static String applyPerformanceDefaultsIfUnset(String currentArgs) {
-        if (DEFAULT_PREF.getBoolean("perfDefaultsApplied", false)) return currentArgs;
-        if (currentArgs != null && !currentArgs.trim().isEmpty()) {
-            // The user already has custom JVM args; don't fight them. Just mark this done
-            // so we never retroactively inject flags into an args string they wrote themselves.
-            DEFAULT_PREF.edit().putBoolean("perfDefaultsApplied", true).apply();
-            return currentArgs;
-        }
-        DEFAULT_PREF.edit()
-                .putString("javaArgs", PERFORMANCE_JAVA_ARGS)
-                .putBoolean("perfDefaultsApplied", true)
-                .apply();
-        Log.i("LauncherPreferences", "Applied default low-pause GC tuning to JVM arguments");
-        return PERFORMANCE_JAVA_ARGS;
-    }
-
-    /**
-     * JVM flags aimed specifically at the "FPS is fine, then it just dies later with no error"
-     * failure mode on a heavy modpack and a memory-constrained device. Good frame rate only
-     * means the renderer is keeping up; it says nothing about the heap, which can still climb
-     * for minutes during normal play (new chunks, entities, cached textures/sounds) until
-     * either a real OutOfMemoryError hits, or - just as often on Android - the OS's own
-     * low-memory killer silently kills the whole process with no Java exception and nothing in
-     * latestlog.txt at all, which looks exactly like "crashes for no reason".
-     */
-    private static final String[] CRASH_RESILIENCE_JAVA_ARGS = {
-            // Minecraft/Sodium cache plenty of short-lived data (chunk render data, textures,
-            // sounds) behind SoftReferences, which by default the JVM is allowed to keep around
-            // under memory pressure far longer than is safe on a 2-4GB phone. This tells it to
-            // drop them immediately once the collector is under pressure, trading a little
-            // re-computation for a much lower chance of actually running out of memory.
-            "-XX:SoftRefLRUPolicyMSPerMB=0",
-            // Cuts memory used by duplicate strings (NBT keys, translation keys, mod ids),
-            // which adds up across a 100+ mod pack; only effective with G1 (already enabled
-            // above), and purely a memory-pressure reducer, no behavior change.
-            "-XX:+UseStringDeduplication"
-    };
-
-    /**
-     * Append any of CRASH_RESILIENCE_JAVA_ARGS that aren't already present in the user's JVM
-     * arguments. Unlike applyPerformanceDefaultsIfUnset, this always merges in on top of
-     * whatever is already there (including flags from a prior round, or flags the user added
-     * themselves) rather than only seeding an empty field, since it specifically targets
-     * installs that already exist and are actively hitting this failure mode right now.
-     * Still runs only once ever (tracked by "crashResilienceArgsApplied") so it never keeps
-     * re-adding itself, and never touches a flag the user later removes on purpose.
-     */
-    private static String applyCrashResilienceArgsIfUnset(String currentArgs) {
-        if (DEFAULT_PREF.getBoolean("crashResilienceArgsApplied", false)) return currentArgs;
-        StringBuilder merged = new StringBuilder(currentArgs == null ? "" : currentArgs);
-        boolean changed = false;
-        for (String flag : CRASH_RESILIENCE_JAVA_ARGS) {
-            if (merged.indexOf(flag) < 0) {
-                if (merged.length() > 0 && merged.charAt(merged.length() - 1) != ' ') merged.append(' ');
-                merged.append(flag);
-                changed = true;
-            }
-        }
-        DEFAULT_PREF.edit().putBoolean("crashResilienceArgsApplied", true).apply();
-        if (!changed) return currentArgs;
-        String result = merged.toString().trim();
-        DEFAULT_PREF.edit().putString("javaArgs", result).apply();
-        Log.i("LauncherPreferences", "Applied crash-resilience JVM flags (soft reference / string dedup) to reduce OOM risk under heavy modpacks");
-        return result;
-    }
-
-    /**
-     * One-time migration that turns Sustained Performance Mode on for an install that never
-     * explicitly set it, matching the new default above. Runs once (tracked by
-     * "sustainedPerfMigrated") so it never fights a value the user deliberately changed
-     * afterwards.
-     */
-    private static void applySustainedPerformanceDefaultIfUnset() {
-        if (DEFAULT_PREF.getBoolean("sustainedPerfMigrated", false)) return;
-        DEFAULT_PREF.edit()
-                .putBoolean("sustainedPerformance", true)
-                .putBoolean("sustainedPerfMigrated", true)
-                .apply();
-    }
-
     private static int findBestRAMAllocation(Context ctx){
         int deviceRam = Tools.getTotalDeviceMemory(ctx);
         if (deviceRam < 1024) return 296;
@@ -278,13 +244,10 @@ public class LauncherPreferences {
         // Limit the max for 32 bits devices more harshly
         if (is32BitsDevice()) return 696;
 
-        // A couple hundred MB more headroom than before at these tiers: a heavy, 100+ mod
-        // pack genuinely needs more heap than a vanilla-ish setup, and these phones still
-        // keep roughly half their RAM free for Android itself at these numbers. Kept modest
-        // on purpose - allocating too aggressively just trades a Java OutOfMemoryError for
-        // Android's own low-memory killer silently ending the process instead.
-        if (deviceRam < 3064) return 1024;
-        if (deviceRam < 4096) return 1280;
+        // Back to the stock values. Raising them (5c427e7) only trades a Java OutOfMemoryError,
+        // which leaves a log, for Android's low-memory killer ending the whole process with none.
+        if (deviceRam < 3064) return 936;
+        if (deviceRam < 4096) return 1144;
         if (deviceRam < 6144) return 1536;
         return 2048; //Default RAM allocation for 64 bits
     }

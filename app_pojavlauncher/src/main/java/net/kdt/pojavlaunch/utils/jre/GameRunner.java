@@ -29,6 +29,7 @@ import net.kdt.pojavlaunch.utils.GpuUtils;
 import net.kdt.pojavlaunch.utils.GameOptionsUtils;
 import net.kdt.pojavlaunch.utils.JREUtils;
 import net.kdt.pojavlaunch.utils.JSONUtils;
+import net.kdt.pojavlaunch.utils.LaunchGuard;
 import net.kdt.pojavlaunch.utils.MCOptionUtils;
 import net.kdt.pojavlaunch.utils.OldVersionsUtils;
 
@@ -251,6 +252,20 @@ public class GameRunner {
 
         RenderSpec renderer = gameRenderer.getCurrentRenderer();
 
+        // The previous launch died while starting (see LaunchGuard). A renderer that comes from a
+        // third-party app or plugin is native code this launcher cannot vouch for, so for this
+        // launch only, use the built-in one instead, and say so. The renderer chosen in Settings
+        // is left as it was.
+        if (LauncherPreferences.PREF_SAFE_LAUNCH
+                && (renderer instanceof ApkRenderSpec
+                    || Renderers.MOBILEGLUES_RENDERER.equals(renderer.tag()))) {
+            RenderSpec builtIn = GameRenderer.getKnownRenderer(Renderers.LTW_RENDERER);
+            if (builtIn != null && builtIn.compatibleDevice(activity)) {
+                switchRendererIfSupported(true, builtIn, gameRenderer, instance, activity, 0);
+                renderer = gameRenderer.getCurrentRenderer();
+            }
+        }
+
         // A renderer plugin declares the Minecraft versions it supports. Outside that range, use
         // GL4ES for this launch and say so, rather than starting a renderer that will not work.
         if (renderer instanceof ApkRenderSpec
@@ -266,22 +281,6 @@ public class GameRunner {
                 && !isMobileGluesSupportedVersion(versionInfo)) {
             showDialog(activity, R.string.compat_mobileglues_version);
             return;
-        }
-
-        // MobileGlues was previously selectable on devices without real Vulkan hardware,
-        // since its native library still reports a usable GLES 3 context on its own. Its
-        // internal Gallium/Zink backend then finds no GPU it can use and crashes the whole
-        // game process with a native GLFW/EGL failure ("Could not find any graphics
-        // adapters!") instead of a recoverable error. Catch that here, before native setup,
-        // so this now shows a clear in-app message and falls back instead of hard-crashing.
-        if (Renderers.MOBILEGLUES_RENDERER.equals(renderer.tag())
-                && !GpuUtils.checkVulkanSupport(activity.getPackageManager())) {
-            RenderSpec vulkanlessFallback = GameRenderer.getKnownRenderer(Renderers.LTW_RENDERER);
-            boolean fallbackSupported = vulkanlessFallback != null
-                    && vulkanlessFallback.compatibleDevice(activity);
-            switchRendererIfSupported(fallbackSupported, vulkanlessFallback, gameRenderer, instance,
-                    activity, R.string.compat_mobileglues_vulkan);
-            renderer = gameRenderer.getCurrentRenderer();
         }
 
         // Switch renderer to GL4ES when running a compat context version on LTW
@@ -424,9 +423,23 @@ public class GameRunner {
 
         String mainClass = versionInfo.mainClass;
 
+        // Written before the JVM starts: if this launch is killed without leaving a log, the
+        // "game closed unexpectedly" report can still say what it was running.
+        LaunchGuard.saveDetails(activity, "Game version: " + versionId + "\n"
+                + "Renderer: " + usedRenderer.tag() + " (" + usedRenderer.name() + ")\n"
+                + "Java runtime: " + runtime.name + "\n"
+                + "RAM allocated: " + LauncherPreferences.PREF_RAM_ALLOCATION + " MB\n"
+                + "Java arguments: \"" + instance.getLaunchArgs() + "\"\n"
+                + "Safe launch: " + (LauncherPreferences.PREF_SAFE_LAUNCH ? "yes" : "no") + "\n"
+                + "Big-core pinning: " + LauncherPreferences.PREF_BIG_CORE_AFFINITY
+                + ", sustained performance: " + LauncherPreferences.PREF_SUSTAINED_PERFORMANCE
+                + ", thermal guard: " + LauncherPreferences.PREF_THERMAL_GUARD + "\n");
+
         try {
             JavaRunner.nativeSetupExit(activity);
             JavaRunner.startJvm(runtime, javaArgList, launchClassPath, mainClass, launchArgs);
+            // The JVM started and ran to its own end, so this launch did not die on the way up.
+            LaunchGuard.markCleanExit();
         }catch (VMLoadException e) {
             LifecycleAwareAlertDialog.DialogCreator dialogCreator = (dialog, builder) ->
                 builder.setMessage(e.toString(activity)).setPositiveButton(android.R.string.ok, (d, w)->{});

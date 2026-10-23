@@ -68,19 +68,11 @@ public final class MobileGluesRenderSpec implements RenderSpec {
             return false;
         }
 
-        // MobileGlues translates OpenGL onto Vulkan (it bundles its own Zink/Mesa-style
-        // Gallium loader). Without real Vulkan hardware support it still reports GLES 3
-        // through the native GLES stack, but its own internal Vulkan/Gallium device probe
-        // then finds no usable GPU bus and GLFW fails to create a window ("EGL: Failed to
-        // find support for OpenGL" / "Could not find any graphics adapters!"), crashing the
-        // game outright instead of just not being offered. Gate on Vulkan the same way the
-        // launcher's own Zink backend already does.
-        boolean supportsVulkan = GpuUtils.checkVulkanSupport(context.getPackageManager());
-        if (!supportsVulkan) {
-            Log.w(TAG, "MobileGlues not selected: this device has no Vulkan hardware support, "
-                    + "which MobileGlues' internal Gallium/Zink backend requires");
-        }
-        return supportsVulkan;
+        // MobileGlues runs on top of the device's own GLES 3 driver (the launcher lists it as
+        // "GLES 3+"), so GLES 3 is the whole requirement. An earlier build also demanded Vulkan
+        // here (46e9cbc); that rested on a misreading of the log and hid MobileGlues on phones
+        // that run it fine, so it is gone again.
+        return true;
     }
 
     @Override

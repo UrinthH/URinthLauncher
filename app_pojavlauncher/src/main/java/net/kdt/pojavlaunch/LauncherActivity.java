@@ -4,6 +4,8 @@ import static android.content.res.Configuration.ORIENTATION_PORTRAIT;
 
 import android.Manifest;
 import android.app.NotificationManager;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -52,6 +54,7 @@ import net.kdt.pojavlaunch.services.ProgressServiceKeeper;
 import net.kdt.pojavlaunch.tasks.AsyncVersionList;
 import net.kdt.pojavlaunch.tasks.MoJsonExtras;
 import net.kdt.pojavlaunch.tasks.MoJsonDownloader;
+import net.kdt.pojavlaunch.utils.GameExitReporter;
 import net.kdt.pojavlaunch.utils.NotificationUtils;
 
 import git.artdeell.mojo.R;
@@ -63,6 +66,7 @@ public class LauncherActivity extends BaseActivity {
     private ProgressLayout mProgressLayout;
     private ProgressServiceKeeper mProgressServiceKeeper;
     private NotificationManager mNotificationManager;
+    private AlertDialog mGameExitDialog;
     private static ActivityResultLauncher<String> mRequestPermissionLauncher;
 
     private final ExtraListener<Boolean> mSelectAuthMethod = (key, value) -> {
@@ -222,6 +226,38 @@ public class LauncherActivity extends BaseActivity {
         super.onResume();
         ContextExecutor.setActivity(this);
         InstanceInstaller.postInstallCheck(this);
+        checkLastGameExit();
+    }
+
+    /**
+     * When the game process is killed by Android (usually for memory) or crashes natively, it
+     * leaves no error message and no log. Work out why from what Android and the launch guard
+     * recorded, and say so. The lookup touches files and a system service, so it runs off the
+     * main thread; a session that ended normally, or was already reported, produces nothing.
+     */
+    private void checkLastGameExit() {
+        final Context appContext = getApplicationContext();
+        PojavApplication.sExecutorService.submit(() -> {
+            final String[] report = GameExitReporter.buildReport(appContext);
+            if(report == null) return;
+            Tools.runOnUiThread(() -> showGameExitReport(report[0], report[1]));
+        });
+    }
+
+    private void showGameExitReport(String message, String fullReport) {
+        if(isFinishing() || isDestroyed()) return;
+        if(mGameExitDialog != null && mGameExitDialog.isShowing()) return;
+        mGameExitDialog = new AlertDialog.Builder(this)
+                .setTitle(R.string.game_exit_dialog_title)
+                .setMessage(message)
+                .setPositiveButton(android.R.string.ok, null)
+                .setNeutralButton(R.string.game_exit_copy_report, (d, w) -> {
+                    ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                    if(clipboard == null) return;
+                    clipboard.setPrimaryClip(ClipData.newPlainText(getString(R.string.game_exit_dialog_title), fullReport));
+                    Toast.makeText(this, R.string.game_exit_report_copied, Toast.LENGTH_SHORT).show();
+                })
+                .show();
     }
 
     @Override

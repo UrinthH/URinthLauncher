@@ -21,6 +21,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
 
+import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 
 import net.kdt.pojavlaunch.CallbackBridge;
@@ -58,6 +59,8 @@ public class GameView extends FrameLayout implements PlatformGrabListener, Surfa
     final Object mSurfaceReadyListenerLock = new Object();
     /* View holding the surface, either a SurfaceView or a TextureView */
     View mSurface;
+    /** Written from the surface callbacks, read by the thermal guard. */
+    private volatile Surface mCurrentSurface;
     GameCursorView mCursorView;
 
     private final InGameEventProcessor mIngameProcessor = new InGameEventProcessor(this, mSensitivityFactor);
@@ -334,6 +337,7 @@ public class GameView extends FrameLayout implements PlatformGrabListener, Surfa
 
     @Override
     public void onSurfaceAvailable(Surface surface) {
+        mCurrentSurface = surface;
         Platform.updateSurface(surface);
         if(mRefreshOnly) return;
         realStart();
@@ -348,8 +352,15 @@ public class GameView extends FrameLayout implements PlatformGrabListener, Surfa
 
     @Override
     public void onSurfaceDestroyed() {
+        mCurrentSurface = null;
         if(PLATFORM != null)
             PLATFORM.surfaceDestroyed();
+    }
+
+    /** The surface the game is drawing to right now, or null while there is none. */
+    @Nullable
+    public Surface getCurrentSurface() {
+        return mCurrentSurface;
     }
 
     /** A small interface called when the listener is ready for the first time */

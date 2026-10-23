@@ -5,6 +5,7 @@ import static net.kdt.pojavlaunch.Tools.dialogForceClose;
 import static net.kdt.pojavlaunch.game.platform.Platform.PLATFORM;
 import static net.kdt.pojavlaunch.prefs.LauncherPreferences.PREF_ENABLE_GYRO;
 import static net.kdt.pojavlaunch.prefs.LauncherPreferences.PREF_SUSTAINED_PERFORMANCE;
+import static net.kdt.pojavlaunch.prefs.LauncherPreferences.PREF_THERMAL_GUARD;
 import static net.kdt.pojavlaunch.prefs.LauncherPreferences.PREF_USE_ALTERNATE_SURFACE;
 import static net.kdt.pojavlaunch.prefs.LauncherPreferences.PREF_VIRTUAL_MOUSE_START;
 import static net.kdt.pojavlaunch.prefs.LauncherPreferences.PREF_ZINK_PREFER_SYSTEM_DRIVER;
@@ -74,6 +75,7 @@ import net.kdt.pojavlaunch.prefs.QuickSettingSideDialog;
 import net.kdt.pojavlaunch.services.GameService;
 import net.kdt.pojavlaunch.tasks.AsyncAssetManager;
 import net.kdt.pojavlaunch.utils.JREUtils;
+import net.kdt.pojavlaunch.utils.LaunchGuard;
 import net.kdt.pojavlaunch.utils.MCOptionUtils;
 import net.kdt.pojavlaunch.authenticator.accounts.Account;
 import net.kdt.pojavlaunch.utils.jre.GameRunner;
@@ -126,6 +128,11 @@ public class GameActivity extends BaseActivity implements ControlButtonMenuListe
             finish();
             return;
         }
+        // If the previous launch died while it was still starting, run this one in a plain
+        // configuration (no custom Java args, no CPU pinning, capped RAM) instead of repeating
+        // the same crash. Must come before anything below reads those preferences.
+        final boolean safeLaunch = LaunchGuard.begin(this);
+        if(safeLaunch) LauncherPreferences.enableSafeLaunch(getApplicationContext());
         ApkRendererScanner.scan(this);
         mGameRenderer = new GameRenderer(instance.getLaunchRenderer());
         URinthRender.startThermalMonitoring(getApplicationContext());
@@ -141,6 +148,12 @@ public class GameActivity extends BaseActivity implements ControlButtonMenuListe
         // Start the service a bit early
         ContextCompat.startForegroundService(this, gameServiceIntent);
         initLayout(R.layout.activity_basemain);
+        if(safeLaunch) {
+            Logger.appendToLog("[LaunchGuard] The previous launch ended during start-up. Safe launch: "
+                    + "custom Java arguments, CPU pinning, sustained performance and the thermal guard are off, RAM is capped at "
+                    + LauncherPreferences.PREF_RAM_ALLOCATION + " MB");
+            Toast.makeText(this, R.string.launch_safe_mode_notice, Toast.LENGTH_LONG).show();
+        }
 
         Platform.initialize(this, launcherGLView);
 
@@ -153,6 +166,9 @@ public class GameActivity extends BaseActivity implements ControlButtonMenuListe
         // Set the sustained performance mode for available APIs
         if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.N)
             getWindow().setSustainedPerformanceMode(PREF_SUSTAINED_PERFORMANCE);
+
+        // Repeating temperature check while the game is open; eases CPU/GPU load when hot.
+        if(PREF_THERMAL_GUARD) ThermalGuard.start(this, launcherGLView);
 
         // This is required on Android 10 for the insets listener
         // https://issuetracker.google.com/issues/266331465
@@ -366,7 +382,10 @@ public class GameActivity extends BaseActivity implements ControlButtonMenuListe
 
     @Override
     protected void onDestroy() {
+        ThermalGuard.stop();
         URinthRender.stopThermalMonitoring();
+        // The player left on purpose: this launch did not crash.
+        if(isFinishing()) LaunchGuard.markCleanExit();
         super.onDestroy();
         ContextExecutor.clearActivity();
     }

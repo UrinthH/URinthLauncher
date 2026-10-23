@@ -13,6 +13,8 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
+import net.kdt.pojavlaunch.utils.LaunchGuard;
+
 import git.artdeell.mojo.R;
 
 @Keep
@@ -41,6 +43,9 @@ public class ExitActivity extends AppCompatActivity {
 
     @SuppressWarnings("unused") //used by native jre_launcher_new
     public static void showExitMessage(Context ctx, int code, boolean isSignal) {
+        // The game ended by itself and is about to say so: that is not a launch that silently died.
+        // A signal (native crash) is left unmarked, so the next launch can tell it died early.
+        if(!isSignal) LaunchGuard.markCleanExit();
         if((!isSignal && code == 0)) {
             if(ctx != null) Tools.restartLauncherActivity(ctx);
             System.exit(0);

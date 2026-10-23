@@ -64,6 +64,7 @@ import net.kdt.pojavlaunch.multirt.MultiRTUtils;
 import net.kdt.pojavlaunch.prefs.LauncherPreferences;
 import net.kdt.pojavlaunch.utils.FileUtils;
 import net.kdt.pojavlaunch.utils.GpuUtils;
+import net.kdt.pojavlaunch.utils.LaunchGuard;
 import net.kdt.pojavlaunch.value.DependentLibrary;
 import net.kdt.pojavlaunch.value.LibraryArtifact;
 
@@ -895,6 +896,8 @@ public final class Tools {
                 .setNegativeButton(android.R.string.cancel, null)
                 .setPositiveButton(android.R.string.ok, (p1, p2) -> {
                     try {
+                        // The player chose to close the game: not a launch that died on its own.
+                        LaunchGuard.markCleanExit();
                         Tools.restartLauncherActivity(ctx);
                         Tools.fullyExit();
                     } catch (Throwable th) {

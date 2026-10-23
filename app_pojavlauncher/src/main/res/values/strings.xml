@@ -69,7 +69,6 @@
     <string name="mcl_setting_renderer_ltw_legacy">LTW Legacy (OpenGL ES 3) - requires legacy renderer plugin</string>
     <string name="mcl_setting_renderer_mobileglues">MobileGlues (external plugin, GLES 3+)</string>
     <string name="compat_mobileglues_version">MobileGlues requires Minecraft 1.17 or newer in this launcher. Change the renderer in Settings to launch this Minecraft version.</string>
-    <string name="compat_mobileglues_vulkan">MobileGlues needs real Vulkan GPU support, which this device does not have, so the game cannot start with it. Change the renderer in Settings to OpenLTW or GL4ES instead.</string>
     <string name="mcl_setting_renderer_virgl">VirGL (external Mesa plugin required)</string>
     <string name="mcl_setting_renderer_panfrost">Panfrost (Mali, external Mesa plugin required)</string>
     <string name="mcl_setting_renderer_vulkan_zink">Zink (Vulkan) - all versions</string>
@@ -645,4 +644,20 @@
     <string name="urinth_updated">Updated launcher to %1$s</string>
     <string name="urinth_menu_new">New installation</string>
     <string name="urinth_menu_settings">Settings</string>
+
+    <!-- Why the last game session ended, and the safety nets around launching -->
+    <string name="game_exit_dialog_title">The game closed unexpectedly</string>
+    <string name="game_exit_hint_memory">Android closed the game because the phone ran out of memory. A kill like this leaves no error message and no log. Lower the RAM allocation in Settings, close other apps before playing, or use fewer mods.</string>
+    <string name="game_exit_hint_native">The game crashed inside a native library, usually the renderer or the graphics driver. This leaves no Java error. Try a different renderer in Settings.</string>
+    <string name="game_exit_hint_generic">The last game session ended before it finished starting, without showing an error.</string>
+    <string name="game_exit_hint_other">The last game session ended unexpectedly. The lines below are how Android recorded it.</string>
+    <string name="game_exit_ran_for">It stopped about %1$d seconds after it started.</string>
+    <string name="game_exit_android_says">Android reports: %1$s</string>
+    <string name="game_exit_saved_to">Details saved to %1$s</string>
+    <string name="game_exit_copy_report">Copy details</string>
+    <string name="game_exit_report_copied">Details copied</string>
+    <string name="launch_safe_mode_notice">The last launch stopped while starting up, so this one uses plain settings: no custom Java arguments and less RAM.</string>
+    <string name="thermal_guard_hot_toast">The phone is getting hot. Easing the game load to keep it running smoothly.</string>
+    <string name="preference_thermal_guard_title">Thermal guard</string>
+    <string name="preference_thermal_guard_description">Watch the temperature while you play and ease CPU and GPU load when the phone gets hot.</string>
 </resources>
