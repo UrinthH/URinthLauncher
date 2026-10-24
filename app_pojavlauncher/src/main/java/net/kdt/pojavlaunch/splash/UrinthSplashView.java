@@ -36,7 +36,10 @@ import git.artdeell.mojo.R;
  * </pre>
  */
 public final class UrinthSplashView extends View {
-    public static final long DURATION_MS = 3000;
+    public static final long DURATION_MS = 5000;
+
+    /** The animation below is written for this many milliseconds and is stretched to DURATION_MS. */
+    private static final float DESIGN_MS = 3000f;
 
     private static final String NAME_WHITE = "Urinth";
     private static final String NAME_RED = "Ultra";
@@ -112,7 +115,7 @@ public final class UrinthSplashView extends View {
 
     /** Move the intro to this point of its timeline (milliseconds) and redraw. */
     public void setTime(float milliseconds) {
-        time = milliseconds;
+        time = milliseconds * (DESIGN_MS / DURATION_MS);
         invalidate();
     }
 
@@ -120,8 +123,8 @@ public final class UrinthSplashView extends View {
     protected void onSizeChanged(int w, int h, int oldw, int oldh) {
         super.onSizeChanged(w, h, oldw, oldh);
         centerX = w / 2f;
-        centerY = h * 0.36f;
-        logoSize = Math.min(h * 0.34f, w * 0.26f);
+        centerY = h * 0.37f;
+        logoSize = Math.min(h * 0.22f, w * 0.16f);
 
         bgPaint.setShader(new LinearGradient(0, 0, 0, h, COLOR_BG_TOP, COLOR_BG_BOTTOM, Shader.TileMode.CLAMP));
         vignettePaint.setShader(new RadialGradient(centerX, h * 0.45f, Math.max(w, h) * 0.75f,
@@ -131,14 +134,14 @@ public final class UrinthSplashView extends View {
                 new float[]{0f, 0.45f, 1f}, Shader.TileMode.CLAMP));
 
         // Name layout: measured once so letters can be placed and animated one by one.
-        textPaint.setTextSize(Math.min(h * 0.105f, w * 0.085f));
+        textPaint.setTextSize(Math.min(h * 0.068f, w * 0.052f));
         float total = 0;
         for (int i = 0; i < name.length(); i++) {
             charWidths[i] = textPaint.measureText(name, i, i + 1);
             total += charWidths[i];
         }
         nameLeft = centerX - total / 2f;
-        nameBaseline = centerY + logoSize * 0.86f + textPaint.getTextSize() * 0.95f;
+        nameBaseline = centerY + logoSize * 0.86f + textPaint.getTextSize() * 1.05f;
     }
 
     // ---- easing -----------------------------------------------------------------------------
@@ -238,8 +241,8 @@ public final class UrinthSplashView extends View {
     private void drawBrackets(Canvas canvas, int w, int h) {
         float p = easeOutCubic(window(100, 700));
         if (p <= 0f) return;
-        float inset = density * 22f;
-        float len = density * 26f * p;
+        float inset = density * 16f;
+        float len = density * 18f * p;
         ringPaint.setShader(null);
         ringPaint.setStrokeWidth(density * 1.6f);
         ringPaint.setColor(withAlpha(COLOR_TEAL, 0.75f));
@@ -270,20 +273,20 @@ public final class UrinthSplashView extends View {
 
         // Ring 1: three arcs turning clockwise.
         float r1 = logoSize * 0.64f;
-        ringPaint.setStrokeWidth(density * 2.2f);
+        ringPaint.setStrokeWidth(density * 1.6f);
         ringPaint.setColor(withAlpha(COLOR_TEAL, 0.95f * fade));
         rect.set(centerX - r1, centerY - r1, centerX + r1, centerY + r1);
-        float a1 = time * 0.16f;
+        float a1 = time * 0.24f;
         for (int i = 0; i < 3; i++) {
             canvas.drawArc(rect, a1 + i * 120f, 70f * sweep, false, ringPaint);
         }
 
         // Ring 2: broken ring turning the other way, in red.
         float r2 = logoSize * 0.73f;
-        ringPaint.setStrokeWidth(density * 1.6f);
+        ringPaint.setStrokeWidth(density * 1.3f);
         ringPaint.setColor(withAlpha(COLOR_RED, 0.85f * fade));
         rect.set(centerX - r2, centerY - r2, centerX + r2, centerY + r2);
-        float a2 = -time * 0.22f;
+        float a2 = -time * 0.33f;
         for (int i = 0; i < 4; i++) {
             canvas.drawArc(rect, a2 + i * 90f, 34f * sweep, false, ringPaint);
         }
@@ -291,7 +294,7 @@ public final class UrinthSplashView extends View {
         // Ring 3: fine tick marks with a bright comet running around them.
         float rIn = logoSize * 0.80f;
         float rOut = logoSize * 0.86f;
-        float comet = (time * 0.30f) % 360f;
+        float comet = (time * 0.45f) % 360f;
         tickPaint.setStrokeWidth(density * 1.3f);
         int ticks = 72;
         int shown = Math.round(ticks * sweep);
@@ -362,7 +365,7 @@ public final class UrinthSplashView extends View {
         // Tagline.
         float tag = smooth(window(1550, 450));
         if (tag > 0f) {
-            smallPaint.setTextSize(textPaint.getTextSize() * 0.27f);
+            smallPaint.setTextSize(Math.max(textPaint.getTextSize() * 0.3f, density * 8f));
             smallPaint.setColor(withAlpha(COLOR_TEXT_DIM, tag * exit));
             smallPaint.setTextAlign(Paint.Align.CENTER);
             canvas.drawText("MINECRAFT  LAUNCHER", centerX, nameBaseline + textPaint.getTextSize() * 0.78f, smallPaint);
@@ -416,10 +419,10 @@ public final class UrinthSplashView extends View {
         float p = window(1150, 1600);
         float progress = smooth(p);
 
-        float barWidth = Math.min(w * 0.46f, density * 440f);
-        float barHeight = density * 7f;
+        float barWidth = Math.min(w * 0.30f, density * 280f);
+        float barHeight = density * 4.5f;
         float left = centerX - barWidth / 2f;
-        float top = h * 0.90f;
+        float top = h * 0.86f;
         float gap = density * 2f;
         float segWidth = (barWidth - gap * (BAR_SEGMENTS - 1)) / BAR_SEGMENTS;
         float filled = progress * BAR_SEGMENTS;
@@ -446,7 +449,7 @@ public final class UrinthSplashView extends View {
         }
 
         // Status line (left) and percentage (right), both in a console font.
-        float textSize = density * 10.5f;
+        float textSize = density * 8.5f;
         smallPaint.setTextSize(textSize);
         smallPaint.setTextAlign(Paint.Align.LEFT);
         smallPaint.setColor(withAlpha(COLOR_TEXT_DIM, appear * exit));
