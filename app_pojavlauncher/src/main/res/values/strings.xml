@@ -670,5 +670,5 @@
     <string name="launch_safe_mode_notice">The last launch stopped while starting up, so this one uses plain settings: no custom Java arguments and less RAM.</string>
     <string name="thermal_guard_hot_toast">Performance Mode: the phone is hot, so background load is being eased to keep frame rates steady.</string>
     <string name="preference_performance_mode_title">Performance Mode</string>
-    <string name="preference_performance_mode_description">Lowers the heaviest game settings (render distance, particles, shadows, clouds and more) and keeps watch on the phone's temperature, easing background load when it gets hot. Turn it off to put your settings back. Resolution is never changed.</string>
+    <string name="preference_performance_mode_description">Lowers the heaviest game settings (render distance, particles, shadows, clouds and more) and keeps watch on the phone\'s temperature, easing background load when it gets hot. Turn it off to put your settings back. Resolution is never changed.</string>
 </resources>
