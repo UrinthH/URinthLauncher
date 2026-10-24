@@ -95,7 +95,8 @@ public class JavaRunner {
         String resolvFile;
         resolvFile = new File(Tools.DIR_DATA,"resolv.conf").getAbsolutePath();
 
-        userArguments.add(0, "-Xms"+LauncherPreferences.PREF_RAM_ALLOCATION+"M");
+        // Start small (256 MB) and let the heap grow up to -Xmx, instead of committing it all at start.
+        userArguments.add(0, "-Xms"+Math.min(256, LauncherPreferences.PREF_RAM_ALLOCATION)+"M");
         userArguments.add(0, "-Xmx"+LauncherPreferences.PREF_RAM_ALLOCATION+"M");
 
         ArrayList<String> overridableArguments = new ArrayList<>(Arrays.asList(

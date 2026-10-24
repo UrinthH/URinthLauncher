@@ -103,6 +103,7 @@ public class LauncherPreferences {
         PREF_CUSTOM_JAVA_ARGS = DEFAULT_PREF.getString("javaArgs", "");
         // Earlier builds pushed tuning defaults onto existing installs; take them back out, once.
         PREF_CUSTOM_JAVA_ARGS = undoEarlierTuningDefaults(PREF_CUSTOM_JAVA_ARGS);
+        PREF_CUSTOM_JAVA_ARGS = seedDefaultJavaArgsOnce(PREF_CUSTOM_JAVA_ARGS);
         // The stock default: on only for devices with headroom to spare. Weaker phones get the
         // same effect on demand from the thermal guard, which switches it on only while the
         // device is actually hot instead of capping the clocks for the whole session.
@@ -207,6 +208,30 @@ public class LauncherPreferences {
     }
 
     /**
+     * The default Java arguments: a modest G1 setup for phones. -Xms and -Xmx are not part of it
+     * because the launcher sets them itself (Xmx from the RAM setting, default 1024 MB; Xms 256 MB).
+     */
+    public static final String DEFAULT_JAVA_ARGS =
+            "-XX:+UseG1GC -XX:MaxGCPauseMillis=100 -XX:+ParallelRefProcEnabled "
+            + "-XX:+DisableExplicitGC -XX:G1ReservePercent=15 "
+            + "-XX:InitiatingHeapOccupancyPercent=25 -XX:+UseStringDeduplication";
+
+    /**
+     * Put {@link #DEFAULT_JAVA_ARGS} into Settings once (gate: "defaultJavaArgsV1"), only when the
+     * Java arguments field is empty. Arguments the user typed are never replaced.
+     */
+    private static String seedDefaultJavaArgsOnce(String currentArgs) {
+        if (DEFAULT_PREF.getBoolean("defaultJavaArgsV1", false)) return currentArgs;
+        SharedPreferences.Editor editor = DEFAULT_PREF.edit().putBoolean("defaultJavaArgsV1", true);
+        if (currentArgs != null && !currentArgs.trim().isEmpty()) {
+            editor.apply();
+            return currentArgs;
+        }
+        editor.putString("javaArgs", DEFAULT_JAVA_ARGS).apply();
+        return DEFAULT_JAVA_ARGS;
+    }
+
+    /**
      * Put this process into the plain "safe launch" configuration. Used by LaunchGuard after a
      * launch that died within seconds of starting, so the next attempt does not repeat the same
      * configuration. Only affects this process; nothing is written to SharedPreferences, so the
@@ -244,12 +269,8 @@ public class LauncherPreferences {
         // Limit the max for 32 bits devices more harshly
         if (is32BitsDevice()) return 696;
 
-        // Back to the stock values. Raising them (5c427e7) only trades a Java OutOfMemoryError,
-        // which leaves a log, for Android's low-memory killer ending the whole process with none.
-        if (deviceRam < 3064) return 936;
-        if (deviceRam < 4096) return 1144;
-        if (deviceRam < 6144) return 1536;
-        return 2048; //Default RAM allocation for 64 bits
+        // Default heap is 1024 MB (-Xmx1024M) on every 64-bit phone with 2 GB or more.
+        return 1024;
     }
 
     /// Find a correct resolution for the device
