@@ -2,9 +2,7 @@ package net.kdt.pojavlaunch.authenticator.accounts;
 
 
 import android.graphics.BitmapFactory;
-import android.graphics.Canvas;
 import android.graphics.Color;
-import android.graphics.Paint;
 import android.util.Log;
 
 import net.kdt.pojavlaunch.*;
@@ -94,34 +92,46 @@ public class Account {
         return mFaceCache;
     }
 
+    /**
+     * Face shown for offline (local) accounts: a small original 8x8 pixel-art head, scaled up with
+     * hard edges so every pixel stays sharp. Premium accounts show their real skin instead.
+     */
+    private static final String[] LOCAL_FACE = {
+            "HHHHHHHH",
+            "HHHHHHHH",
+            "HHSSSSHH",
+            "SWGSSWGS",
+            "SSSSSSSS",
+            "SCSSSSCS",
+            "SSMMMMSS",
+            "DSSSSSSD",
+    };
+
+    private static int localFaceColor(char code) {
+        switch (code) {
+            case 'H': return Color.rgb(54, 44, 40);
+            case 'S': return Color.rgb(224, 172, 128);
+            case 'W': return Color.rgb(245, 247, 250);
+            case 'G': return Color.rgb(46, 125, 90);
+            case 'C': return Color.rgb(232, 148, 120);
+            case 'M': return Color.rgb(150, 76, 62);
+            case 'D': return Color.rgb(204, 152, 110);
+            default: return Color.TRANSPARENT;
+        }
+    }
+
     private static synchronized Bitmap getSteveFace() {
         if (sSteveFace != null && !sSteveFace.isRecycled()) return sSteveFace;
-        Bitmap face = Bitmap.createBitmap(100, 100, Bitmap.Config.ARGB_8888);
-        Canvas canvas = new Canvas(face);
-        Paint paint = new Paint();
-        paint.setStyle(Paint.Style.FILL);
-        paint.setColor(Color.rgb(92, 58, 35));
-        canvas.drawRect(0, 0, 100, 25, paint);
-        canvas.drawRect(0, 20, 14, 78, paint);
-        canvas.drawRect(86, 20, 100, 78, paint);
-        paint.setColor(Color.rgb(198, 142, 103));
-        canvas.drawRect(14, 20, 86, 84, paint);
-        paint.setColor(Color.rgb(45, 29, 21));
-        canvas.drawRect(14, 20, 30, 31, paint);
-        canvas.drawRect(30, 25, 43, 31, paint);
-        canvas.drawRect(57, 25, 70, 31, paint);
-        canvas.drawRect(70, 20, 86, 31, paint);
-        paint.setColor(Color.WHITE);
-        canvas.drawRect(22, 39, 42, 51, paint);
-        canvas.drawRect(58, 39, 78, 51, paint);
-        paint.setColor(Color.rgb(55, 112, 180));
-        canvas.drawRect(30, 39, 40, 51, paint);
-        canvas.drawRect(60, 39, 70, 51, paint);
-        paint.setColor(Color.rgb(40, 29, 24));
-        canvas.drawRect(14, 58, 86, 84, paint);
-        canvas.drawRect(30, 52, 70, 64, paint);
-        paint.setColor(Color.rgb(198, 142, 103));
-        canvas.drawRect(40, 52, 60, 62, paint);
+        int cells = LOCAL_FACE.length;
+        Bitmap small = Bitmap.createBitmap(cells, cells, Bitmap.Config.ARGB_8888);
+        for (int y = 0; y < cells; y++) {
+            for (int x = 0; x < cells; x++) {
+                small.setPixel(x, y, localFaceColor(LOCAL_FACE[y].charAt(x)));
+            }
+        }
+        // filter = false keeps hard pixel edges instead of blurring them
+        Bitmap face = Bitmap.createScaledBitmap(small, 96, 96, false);
+        if (face != small) small.recycle();
         sSteveFace = face;
         return face;
     }

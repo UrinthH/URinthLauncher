@@ -22,7 +22,7 @@ import git.artdeell.mojo.R;
 public class GameCursorView extends View implements PlatformCursorImplementor {
     private final Paint customCursorPaint = new Paint();
     private final Drawable cursorDrawable;
-    private boolean noDraw = false;
+    private volatile boolean noDraw = false;
     private float mouseScale = 1f;
 
     public GameCursorView(Context context, AttributeSet attrs, int defStyleAttr) {
@@ -47,33 +47,46 @@ public class GameCursorView extends View implements PlatformCursorImplementor {
     @Override
     protected void onDraw(@NonNull Canvas canvas) {
         if (noDraw) return;
+        if (!(getParent() instanceof GameView)) return;
+        GameView gameView = (GameView) getParent();
         // Scale coordinates back to the full unresized screen size
-        int dx = (int) (Platform.cursorX * ((GameView)getParent()).cursorRatioX);
-        int dy = (int) (Platform.cursorY * ((GameView)getParent()).cursorRatioY);
-        canvas.translate(dx, dy);
+        float dx = Platform.cursorX * gameView.cursorRatioX;
+        float dy = Platform.cursorY * gameView.cursorRatioY;
         PlatformCursor cursor = Platform.getCursor();
+        int saved = canvas.save();
+        canvas.translate(Math.round(dx), Math.round(dy));
         canvas.scale(mouseScale, mouseScale);
         if (cursor == null) {
             cursorDrawable.draw(canvas);
         } else {
             canvas.drawBitmap(cursor.bitmap, -cursor.hotX, -cursor.hotY, customCursorPaint);
         }
+        canvas.restoreToCount(saved);
+    }
+
+    /**
+     * Cursor events arrive far faster than the screen refreshes. Redrawing for each one piles up
+     * work and makes the pointer stutter, so redraws are merged into one per screen frame.
+     * postInvalidateOnAnimation is safe to call from any thread.
+     */
+    private void requestRedraw() {
+        postInvalidateOnAnimation();
     }
 
     @Override
     public void onCursorPosition() {
-        if (!noDraw) post(this::invalidate);
+        if (!noDraw) requestRedraw();
     }
 
     @Override
     public void onCursorChanged() {
-        post(this::invalidate);
+        requestRedraw();
     }
 
     @Override
     public void onGrabState(boolean isGrabbing) {
         noDraw = isGrabbing;
-        invalidate();
+        requestRedraw();
     }
 
     public void setCursorScale(float scale) {
