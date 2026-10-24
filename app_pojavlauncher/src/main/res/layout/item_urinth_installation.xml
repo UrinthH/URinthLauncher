@@ -9,6 +9,7 @@
     android:paddingBottom="2dp">
 
     <ImageView
+        android:id="@+id/urinth_row_icon"
         android:layout_width="22dp"
         android:layout_height="22dp"
         android:contentDescription="@null"

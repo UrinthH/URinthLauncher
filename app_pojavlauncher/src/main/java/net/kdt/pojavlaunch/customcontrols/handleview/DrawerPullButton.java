@@ -36,11 +36,11 @@ public class DrawerPullButton extends View {
         canvas.restore();
     }
 
-    // Move the button to the third quarter of the screen
+    // The button stays at the top centre of the screen (it used to be moved to the third
+    // quarter, which put it on top of a custom layout's top-right buttons).
     @Override
     protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
         super.onLayout(changed, left, top, right, bottom);
-        int parentWidth = ((View) getParent()).getWidth();
-        setTranslationX((int)(parentWidth * 0.25));
+        setTranslationX(0);
     }
 }

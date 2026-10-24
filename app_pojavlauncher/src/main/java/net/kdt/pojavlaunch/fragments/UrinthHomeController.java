@@ -29,6 +29,8 @@ import net.kdt.pojavlaunch.extra.ExtraCore;
 import net.kdt.pojavlaunch.extra.ExtraListener;
 import net.kdt.pojavlaunch.home.HomeActivityLog;
 import net.kdt.pojavlaunch.instances.DisplayInstance;
+import net.kdt.pojavlaunch.home.InstallationLabels;
+import net.kdt.pojavlaunch.instances.InstanceIconProvider;
 import net.kdt.pojavlaunch.instances.Instances;
 import net.kdt.pojavlaunch.prefs.LauncherPreferences;
 import net.kdt.pojavlaunch.prefs.screens.LauncherPreferenceFragment;
@@ -47,7 +49,6 @@ import git.artdeell.mojo.R;
  */
 public final class UrinthHomeController {
     /** The home page does not scroll, so the lists show only what fits the card: one installation and three activity rows. */
-    private static final int MAX_HOME_INSTALLATIONS = 1;
     private static final int MAX_HOME_ACTIVITY = 3;
     private static final int GREEN = 0xFF1FC77A;
 
@@ -412,16 +413,23 @@ public final class UrinthHomeController {
 
     private void renderLastPlayed() {
         DisplayInstance target = pickPlayTarget();
-        lastPlayedName.setText(target == null ? context.getString(R.string.urinth_last_played) : target.name);
+        if (target == null) {
+            lastPlayedName.setText(R.string.urinth_last_played);
+        } else {
+            String version = InstallationLabels.minecraftVersion(target.versionId);
+            lastPlayedName.setText(version == null ? target.name
+                    : context.getString(R.string.urinth_last_played_with_version, target.name, version));
+        }
     }
 
     private void renderInstallations() {
         installationsList.removeAllViews();
         LayoutInflater inflater = LayoutInflater.from(context);
-        int shown = Math.min(instances.size(), MAX_HOME_INSTALLATIONS);
-        for (int i = 0; i < shown; i++) {
+        for (int i = 0; i < instances.size(); i++) {
             DisplayInstance instance = instances.get(i);
             View row = inflater.inflate(R.layout.item_urinth_installation, installationsList, false);
+            ((ImageView) row.findViewById(R.id.urinth_row_icon)).setImageDrawable(
+                    InstanceIconProvider.fetchIcon(context.getResources(), instance));
             ((TextView) row.findViewById(R.id.urinth_row_name)).setText(instance.name);
             String version = instance.versionId == null ? "" : instance.versionId;
             ((TextView) row.findViewById(R.id.urinth_row_version))

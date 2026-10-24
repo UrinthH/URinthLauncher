@@ -598,6 +598,7 @@
     <string name="urinth_hero_sub">Play, explore and build your own worlds.</string>
     <string name="urinth_play">Play</string>
     <string name="urinth_last_played">Last Played</string>
+    <string name="urinth_last_played_with_version">%1$s · %2$s</string>
     <string name="urinth_explore_worlds">Explore endless worlds</string>
     <string name="urinth_news_title">Latest News</string>
     <string name="urinth_news_all">View all</string>

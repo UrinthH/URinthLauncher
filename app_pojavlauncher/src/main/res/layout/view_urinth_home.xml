@@ -292,7 +292,7 @@
                                         android:layout_height="wrap_content"
                                         android:layout_marginStart="6dp"
                                         android:ellipsize="end"
-                                        android:maxWidth="100dp"
+                                        android:maxWidth="170dp"
                                         android:singleLine="true"
                                         android:text="@string/urinth_last_played"
                                         android:textColor="#F2F8FA"
@@ -782,11 +782,21 @@
                                     android:textStyle="bold" />
                             </LinearLayout>
 
-                            <LinearLayout
-                                android:id="@+id/urinth_installations_list"
+                            <!-- Every installation, newest at the bottom; scrolls when there are more than fit. -->
+                            <ScrollView
                                 android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:orientation="vertical" />
+                                android:layout_height="0dp"
+                                android:layout_weight="1"
+                                android:fadeScrollbars="false"
+                                android:overScrollMode="ifContentScrolls"
+                                android:scrollbars="vertical">
+
+                                <LinearLayout
+                                    android:id="@+id/urinth_installations_list"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:orientation="vertical" />
+                            </ScrollView>
 
                             <TextView
                                 android:id="@+id/urinth_installations_empty"
