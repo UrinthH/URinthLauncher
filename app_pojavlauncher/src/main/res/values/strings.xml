@@ -635,13 +635,13 @@
     <string name="urinth_perf_title">Performance Mode</string>
     <string name="urinth_perf_state_on">ACTIVE</string>
     <string name="urinth_perf_state_off">OFF</string>
-    <string name="urinth_perf_subtitle_off">Boost FPS and keep the phone cool</string>
+    <string name="urinth_perf_subtitle_off">Keep frame rates steady and the phone cool</string>
     <string name="urinth_perf_subtitle_on">Boosted on every launch</string>
-    <string name="urinth_perf_features">Lighter settings · Heat watch · Auto restore</string>
+    <string name="urinth_perf_features">Heat watch · Smart load control · No setting changes</string>
     <string name="urinth_perf_button_off">Boost my game</string>
     <string name="urinth_perf_button_on">Boosted · tap to turn off</string>
-    <string name="urinth_perf_toast_on">Performance Mode is on. Your next game launch is boosted.</string>
-    <string name="urinth_perf_toast_off">Performance Mode is off. Your game settings go back on the next launch.</string>
+    <string name="urinth_perf_toast_on">Performance Mode is on. It applies the next time you launch the game.</string>
+    <string name="urinth_perf_toast_off">Performance Mode is off.</string>
     <string name="urinth_activity_title">Recent Activity</string>
     <string name="urinth_activity_empty">Nothing yet. Games you play, new installations and launcher updates show here.</string>
     <string name="urinth_activity_now">Just now</string>
@@ -670,5 +670,5 @@
     <string name="launch_safe_mode_notice">The last launch stopped while starting up, so this one uses plain settings: no custom Java arguments and less RAM.</string>
     <string name="thermal_guard_hot_toast">Performance Mode: the phone is hot, so background load is being eased to keep frame rates steady.</string>
     <string name="preference_performance_mode_title">Performance Mode</string>
-    <string name="preference_performance_mode_description">Lowers the heaviest game settings (render distance, particles, shadows, clouds and more) and keeps watch on the phone\'s temperature, easing background load when it gets hot. Turn it off to put your settings back. Resolution is never changed.</string>
+    <string name="preference_performance_mode_description">Keeps watch on the phone\'s temperature while you play and eases background load when it gets hot. It never changes your resolution or your game options.</string>
 </resources>

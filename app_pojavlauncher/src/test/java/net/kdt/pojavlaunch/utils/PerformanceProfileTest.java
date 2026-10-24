@@ -15,60 +15,32 @@ public class PerformanceProfileTest {
     }
 
     @Test
-    public void lowersHeavySettings() {
-        List<String> options = lines("renderDistance:16", "simulationDistance:12", "entityDistanceScaling:1.0",
-                "particles:0", "graphicsMode:1", "ao:true", "entityShadows:true", "biomeBlendRadius:5",
-                "mipmapLevels:4", "renderClouds:\"true\"");
-        List<PerformanceProfile.Change> changes = PerformanceProfile.lighten(options);
-        assertEquals(10, changes.size());
-        assertEquals(lines("renderDistance:8", "simulationDistance:6", "entityDistanceScaling:0.75",
-                "particles:1", "graphicsMode:0", "ao:false", "entityShadows:false", "biomeBlendRadius:1",
-                "mipmapLevels:2", "renderClouds:\"false\""), options);
-    }
-
-    @Test
-    public void neverRaisesAndNeverTouchesOtherKeys() {
-        List<String> options = lines("renderDistance:4", "simulationDistance:5", "particles:2", "graphicsMode:0",
-                "ao:false", "overrideWidth:1280", "maxFps:260", "enableVsync:false", "fullscreen:true", "lang:en_us");
-        List<String> before = new ArrayList<>(options);
-        assertTrue(PerformanceProfile.lighten(options).isEmpty());
-        assertEquals(before, options);
-    }
-
-    @Test
-    public void doesNotInventMissingKeysOrParseGarbage() {
-        List<String> options = lines("renderDistance:abc", "something", "");
-        assertTrue(PerformanceProfile.lighten(options).isEmpty());
-        assertEquals(lines("renderDistance:abc", "something", ""), options);
-    }
-
-    @Test
-    public void oldNumericAmbientOcclusionAndCloudsWork() {
-        List<String> options = lines("ao:2", "renderClouds:fast", "fancyGraphics:true");
-        PerformanceProfile.lighten(options);
-        assertEquals(lines("ao:0", "renderClouds:false", "fancyGraphics:false"), options);
-    }
-
-    @Test
-    public void restoreOnlyWhileValueIsStillOurs() {
-        List<String> options = lines("renderDistance:16", "particles:0", "ao:true");
-        List<PerformanceProfile.Change> changes = PerformanceProfile.lighten(options);
-        // The player raised render distance in game to 10 afterwards.
-        options.set(0, "renderDistance:10");
-        assertEquals(2, PerformanceProfile.restore(options, changes));
-        assertEquals(lines("renderDistance:10", "particles:0", "ao:true"), options);
-    }
-
-    @Test
-    public void encodeDecodeRoundTrip() {
-        List<PerformanceProfile.Change> changes = PerformanceProfile.lighten(lines("renderDistance:16", "renderClouds:\"true\""));
-        List<PerformanceProfile.Change> back = PerformanceProfile.decode(PerformanceProfile.encode(changes));
-        assertEquals(2, back.size());
-        assertEquals("renderDistance", back.get(0).key);
-        assertEquals("16", back.get(0).original);
-        assertEquals("8", back.get(0).applied);
-        assertEquals("\"true\"", back.get(1).original);
+    public void decodesRememberedChanges() {
+        List<PerformanceProfile.Change> changes = PerformanceProfile.decode("renderDistance\t16\t8\nrenderClouds\t\"true\"\t\"false\"");
+        assertEquals(2, changes.size());
+        assertEquals("renderDistance", changes.get(0).key);
+        assertEquals("16", changes.get(0).original);
+        assertEquals("8", changes.get(0).applied);
+        assertEquals("\"true\"", changes.get(1).original);
         assertTrue(PerformanceProfile.decode("").isEmpty());
         assertTrue(PerformanceProfile.decode(null).isEmpty());
+        assertTrue(PerformanceProfile.decode("garbage line").isEmpty());
+    }
+
+    @Test
+    public void restoresOnlyWhileValueIsStillTheOneThatWasSet() {
+        List<String> options = lines("renderDistance:10", "particles:1", "ao:false", "maxFps:260", "overrideWidth:1280");
+        List<PerformanceProfile.Change> changes = PerformanceProfile.decode(
+                "renderDistance\t16\t8\nparticles\t0\t1\nao\ttrue\tfalse");
+        // render distance was changed by the player to 10 since, so it stays
+        assertEquals(2, PerformanceProfile.restore(options, changes));
+        assertEquals(lines("renderDistance:10", "particles:0", "ao:true", "maxFps:260", "overrideWidth:1280"), options);
+    }
+
+    @Test
+    public void nothingRememberedChangesNothing() {
+        List<String> options = lines("renderDistance:16", "overrideWidth:1280");
+        assertEquals(0, PerformanceProfile.restore(options, new ArrayList<PerformanceProfile.Change>()));
+        assertEquals(lines("renderDistance:16", "overrideWidth:1280"), options);
     }
 }

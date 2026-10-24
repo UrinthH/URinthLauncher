@@ -143,9 +143,10 @@ public class GameActivity extends BaseActivity implements ControlButtonMenuListe
         }
 
         AsyncAssetManager.extractDefaultSettings(this, instance.getGameDirectory());
-        // Performance Mode: lighten the heavy game settings (and put them back when it is off).
-        String profileResult = PerformanceProfile.sync(instance.getGameDirectory(), PREF_PERFORMANCE_MODE, LauncherPreferences.DEFAULT_PREF);
-        if(profileResult != null) Log.i("PerformanceMode", "options.txt: " + profileResult);
+        // Performance Mode never edits options.txt. This only puts back values an earlier build
+        // lowered (nothing happens unless that build left a record for this instance).
+        int undone = PerformanceProfile.undoEarlierChanges(instance.getGameDirectory(), LauncherPreferences.DEFAULT_PREF);
+        if(undone > 0) Log.i("PerformanceMode", "Restored " + undone + " game settings changed by an earlier build");
         MCOptionUtils.load(instance.getGameDirectory().getAbsolutePath());
 
         Intent gameServiceIntent = new Intent(this, GameService.class);
