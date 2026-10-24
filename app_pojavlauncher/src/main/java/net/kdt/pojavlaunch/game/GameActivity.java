@@ -77,7 +77,6 @@ import net.kdt.pojavlaunch.tasks.AsyncAssetManager;
 import net.kdt.pojavlaunch.utils.JREUtils;
 import net.kdt.pojavlaunch.utils.LaunchGuard;
 import net.kdt.pojavlaunch.utils.MCOptionUtils;
-import net.kdt.pojavlaunch.utils.PerformanceProfile;
 import net.kdt.pojavlaunch.authenticator.accounts.Account;
 import net.kdt.pojavlaunch.utils.jre.GameRunner;
 
@@ -143,10 +142,6 @@ public class GameActivity extends BaseActivity implements ControlButtonMenuListe
         }
 
         AsyncAssetManager.extractDefaultSettings(this, instance.getGameDirectory());
-        // Performance Mode never edits options.txt. This only puts back values an earlier build
-        // lowered (nothing happens unless that build left a record for this instance).
-        int undone = PerformanceProfile.undoEarlierChanges(instance.getGameDirectory(), LauncherPreferences.DEFAULT_PREF);
-        if(undone > 0) Log.i("PerformanceMode", "Restored " + undone + " game settings changed by an earlier build");
         MCOptionUtils.load(instance.getGameDirectory().getAbsolutePath());
 
         Intent gameServiceIntent = new Intent(this, GameService.class);
@@ -175,6 +170,7 @@ public class GameActivity extends BaseActivity implements ControlButtonMenuListe
         // Repeating temperature check while the game is open; eases CPU/GPU load when hot.
         if(PREF_PERFORMANCE_MODE) {
             ThermalGuard.start(this, launcherGLView);
+            RenderScheduler.start();
             // Smooth screen flips: let the system rotate the window without freezing it until the
             // game has redrawn (seamless on Android 8+, a quick crossfade before that). Set once,
             // before the first frame; the system falls back on its own where it cannot do this.
@@ -398,6 +394,7 @@ public class GameActivity extends BaseActivity implements ControlButtonMenuListe
 
     @Override
     protected void onDestroy() {
+        RenderScheduler.stop();
         ThermalGuard.stop();
         URinthRender.stopThermalMonitoring();
         // The player left on purpose: this launch did not crash.

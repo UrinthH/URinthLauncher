@@ -315,6 +315,9 @@ public class JavaRunner {
 
 
         runtimeArgs.add("-XX:ActiveProcessorCount=" + java.lang.Runtime.getRuntime().availableProcessors());
+        // Performance Mode: one short line per garbage collection in the game log, with how long
+        // it paused the game. A lag spike can then be matched to a collection (or ruled out).
+        if(LauncherPreferences.PREF_PERFORMANCE_MODE && !hasArgument(runtimeArgs, "-verbose:gc")) runtimeArgs.add("-verbose:gc");
         addx86SignalWorkaround(runtimeArgs);
         StringBuilder classpathBuilder = new StringBuilder().append("-Djava.class.path=");
         boolean first = true;

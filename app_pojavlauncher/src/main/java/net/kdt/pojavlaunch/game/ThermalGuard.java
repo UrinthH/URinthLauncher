@@ -76,7 +76,11 @@ public final class ThermalGuard {
     private static final int BACKGROUND_NICE = 10;
     private static final long TOAST_COOLDOWN_MS = 3L * 60L * 1000L;
 
-    private static ThermalGuard sInstance;
+    private static volatile ThermalGuard sInstance;
+
+    /** Heat levels as other Performance Mode parts see them. */
+    static final int HEAT_HOT = LEVEL_HOT;
+    static final int HEAT_CRITICAL = LEVEL_CRITICAL;
 
     private final Activity mActivity;
     private final GameView mGameView;
@@ -95,7 +99,7 @@ public final class ThermalGuard {
     @Nullable
     private PowerManager.OnThermalStatusChangedListener mStatusListener;
     private boolean mRunning;
-    private int mLevel = LEVEL_COOL;
+    private volatile int mLevel = LEVEL_COOL;
     private int mCalmerReadings;
     private boolean mRefreshRateCapped;
     @Nullable
@@ -115,6 +119,12 @@ public final class ThermalGuard {
         mCanCapRefreshRate = highestRefreshRate(activity) > CAPPED_REFRESH_RATE + 1f;
         mSustainedModeSupported = Build.VERSION.SDK_INT >= Build.VERSION_CODES.N
                 && mPowerManager != null && mPowerManager.isSustainedPerformanceModeSupported();
+    }
+
+    /** How hot the phone is right now (0 cool to 3 critical), or 0 when the guard is not running. */
+    static int currentHeatLevel() {
+        ThermalGuard guard = sInstance;
+        return guard == null ? LEVEL_COOL : guard.mLevel;
     }
 
     /** Start watching. Call from the main thread; a guard that is already running is replaced. */
