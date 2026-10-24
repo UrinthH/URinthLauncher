@@ -16,7 +16,11 @@ import net.kdt.pojavlaunch.LauncherActivity;
  * the launcher. It plays on every open of the app.
  */
 public class UrinthSplashActivity extends Activity {
+    /** A second intro opened on top of a running one (installer Open, then the icon) is dropped. */
+    private static boolean sShowing;
+
     private UrinthSplashView mView;
+    private boolean mOwnsSlot;
     private final FrameClock mClock = new FrameClock();
     private boolean mFinished;
     private boolean mLaunched;
@@ -30,6 +34,12 @@ public class UrinthSplashActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        if (sShowing) {
+            finish();
+            return;
+        }
+        sShowing = true;
+        mOwnsSlot = true;
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         if (Build.VERSION.SDK_INT >= 28) {
             getWindow().getAttributes().layoutInDisplayCutoutMode =
@@ -132,6 +142,7 @@ public class UrinthSplashActivity extends Activity {
     @Override
     protected void onDestroy() {
         mClock.stop();
+        if (mOwnsSlot) sShowing = false;
         super.onDestroy();
     }
 }

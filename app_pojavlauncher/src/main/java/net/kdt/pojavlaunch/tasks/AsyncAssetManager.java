@@ -30,6 +30,29 @@ public class AsyncAssetManager {
      * Attempt to install the java 8 runtime, if necessary
      * @param am App context
      */
+    /**
+     * Runs unpacking work at background priority. On the first start after an install the Java
+     * runtime is decompressed, which keeps a CPU core fully busy for a while; at normal priority
+     * that made the launcher's own screens (the intro animation first of all) stutter.
+     */
+    private static void runInBackground(Runnable work) {
+        int original = android.os.Process.getThreadPriority(android.os.Process.myTid());
+        try {
+            android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND);
+        } catch (RuntimeException ignored) {
+            // Keep the current priority.
+        }
+        try {
+            work.run();
+        } finally {
+            try {
+                android.os.Process.setThreadPriority(original);
+            } catch (RuntimeException ignored) {
+                // Thread is going away anyway.
+            }
+        }
+    }
+
     public static void unpackRuntime(AssetManager am) {
         /* Check if JRE is included */
         String rt_version = null;
@@ -46,7 +69,7 @@ public class AsyncAssetManager {
 
         // Install the runtime in an async manner, hope for the best
         String finalRt_version = rt_version;
-        sExecutorService.execute(() -> {
+        sExecutorService.execute(() -> runInBackground(() -> {
 
             try {
                 MultiRTUtils.installRuntimeNamedBinpack(
@@ -57,7 +80,7 @@ public class AsyncAssetManager {
             }catch (IOException e) {
                 Log.e("JREAuto", "Internal JRE unpack failed", e);
             }
-        });
+        }));
     }
 
     /** Unpack single files, with no regard to version tracking */
@@ -77,7 +100,7 @@ public class AsyncAssetManager {
 
     public static void unpackComponents(Context ctx){
         ProgressLayout.setProgress(ProgressLayout.EXTRACT_COMPONENTS, 0);
-        sExecutorService.execute(() -> {
+        sExecutorService.execute(() -> runInBackground(() -> {
             tryUnpackComponent(ctx, "caciocavallo", false);
             tryUnpackComponent(ctx, "caciocavallo17", false);
 
@@ -85,7 +108,7 @@ public class AsyncAssetManager {
             tryUnpackComponent(ctx, "forge_installer", true);
             tryUnpackComponent(ctx, "authlib-injector", true);
             ProgressLayout.clearProgress(ProgressLayout.EXTRACT_COMPONENTS);
-        });
+        }));
     }
 
     private static String readInstalledComponentVersion(File componentRoot) {

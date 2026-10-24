@@ -83,6 +83,12 @@ public final class UrinthSplashView extends View {
     private final String name = NAME_WHITE + NAME_RED;
 
     private float time;
+    /** Real elapsed milliseconds of the intro (time is the same moment on the 3000 ms design scale). */
+    private float realMs;
+
+    /** The loading bar fills for exactly this long. */
+    private static final float BAR_START_MS = 1700f;
+    private static final float BAR_FILL_MS = 3000f;
     private float centerX;
     private float centerY;
     private float logoSize;
@@ -115,6 +121,7 @@ public final class UrinthSplashView extends View {
 
     /** Move the intro to this point of its timeline (milliseconds) and redraw. */
     public void setTime(float milliseconds) {
+        realMs = milliseconds;
         time = milliseconds * (DESIGN_MS / DURATION_MS);
         invalidate();
     }
@@ -413,11 +420,11 @@ public final class UrinthSplashView extends View {
     }
 
     private void drawProgress(Canvas canvas, int w, int h) {
-        float appear = smooth(window(1100, 350));
+        float appear = smooth(window(850, 350));
         if (appear <= 0f) return;
         float exit = 1f - smooth(window(2850, 150));
-        float p = window(1150, 1600);
-        float progress = smooth(p);
+        float p = clamp01((realMs - BAR_START_MS) / BAR_FILL_MS);
+        float progress = 0.6f * p + 0.4f * smooth(p); // steady, with a soft start and finish
 
         float barWidth = Math.min(w * 0.30f, density * 280f);
         float barHeight = density * 4.5f;
