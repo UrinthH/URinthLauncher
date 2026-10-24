@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Android 12+ system splash: the logo on the same dark colour the animated intro starts on. -->
+    <style name="MojoLauncher.Splash" parent="MojoLauncher.AppTheme">
+        <item name="android:windowBackground">@color/urinth_splash_bg</item>
+        <item name="android:statusBarColor">@color/urinth_splash_bg</item>
+        <item name="android:navigationBarColor">@color/urinth_splash_bg</item>
+        <item name="android:windowSplashScreenBackground">@color/urinth_splash_bg</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/urinth_splash_icon</item>
+    </style>
+</resources>

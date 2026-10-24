@@ -15,6 +15,7 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 import net.kdt.pojavlaunch.prefs.LauncherPreferences;
+import net.kdt.pojavlaunch.splash.UrinthSplashActivity;
 import net.kdt.pojavlaunch.tasks.AsyncAssetManager;
 
 import git.artdeell.mojo.R;
@@ -97,8 +98,9 @@ public class TestStorageActivity extends Activity {
         AsyncAssetManager.unpackComponents(this);
         AsyncAssetManager.unpackSingleFiles(this);
 
-        Intent intent =  new Intent(this, LauncherActivity.class);
-        startActivity(intent);
+        // The animated intro opens the launcher itself when it finishes.
+        UrinthSplashActivity.open(this);
+        overridePendingTransition(0, 0);
         finish();
     }
 }

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="urinth_splash_bg">#0A151D</color>
+
+    <!-- Entry theme: dark from the very first frame so there is no white flash before the intro. -->
+    <style name="MojoLauncher.Splash" parent="MojoLauncher.AppTheme">
+        <item name="android:windowBackground">@color/urinth_splash_bg</item>
+        <item name="android:statusBarColor">@color/urinth_splash_bg</item>
+        <item name="android:navigationBarColor">@color/urinth_splash_bg</item>
+    </style>
+</resources>
