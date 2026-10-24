@@ -799,13 +799,14 @@
                                 android:textSize="9sp" />
                         </LinearLayout>
 
-                        <!-- Recent activity: the newest three entries -->
+                        <!-- Performance Mode: one tap boost. Replaces the old Recent Activity card. -->
                         <LinearLayout
+                            android:id="@+id/urinth_perf_panel"
                             android:layout_width="match_parent"
                             android:layout_height="0dp"
                             android:layout_marginTop="6dp"
                             android:layout_weight="1.3"
-                            android:background="@drawable/urinth_panel_bg"
+                            android:background="@drawable/urinth_perf_panel_bg"
                             android:orientation="vertical"
                             android:padding="6dp">
 
@@ -816,37 +817,71 @@
                                 android:orientation="horizontal">
 
                                 <ImageView
+                                    android:id="@+id/urinth_perf_icon"
                                     android:layout_width="12dp"
                                     android:layout_height="12dp"
                                     android:contentDescription="@null"
-                                    android:src="@drawable/ic_urinth_clock" />
+                                    android:src="@drawable/ic_urinth_bolt" />
 
                                 <TextView
-                                    android:layout_width="wrap_content"
+                                    android:layout_width="0dp"
                                     android:layout_height="wrap_content"
                                     android:layout_marginStart="5dp"
+                                    android:layout_weight="1"
                                     android:singleLine="true"
-                                    android:text="@string/urinth_activity_title"
+                                    android:text="@string/urinth_perf_title"
                                     android:textColor="#F2F8FA"
                                     android:textSize="10sp"
                                     android:textStyle="bold" />
+
+                                <TextView
+                                    android:id="@+id/urinth_perf_state"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:singleLine="true"
+                                    android:text="@string/urinth_perf_state_off"
+                                    android:textColor="#ABC0CB"
+                                    android:textSize="8sp"
+                                    android:textStyle="bold" />
                             </LinearLayout>
 
-                            <LinearLayout
-                                android:id="@+id/urinth_activity_list"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:orientation="vertical" />
-
                             <TextView
-                                android:id="@+id/urinth_activity_empty"
+                                android:id="@+id/urinth_perf_subtitle"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="2dp"
                                 android:singleLine="true"
-                                android:text="@string/urinth_activity_empty"
+                                android:text="@string/urinth_perf_subtitle_off"
                                 android:textColor="#ABC0CB"
                                 android:textSize="9sp" />
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="2dp"
+                                android:singleLine="true"
+                                android:text="@string/urinth_perf_features"
+                                android:textColor="#7FA0B0"
+                                android:textSize="8sp" />
+
+                            <View
+                                android:layout_width="match_parent"
+                                android:layout_height="0dp"
+                                android:layout_weight="1" />
+
+                            <TextView
+                                android:id="@+id/urinth_perf_button"
+                                android:layout_width="match_parent"
+                                android:layout_height="26dp"
+                                android:background="@drawable/urinth_perf_button_bg"
+                                android:clickable="true"
+                                android:focusable="true"
+                                android:gravity="center"
+                                android:singleLine="true"
+                                android:text="@string/urinth_perf_button_off"
+                                android:textColor="@color/urinth_perf_button_text"
+                                android:textSize="10sp"
+                                android:textStyle="bold" />
                         </LinearLayout>
                     </LinearLayout>
                 </LinearLayout>

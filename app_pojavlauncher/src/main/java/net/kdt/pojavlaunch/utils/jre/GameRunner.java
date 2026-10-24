@@ -433,7 +433,7 @@ public class GameRunner {
                 + "Safe launch: " + (LauncherPreferences.PREF_SAFE_LAUNCH ? "yes" : "no") + "\n"
                 + "Big-core pinning: " + LauncherPreferences.PREF_BIG_CORE_AFFINITY
                 + ", sustained performance: " + LauncherPreferences.PREF_SUSTAINED_PERFORMANCE
-                + ", thermal guard: " + LauncherPreferences.PREF_THERMAL_GUARD + "\n");
+                + ", performance mode: " + LauncherPreferences.PREF_PERFORMANCE_MODE + "\n");
 
         try {
             JavaRunner.nativeSetupExit(activity);

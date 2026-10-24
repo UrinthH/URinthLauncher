@@ -30,6 +30,7 @@ import net.kdt.pojavlaunch.extra.ExtraListener;
 import net.kdt.pojavlaunch.home.HomeActivityLog;
 import net.kdt.pojavlaunch.instances.DisplayInstance;
 import net.kdt.pojavlaunch.instances.Instances;
+import net.kdt.pojavlaunch.prefs.LauncherPreferences;
 import net.kdt.pojavlaunch.prefs.screens.LauncherPreferenceFragment;
 
 import java.text.DateFormat;
@@ -63,8 +64,11 @@ public final class UrinthHomeController {
     private final ImageView accountAvatar;
     private final LinearLayout installationsList;
     private final TextView installationsEmpty;
-    private final LinearLayout activityList;
-    private final TextView activityEmpty;
+    private final View perfPanel;
+    private final ImageView perfIcon;
+    private final TextView perfState;
+    private final TextView perfSubtitle;
+    private final TextView perfButton;
 
     private List<DisplayInstance> instances = new ArrayList<>();
     private Account currentAccount;
@@ -114,8 +118,13 @@ public final class UrinthHomeController {
         accountAvatar = root.findViewById(R.id.urinth_account_avatar);
         installationsList = root.findViewById(R.id.urinth_installations_list);
         installationsEmpty = root.findViewById(R.id.urinth_installations_empty);
-        activityList = root.findViewById(R.id.urinth_activity_list);
-        activityEmpty = root.findViewById(R.id.urinth_activity_empty);
+        perfPanel = root.findViewById(R.id.urinth_perf_panel);
+        perfIcon = root.findViewById(R.id.urinth_perf_icon);
+        perfState = root.findViewById(R.id.urinth_perf_state);
+        perfSubtitle = root.findViewById(R.id.urinth_perf_subtitle);
+        perfButton = root.findViewById(R.id.urinth_perf_button);
+        renderPerformanceMode();
+        perfButton.setOnClickListener(v -> togglePerformanceMode());
 
         colourUltra(root.findViewById(R.id.urinth_brand));
         // The hero brand/tagline text view was removed from the layout — branding is
@@ -381,7 +390,7 @@ public final class UrinthHomeController {
     private void render() {
         renderAccount();
         renderInstallations();
-        renderActivity();
+        renderPerformanceMode();
         renderLastPlayed();
 
         statusText.setText(instances.isEmpty() ? R.string.urinth_status_none : R.string.urinth_status_ready);
@@ -426,22 +435,30 @@ public final class UrinthHomeController {
         installationsEmpty.setVisibility(instances.isEmpty() ? View.VISIBLE : View.GONE);
     }
 
-    private void renderActivity() {
-        activityList.removeAllViews();
-        LayoutInflater inflater = LayoutInflater.from(context);
-        long now = System.currentTimeMillis();
-        List<HomeActivityLog.Entry> entries = HomeActivityLog.recent(context, MAX_HOME_ACTIVITY);
-        for (HomeActivityLog.Entry entry : entries) {
-            View row = inflater.inflate(R.layout.item_urinth_activity, activityList, false);
-            ImageView icon = row.findViewById(R.id.urinth_activity_icon);
-            if (HomeActivityLog.TYPE_PLAY.equals(entry.type)) icon.setImageResource(R.drawable.ic_urinth_play);
-            else if (HomeActivityLog.TYPE_INSTALL.equals(entry.type)) icon.setImageResource(R.drawable.ic_urinth_cube);
-            else icon.setImageResource(R.drawable.ic_urinth_refresh);
-            ((TextView) row.findViewById(R.id.urinth_activity_text)).setText(entry.text);
-            ((TextView) row.findViewById(R.id.urinth_activity_age)).setText(ageLabel(now, entry.timeMillis));
-            activityList.addView(row);
+    /** Performance Mode is a plain preference; the game process reads it when it starts. */
+    private void togglePerformanceMode() {
+        boolean enabled = !LauncherPreferences.PREF_PERFORMANCE_MODE;
+        LauncherPreferences.PREF_PERFORMANCE_MODE = enabled;
+        if (LauncherPreferences.DEFAULT_PREF != null) {
+            LauncherPreferences.DEFAULT_PREF.edit().putBoolean("performanceMode", enabled).apply();
         }
-        activityEmpty.setVisibility(entries.isEmpty() ? View.VISIBLE : View.GONE);
+        renderPerformanceMode();
+        perfPanel.setScaleX(0.97f);
+        perfPanel.setScaleY(0.97f);
+        perfPanel.animate().scaleX(1f).scaleY(1f).setDuration(180).start();
+        Toast.makeText(context, enabled ? R.string.urinth_perf_toast_on : R.string.urinth_perf_toast_off,
+                Toast.LENGTH_SHORT).show();
+    }
+
+    private void renderPerformanceMode() {
+        boolean on = LauncherPreferences.PREF_PERFORMANCE_MODE;
+        perfPanel.setSelected(on);
+        perfButton.setSelected(on);
+        perfState.setText(on ? R.string.urinth_perf_state_on : R.string.urinth_perf_state_off);
+        perfState.setTextColor(on ? 0xFF1FC77A : 0xFFABC0CB);
+        perfSubtitle.setText(on ? R.string.urinth_perf_subtitle_on : R.string.urinth_perf_subtitle_off);
+        perfButton.setText(on ? R.string.urinth_perf_button_on : R.string.urinth_perf_button_off);
+        perfIcon.setAlpha(on ? 1f : 0.6f);
     }
 
     private String ageLabel(long now, long then) {
@@ -478,7 +495,6 @@ public final class UrinthHomeController {
                 context.getString(R.string.urinth_played, instance.name));
         ExtraCore.setValue(ExtraConstants.LAUNCH_GAME, true);
         renderLastPlayed();
-        renderActivity();
     }
 
     private void openEditor(DisplayInstance instance) {

@@ -631,6 +631,17 @@
     <string name="urinth_last_played_choose">Choose installation</string>
     <string name="urinth_versions_none">No installed versions</string>
     <string name="urinth_versions_count">%1$d installations</string>
+    <string name="performance_mode_active_toast">Performance Mode active</string>
+    <string name="urinth_perf_title">Performance Mode</string>
+    <string name="urinth_perf_state_on">ACTIVE</string>
+    <string name="urinth_perf_state_off">OFF</string>
+    <string name="urinth_perf_subtitle_off">Boost FPS and keep the phone cool</string>
+    <string name="urinth_perf_subtitle_on">Boosted on every launch</string>
+    <string name="urinth_perf_features">Lighter settings · Heat watch · Auto restore</string>
+    <string name="urinth_perf_button_off">Boost my game</string>
+    <string name="urinth_perf_button_on">Boosted · tap to turn off</string>
+    <string name="urinth_perf_toast_on">Performance Mode is on. Your next game launch is boosted.</string>
+    <string name="urinth_perf_toast_off">Performance Mode is off. Your game settings go back on the next launch.</string>
     <string name="urinth_activity_title">Recent Activity</string>
     <string name="urinth_activity_empty">Nothing yet. Games you play, new installations and launcher updates show here.</string>
     <string name="urinth_activity_now">Just now</string>
@@ -657,7 +668,7 @@
     <string name="game_exit_copy_report">Copy details</string>
     <string name="game_exit_report_copied">Details copied</string>
     <string name="launch_safe_mode_notice">The last launch stopped while starting up, so this one uses plain settings: no custom Java arguments and less RAM.</string>
-    <string name="thermal_guard_hot_toast">The phone is getting hot. Easing the game load to keep it running smoothly.</string>
-    <string name="preference_thermal_guard_title">Thermal guard</string>
-    <string name="preference_thermal_guard_description">Watch the temperature while you play and ease CPU and GPU load when the phone gets hot.</string>
+    <string name="thermal_guard_hot_toast">Performance Mode: the phone is hot, so background load is being eased to keep frame rates steady.</string>
+    <string name="preference_performance_mode_title">Performance Mode</string>
+    <string name="preference_performance_mode_description">Lowers the heaviest game settings (render distance, particles, shadows, clouds and more) and keeps watch on the phone's temperature, easing background load when it gets hot. Turn it off to put your settings back. Resolution is never changed.</string>
 </resources>

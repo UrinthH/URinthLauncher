@@ -5,7 +5,7 @@ import static net.kdt.pojavlaunch.Tools.dialogForceClose;
 import static net.kdt.pojavlaunch.game.platform.Platform.PLATFORM;
 import static net.kdt.pojavlaunch.prefs.LauncherPreferences.PREF_ENABLE_GYRO;
 import static net.kdt.pojavlaunch.prefs.LauncherPreferences.PREF_SUSTAINED_PERFORMANCE;
-import static net.kdt.pojavlaunch.prefs.LauncherPreferences.PREF_THERMAL_GUARD;
+import static net.kdt.pojavlaunch.prefs.LauncherPreferences.PREF_PERFORMANCE_MODE;
 import static net.kdt.pojavlaunch.prefs.LauncherPreferences.PREF_USE_ALTERNATE_SURFACE;
 import static net.kdt.pojavlaunch.prefs.LauncherPreferences.PREF_VIRTUAL_MOUSE_START;
 import static net.kdt.pojavlaunch.prefs.LauncherPreferences.PREF_ZINK_PREFER_SYSTEM_DRIVER;
@@ -77,6 +77,7 @@ import net.kdt.pojavlaunch.tasks.AsyncAssetManager;
 import net.kdt.pojavlaunch.utils.JREUtils;
 import net.kdt.pojavlaunch.utils.LaunchGuard;
 import net.kdt.pojavlaunch.utils.MCOptionUtils;
+import net.kdt.pojavlaunch.utils.PerformanceProfile;
 import net.kdt.pojavlaunch.authenticator.accounts.Account;
 import net.kdt.pojavlaunch.utils.jre.GameRunner;
 
@@ -142,6 +143,9 @@ public class GameActivity extends BaseActivity implements ControlButtonMenuListe
         }
 
         AsyncAssetManager.extractDefaultSettings(this, instance.getGameDirectory());
+        // Performance Mode: lighten the heavy game settings (and put them back when it is off).
+        String profileResult = PerformanceProfile.sync(instance.getGameDirectory(), PREF_PERFORMANCE_MODE, LauncherPreferences.DEFAULT_PREF);
+        if(profileResult != null) Log.i("PerformanceMode", "options.txt: " + profileResult);
         MCOptionUtils.load(instance.getGameDirectory().getAbsolutePath());
 
         Intent gameServiceIntent = new Intent(this, GameService.class);
@@ -168,7 +172,10 @@ public class GameActivity extends BaseActivity implements ControlButtonMenuListe
             getWindow().setSustainedPerformanceMode(PREF_SUSTAINED_PERFORMANCE);
 
         // Repeating temperature check while the game is open; eases CPU/GPU load when hot.
-        if(PREF_THERMAL_GUARD) ThermalGuard.start(this, launcherGLView);
+        if(PREF_PERFORMANCE_MODE) {
+            ThermalGuard.start(this, launcherGLView);
+            Toast.makeText(this, R.string.performance_mode_active_toast, Toast.LENGTH_SHORT).show();
+        }
 
         // This is required on Android 10 for the insets listener
         // https://issuetracker.google.com/issues/266331465

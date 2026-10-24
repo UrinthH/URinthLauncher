@@ -63,7 +63,7 @@ public class LauncherPreferences {
     public static float PREF_DEADZONE_SCALE = 1f;
     public static boolean PREF_BIG_CORE_AFFINITY = false;
     /** Watch device temperature while the game runs and ease CPU/GPU load when it gets hot. */
-    public static boolean PREF_THERMAL_GUARD = true;
+    public static boolean PREF_PERFORMANCE_MODE = false;
     /**
      * Set for the lifetime of one game process that LaunchGuard put into safe launch.
      * Never written to SharedPreferences.
@@ -127,7 +127,7 @@ public class LauncherPreferences {
         // core picked from sysfs max frequencies, which is the wrong choice on chips whose
         // cores all report the same maximum frequency.
         PREF_BIG_CORE_AFFINITY = DEFAULT_PREF.getBoolean("bigCoreAffinity", false);
-        PREF_THERMAL_GUARD = DEFAULT_PREF.getBoolean("thermalGuard", true);
+        PREF_PERFORMANCE_MODE = DEFAULT_PREF.getBoolean("performanceMode", false);
         PREF_ZINK_PREFER_SYSTEM_DRIVER = DEFAULT_PREF.getBoolean("zinkPreferSystemDriver", false);
         PREF_DOWNLOAD_SOURCE = DEFAULT_PREF.getString("downloadSource", "default");
         PREF_VERIFY_MANIFEST = DEFAULT_PREF.getBoolean("verifyManifest", true);
@@ -246,7 +246,7 @@ public class LauncherPreferences {
         PREF_CUSTOM_JAVA_ARGS = "";
         PREF_BIG_CORE_AFFINITY = false;
         PREF_SUSTAINED_PERFORMANCE = false;
-        PREF_THERMAL_GUARD = false;
+        PREF_PERFORMANCE_MODE = false;
         // Roughly what the stock RAM tiers hand a 4 GB phone: leaves Android room to breathe.
         int cap = Math.max(448, (int) (Tools.getTotalDeviceMemory(ctx) * 0.28f));
         if (PREF_RAM_ALLOCATION > cap) PREF_RAM_ALLOCATION = cap;

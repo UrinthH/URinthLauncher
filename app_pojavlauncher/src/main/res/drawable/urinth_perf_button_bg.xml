@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Boost button: outlined when off, solid green when Performance Mode is on. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_selected="true">
+        <shape android:shape="rectangle">
+            <solid android:color="#1FC77A" />
+            <corners android:radius="8dp" />
+        </shape>
+    </item>
+    <item android:state_pressed="true">
+        <shape android:shape="rectangle">
+            <solid android:color="#331FC77A" />
+            <stroke android:width="1dp" android:color="#1FC77A" />
+            <corners android:radius="8dp" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#1A1FC77A" />
+            <stroke android:width="1dp" android:color="#1FC77A" />
+            <corners android:radius="8dp" />
+        </shape>
+    </item>
+</selector>
