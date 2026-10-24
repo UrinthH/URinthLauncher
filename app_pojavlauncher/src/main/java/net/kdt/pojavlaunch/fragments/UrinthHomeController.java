@@ -68,8 +68,8 @@ public final class UrinthHomeController {
     private final TextView installationsEmpty;
     private final View perfPanel;
     private final ImageView perfIcon;
+    private final View perfChip;
     private final TextView perfState;
-    private final TextView perfSubtitle;
     private final TextView perfButton;
 
     private List<DisplayInstance> instances = new ArrayList<>();
@@ -122,8 +122,8 @@ public final class UrinthHomeController {
         installationsEmpty = root.findViewById(R.id.urinth_installations_empty);
         perfPanel = root.findViewById(R.id.urinth_perf_panel);
         perfIcon = root.findViewById(R.id.urinth_perf_icon);
+        perfChip = root.findViewById(R.id.urinth_perf_chip);
         perfState = root.findViewById(R.id.urinth_perf_state);
-        perfSubtitle = root.findViewById(R.id.urinth_perf_subtitle);
         perfButton = root.findViewById(R.id.urinth_perf_button);
         renderPerformanceMode();
         perfButton.setOnClickListener(v -> togglePerformanceMode());
@@ -464,9 +464,10 @@ public final class UrinthHomeController {
         boolean on = LauncherPreferences.PREF_PERFORMANCE_MODE;
         perfPanel.setSelected(on);
         perfButton.setSelected(on);
+        perfChip.setSelected(on);
+        perfState.setSelected(on);
         perfState.setText(on ? R.string.urinth_perf_state_on : R.string.urinth_perf_state_off);
         perfState.setTextColor(on ? 0xFF1FC77A : 0xFFABC0CB);
-        perfSubtitle.setText(on ? R.string.urinth_perf_subtitle_on : R.string.urinth_perf_subtitle_off);
         perfButton.setText(on ? R.string.urinth_perf_button_on : R.string.urinth_perf_button_off);
         perfIcon.setAlpha(on ? 1f : 0.6f);
     }
