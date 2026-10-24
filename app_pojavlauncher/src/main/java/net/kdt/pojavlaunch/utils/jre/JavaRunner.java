@@ -95,8 +95,13 @@ public class JavaRunner {
         String resolvFile;
         resolvFile = new File(Tools.DIR_DATA,"resolv.conf").getAbsolutePath();
 
-        // Start small (256 MB) and let the heap grow up to -Xmx, instead of committing it all at start.
-        userArguments.add(0, "-Xms"+Math.min(256, LauncherPreferences.PREF_RAM_ALLOCATION)+"M");
+        // Start small and let the heap grow up to -Xmx, instead of committing it all at start.
+        // Performance Mode starts at half the maximum, so the heap does not have to stop and grow
+        // (a GC pause each time) while the world loads. Memory is only used once it is filled.
+        int initialHeap = LauncherPreferences.PREF_PERFORMANCE_MODE
+                ? Math.max(256, LauncherPreferences.PREF_RAM_ALLOCATION / 2)
+                : 256;
+        userArguments.add(0, "-Xms"+Math.min(initialHeap, LauncherPreferences.PREF_RAM_ALLOCATION)+"M");
         userArguments.add(0, "-Xmx"+LauncherPreferences.PREF_RAM_ALLOCATION+"M");
 
         ArrayList<String> overridableArguments = new ArrayList<>(Arrays.asList(
@@ -144,7 +149,31 @@ public class JavaRunner {
 
         //Add all the arguments
         userArguments.addAll(additionalArguments);
+        if(LauncherPreferences.PREF_PERFORMANCE_MODE) addPerformanceModeArguments(userArguments);
         return userArguments;
+    }
+
+    private static boolean hasArgument(List<String> arguments, String prefix) {
+        for(String argument : arguments) if(argument.startsWith(prefix)) return true;
+        return false;
+    }
+
+    /**
+     * Performance Mode: a larger young generation for G1, so short-lived garbage (the bulk of
+     * Minecraft's allocations) is cleared in small quick collections instead of piling up into a
+     * long pause, and no perf-data file writes. Never overrides a flag the user already set,
+     * and is only added when G1 is the collector in use.
+     */
+    private static void addPerformanceModeArguments(List<String> arguments) {
+        if(!hasArgument(arguments, "-XX:+UseG1GC")) return;
+        if(!hasArgument(arguments, "-XX:+UnlockExperimentalVMOptions"))
+            arguments.add("-XX:+UnlockExperimentalVMOptions");
+        if(!hasArgument(arguments, "-XX:G1NewSizePercent"))
+            arguments.add("-XX:G1NewSizePercent=30");
+        if(!hasArgument(arguments, "-XX:G1MaxNewSizePercent"))
+            arguments.add("-XX:G1MaxNewSizePercent=45");
+        if(!hasArgument(arguments, "-XX:-UsePerfData") && !hasArgument(arguments, "-XX:+UsePerfData"))
+            arguments.add("-XX:-UsePerfData");
     }
 
     private static File getVmPath(File runtimeHomeDir, String arch, String flavor) {

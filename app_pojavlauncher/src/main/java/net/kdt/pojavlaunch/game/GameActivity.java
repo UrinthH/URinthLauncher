@@ -175,6 +175,14 @@ public class GameActivity extends BaseActivity implements ControlButtonMenuListe
         // Repeating temperature check while the game is open; eases CPU/GPU load when hot.
         if(PREF_PERFORMANCE_MODE) {
             ThermalGuard.start(this, launcherGLView);
+            // Smooth screen flips: let the system rotate the window without freezing it until the
+            // game has redrawn (seamless on Android 8+, a quick crossfade before that). Set once,
+            // before the first frame; the system falls back on its own where it cannot do this.
+            WindowManager.LayoutParams rotationParams = getWindow().getAttributes();
+            rotationParams.rotationAnimation = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
+                    ? WindowManager.LayoutParams.ROTATION_ANIMATION_SEAMLESS
+                    : WindowManager.LayoutParams.ROTATION_ANIMATION_CROSSFADE;
+            getWindow().setAttributes(rotationParams);
             Toast.makeText(this, R.string.performance_mode_active_toast, Toast.LENGTH_SHORT).show();
         }
 

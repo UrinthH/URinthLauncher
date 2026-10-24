@@ -101,6 +101,7 @@ public final class ThermalGuard {
     @Nullable
     private Surface mCappedSurface;
     private boolean mSustainedModeForced;
+    private final Set<Integer> mBoostedThreads = new HashSet<>();
     private long mLastToastAt = -TOAST_COOLDOWN_MS;
     /** Kernel thread id to the priority it had before this guard lowered it. */
     private final Map<Integer, Integer> mLoweredThreads = new HashMap<>();
@@ -187,6 +188,7 @@ public final class ThermalGuard {
             } else {
                 mCalmerReadings = 0;
             }
+            boostRenderThread();
             // Re-apply on every pass, not only when the level changes: the game surface gets
             // re-created when the app is backgrounded, and the JVM starts new helper threads.
             if (mLevel >= LEVEL_HOT) lowerBackgroundThreads();
@@ -294,6 +296,35 @@ public final class ThermalGuard {
                 mLoweredThreads.put(tid, original);
             } catch (RuntimeException gone) {
                 // The thread ended in the meantime, or the system refused: leave it alone.
+            }
+        }
+    }
+
+    /**
+     * Give the game's render thread the front of the queue, so the JIT compiler, garbage
+     * collector helpers and Android's own work do not make it wait for a core. Android allows an
+     * app to raise its own threads to this level. It is applied again on every pass because the
+     * thread only exists once the game has started.
+     */
+    private void boostRenderThread() {
+        File[] tasks = new File("/proc/self/task").listFiles();
+        if (tasks == null) return;
+        for (File task : tasks) {
+            int tid;
+            try {
+                tid = Integer.parseInt(task.getName());
+            } catch (NumberFormatException notAThread) {
+                continue;
+            }
+            if (mBoostedThreads.contains(tid)) continue;
+            String name = readThreadName(task);
+            if (!"Render thread".equals(name) && !"Client thread".equals(name)) continue;
+            mBoostedThreads.add(tid); // do not retry, whatever the outcome
+            try {
+                Process.setThreadPriority(tid, Process.THREAD_PRIORITY_DISPLAY);
+                log("Render thread priority raised");
+            } catch (RuntimeException refused) {
+                log("The system did not allow raising the render thread priority");
             }
         }
     }
