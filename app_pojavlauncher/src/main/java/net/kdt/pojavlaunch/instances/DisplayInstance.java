@@ -8,6 +8,11 @@ public class DisplayInstance {
     public String versionId;
     public String icon;
 
+    /** A name that is unique per installation (its folder name), or null if it has no folder yet. */
+    public String getId() {
+        return mInstanceRoot == null ? null : mInstanceRoot.getName();
+    }
+
     protected void sanitize() {
         sanitizeIcon();
     }

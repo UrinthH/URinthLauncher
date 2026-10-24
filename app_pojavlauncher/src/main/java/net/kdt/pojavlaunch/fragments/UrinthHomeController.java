@@ -29,6 +29,7 @@ import net.kdt.pojavlaunch.extra.ExtraCore;
 import net.kdt.pojavlaunch.extra.ExtraListener;
 import net.kdt.pojavlaunch.home.HomeActivityLog;
 import net.kdt.pojavlaunch.instances.DisplayInstance;
+import net.kdt.pojavlaunch.instances.Instance;
 import net.kdt.pojavlaunch.home.InstallationLabels;
 import net.kdt.pojavlaunch.instances.InstanceIconProvider;
 import net.kdt.pojavlaunch.instances.Instances;
@@ -416,9 +417,10 @@ public final class UrinthHomeController {
         if (target == null) {
             lastPlayedName.setText(R.string.urinth_last_played);
         } else {
-            String version = InstallationLabels.minecraftVersion(target.versionId);
-            lastPlayedName.setText(version == null ? target.name
-                    : context.getString(R.string.urinth_last_played_with_version, target.name, version));
+            String version = latestLabel(target.versionId);
+            if (version == null) version = InstallationLabels.minecraftVersion(target.versionId);
+            lastPlayedName.setText(version == null ? labelFor(target)
+                    : context.getString(R.string.urinth_last_played_with_version, labelFor(target), version));
         }
     }
 
@@ -430,7 +432,7 @@ public final class UrinthHomeController {
             View row = inflater.inflate(R.layout.item_urinth_installation, installationsList, false);
             ((ImageView) row.findViewById(R.id.urinth_row_icon)).setImageDrawable(
                     InstanceIconProvider.fetchIcon(context.getResources(), instance));
-            ((TextView) row.findViewById(R.id.urinth_row_name)).setText(instance.name);
+            ((TextView) row.findViewById(R.id.urinth_row_name)).setText(labelFor(instance));
             String version = instance.versionId == null ? "" : instance.versionId;
             ((TextView) row.findViewById(R.id.urinth_row_version))
                     .setText(context.getString(R.string.urinth_row_version, version));
@@ -485,6 +487,11 @@ public final class UrinthHomeController {
         if (instances.isEmpty()) return null;
         String remembered = HomeActivityLog.lastPlayedName(context);
         if (remembered != null) {
+            // What is remembered is the installation's unique id; older builds remembered its
+            // name, so a name still matches (the first one with that name).
+            for (DisplayInstance instance : instances) {
+                if (remembered.equals(instance.getId())) return instance;
+            }
             for (DisplayInstance instance : instances) {
                 if (remembered.equals(instance.name)) return instance;
             }
@@ -498,9 +505,9 @@ public final class UrinthHomeController {
             return;
         }
         Instances.setSelectedInstance(instance);
-        HomeActivityLog.setLastPlayedName(context, instance.name);
+        HomeActivityLog.setLastPlayedName(context, rememberKey(instance));
         HomeActivityLog.record(context, HomeActivityLog.TYPE_PLAY,
-                context.getString(R.string.urinth_played, instance.name));
+                context.getString(R.string.urinth_played, labelFor(instance)));
         ExtraCore.setValue(ExtraConstants.LAUNCH_GAME, true);
         renderLastPlayed();
     }
@@ -533,31 +540,129 @@ public final class UrinthHomeController {
         host.showCenterFragment(ModrinthBrowserFragment.class, ModrinthBrowserFragment.TAG, args);
     }
 
+    /** "Latest release" / "Latest snapshot" for the two moving version ids, otherwise null. */
+    private String latestLabel(String versionId) {
+        if (Instance.VERSION_LATEST_RELEASE.equalsIgnoreCase(versionId))
+            return context.getString(R.string.profiles_latest_release);
+        if (Instance.VERSION_LATEST_SNAPSHOT.equalsIgnoreCase(versionId))
+            return context.getString(R.string.profiles_latest_snapshot);
+        return null;
+    }
+
+    private String rememberKey(DisplayInstance instance) {
+        String id = instance.getId();
+        return id != null ? id : instance.name;
+    }
+
+    /** Name shown for an installation; never blank, so none is ever left out of a list. */
+    private String labelFor(DisplayInstance instance) {
+        String versionName = instance.versionId;
+        if (Instance.VERSION_LATEST_RELEASE.equalsIgnoreCase(versionName))
+            versionName = context.getString(R.string.profiles_latest_release);
+        else if (Instance.VERSION_LATEST_SNAPSHOT.equalsIgnoreCase(versionName))
+            versionName = context.getString(R.string.profiles_latest_snapshot);
+        return InstallationLabels.displayName(instance.name, versionName,
+                context.getString(R.string.urinth_installation_unnamed));
+    }
+
+    /** Opens the chooser on a fresh read of the installations, so new installs are always in it. */
     private void showLastPlayedMenu(View anchor) {
+        PojavApplication.sExecutorService.execute(() -> {
+            List<DisplayInstance> loaded = new ArrayList<>();
+            try {
+                loaded.addAll(Instances.loadDisplay().list);
+            } catch (Exception ignored) {
+                loaded.addAll(instances);
+            }
+            Tools.runOnUiThread(() -> {
+                if (released) return;
+                instances = loaded;
+                renderInstallations();
+                renderLastPlayed();
+                openInstallationChooser();
+            });
+        });
+    }
+
+    private void openInstallationChooser() {
         if (instances.isEmpty()) {
             toast(R.string.urinth_create_first);
             return;
         }
         AlertDialog dialog = themedDialog(R.string.urinth_last_played_choose);
         LinearLayout rows = themedDialogBody(dialog);
-        String current = HomeActivityLog.lastPlayedName(context);
+        DisplayInstance current = pickPlayTarget();
+        // Two installations can share a name (two Fabric installs, say); number the later ones.
+        java.util.Map<String, Integer> seen = new java.util.HashMap<>();
         for (DisplayInstance instance : instances) {
-            // Ignore stale installation entries left behind after versions are deleted.
-            if (instance == null || instance.name == null || instance.name.trim().isEmpty()) {
-                continue;
-            }
-            addDialogRow(rows, instance.name, current != null && current.equals(instance.name), v -> {
-                HomeActivityLog.setLastPlayedName(context, instance.name);
+            if (instance == null) continue;
+            String title = labelFor(instance);
+            String subtitle = instance.versionId == null || instance.versionId.trim().isEmpty()
+                    ? context.getString(R.string.urinth_installation_setting_up)
+                    : (latestLabel(instance.versionId) != null ? latestLabel(instance.versionId)
+                            : InstallationLabels.subtitle(instance.versionId));
+            String duplicateKey = title + "|" + subtitle;
+            Integer count = seen.get(duplicateKey);
+            seen.put(duplicateKey, count == null ? 1 : count + 1);
+            if (count != null) title = title + " #" + (count + 1);
+            addInstallationRow(rows, instance, title, subtitle, instance == current, v -> {
+                HomeActivityLog.setLastPlayedName(context, rememberKey(instance));
                 renderLastPlayed();
                 dialog.dismiss();
-            }, null);
-        }
-        if (rows.getChildCount() == 0) {
-            dialog.dismiss();
-            toast(R.string.urinth_create_first);
-            return;
+            });
         }
         dialog.show();
+    }
+
+    /** One installation in the chooser: loader icon, name, version underneath, tick when current. */
+    private void addInstallationRow(LinearLayout container, DisplayInstance instance, String title,
+                                    String subtitle, boolean highlighted, View.OnClickListener onClick) {
+        LinearLayout row = new LinearLayout(context);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        row.setBackgroundResource(highlighted ? R.drawable.urinth_dialog_row_current_bg : R.drawable.urinth_dialog_row_bg);
+        row.setPadding(dpToPx(12), dpToPx(10), dpToPx(12), dpToPx(10));
+        LinearLayout.LayoutParams rowParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        rowParams.topMargin = dpToPx(2);
+        rowParams.bottomMargin = dpToPx(2);
+        row.setLayoutParams(rowParams);
+        row.setOnClickListener(onClick);
+
+        ImageView icon = new ImageView(context);
+        icon.setImageDrawable(InstanceIconProvider.fetchIcon(context.getResources(), instance));
+        LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams(dpToPx(28), dpToPx(28));
+        iconParams.rightMargin = dpToPx(12);
+        row.addView(icon, iconParams);
+
+        LinearLayout texts = new LinearLayout(context);
+        texts.setOrientation(LinearLayout.VERTICAL);
+        TextView name = new TextView(context);
+        name.setText(title);
+        name.setSingleLine(true);
+        name.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        name.setTextColor(highlighted ? GREEN : 0xFFF2F8FA);
+        name.setTextSize(14f);
+        texts.addView(name);
+        if (subtitle != null) {
+            TextView version = new TextView(context);
+            version.setText(subtitle);
+            version.setSingleLine(true);
+            version.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            version.setTextColor(0xFFABC0CB);
+            version.setTextSize(11f);
+            texts.addView(version);
+        }
+        row.addView(texts, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+
+        if (highlighted) {
+            ImageView check = new ImageView(context);
+            check.setImageResource(R.drawable.ic_urinth_check);
+            LinearLayout.LayoutParams checkParams = new LinearLayout.LayoutParams(dpToPx(16), dpToPx(16));
+            checkParams.leftMargin = dpToPx(8);
+            row.addView(check, checkParams);
+        }
+        container.addView(row);
     }
 
     /** Lets the player pick a saved account, delete one, or add one with the existing sign-in options. */

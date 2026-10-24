@@ -26,4 +26,20 @@ public class InstallationLabelsTest {
         assertNull(InstallationLabels.minecraftVersion(null));
         assertNull(InstallationLabels.minecraftVersion("  "));
     }
+
+    @Test
+    public void subtitleShowsVersionAndId() {
+        assertEquals("1.21.4 \u00b7 fabric-loader-0.17.3-1.21.4", InstallationLabels.subtitle("fabric-loader-0.17.3-1.21.4"));
+        assertEquals("1.8.9", InstallationLabels.subtitle("1.8.9"));
+        assertEquals("neoforge-21.1.5", InstallationLabels.subtitle("neoforge-21.1.5"));
+        assertNull(InstallationLabels.subtitle(null));
+    }
+
+    @Test
+    public void displayNameNeverBlank() {
+        assertEquals("Fabric", InstallationLabels.displayName(" Fabric ", "1.21.4", "Installation"));
+        assertEquals("1.21.4", InstallationLabels.displayName(null, "1.21.4", "Installation"));
+        assertEquals("1.21.4", InstallationLabels.displayName("  ", "1.21.4", "Installation"));
+        assertEquals("Installation", InstallationLabels.displayName(null, null, "Installation"));
+    }
 }
