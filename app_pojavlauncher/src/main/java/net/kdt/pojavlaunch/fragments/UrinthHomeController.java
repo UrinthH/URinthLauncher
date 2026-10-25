@@ -455,7 +455,7 @@ public final class UrinthHomeController {
             return;
         }
         perfButton.setEnabled(false); // no second tap while the animation plays
-        PerformanceBoostView.play(activity, perfPanel, new PerformanceBoostView.Listener() {
+        PerformanceBoostView.play(activity, perfPanel, perfIcon, new PerformanceBoostView.Listener() {
             @Override
             public void onBurst() {
                 renderPerformanceMode();
