@@ -62,7 +62,7 @@
     <string name="mcl_setting_category_renderer">Trình kết xuất</string>
     <string name="mcl_setting_renderer_gles2_4">Holy GL4ES - (tất cả phiên bản, hiệu suất nhanh)</string>
     <string name="mcl_setting_renderer_vulkan_zink">Zink (Vulkan) - (tất cả phiên bản, Hiệu suất cho: trung bình)</string>
-    <string name="mcl_setting_renderer_ltw">Performance Mode (OpenGL ES 3) - chỉ 1.17 trở lên</string>
+    <string name="mcl_setting_renderer_ltw">Performance Mode</string>
     <string name="mcl_setting_veroption_release">Bản phát hành</string>
     <string name="mcl_setting_veroption_snapshot">Snapshot</string>
     <string name="mcl_setting_veroption_oldalpha">Bản Alpha cũ</string>

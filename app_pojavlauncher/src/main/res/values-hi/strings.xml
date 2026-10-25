@@ -64,7 +64,7 @@
     <string name="mcl_setting_category_renderer">रेंडरर</string>
     <string name="mcl_setting_renderer_gles2_4">होली GL4ES - (सभी संस्करण, तेज़)</string>
     <string name="mcl_setting_renderer_vulkan_zink">ज़िंक (वल्कन) - (सभी संस्करण, मध्यम)</string>
-    <string name="mcl_setting_renderer_ltw">Performance Mode (ओपनजीएल ईएस 3) - केवल 1.17+</string>
+    <string name="mcl_setting_renderer_ltw">Performance Mode</string>
     <string name="mcl_setting_veroption_release">रीलीज़</string>
     <string name="mcl_setting_veroption_snapshot">स्नैपशॉट</string>
     <string name="mcl_setting_veroption_oldalpha">ओल्ड-अल्फा</string>

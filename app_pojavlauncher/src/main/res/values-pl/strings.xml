@@ -51,7 +51,7 @@
     <string name="mcl_setting_category_renderer">Silnik renderujący</string>
     <string name="mcl_setting_renderer_gles2_4">Holy GL4ES - (wszystkie wersje, szybki)</string>
     <string name="mcl_setting_renderer_vulkan_zink">Zink (Vulkan) - (wszystkie wersje, średni)</string>
-    <string name="mcl_setting_renderer_ltw">Performance Mode (OpenGL ES 3) - tylko 1.17+</string>
+    <string name="mcl_setting_renderer_ltw">Performance Mode</string>
     <string name="mcl_setting_veroption_release">Oficjalne wydanie</string>
     <string name="mcl_setting_veroption_snapshot">Wersja deweloperska</string>
     <string name="mcl_setting_veroption_oldalpha">Dawna Alpha</string>
