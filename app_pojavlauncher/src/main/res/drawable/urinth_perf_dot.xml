@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The small status light inside the ACTIVE / OFF label. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_selected="true">
+        <shape android:shape="oval">
+            <size android:width="5dp" android:height="5dp" />
+            <solid android:color="#3DEB9B" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="oval">
+            <size android:width="5dp" android:height="5dp" />
+            <solid android:color="#6B8591" />
+        </shape>
+    </item>
+</selector>

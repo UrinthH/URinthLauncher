@@ -1,17 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Performance Mode card: solid and quiet. A thin green edge shows when the mode is on. -->
+<!-- Performance Mode card: a soft diagonal gradient with a thin edge; greener when the mode is on.
+     The hex pattern, meter bars, corner marks and light sweep are drawn on top by PerformanceCardArt. -->
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:state_selected="true">
         <shape android:shape="rectangle">
-            <solid android:color="#0D1B21" />
-            <stroke android:width="1dp" android:color="#2E8F68" />
+            <gradient
+                android:angle="315"
+                android:endColor="#0A1A1C"
+                android:startColor="#123A33" />
+            <stroke android:width="1dp" android:color="#3AA67F" />
             <corners android:radius="10dp" />
         </shape>
     </item>
     <item>
         <shape android:shape="rectangle">
-            <solid android:color="#0D1920" />
-            <stroke android:width="1dp" android:color="#1E3640" />
+            <gradient
+                android:angle="315"
+                android:endColor="#09141A"
+                android:startColor="#12232C" />
+            <stroke android:width="1dp" android:color="#22404C" />
             <corners android:radius="10dp" />
         </shape>
     </item>

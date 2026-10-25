@@ -78,6 +78,12 @@ public final class UrinthHomeController {
     private Bitmap avatar;
     private boolean released;
     private MediaPlayer themeMusic;
+    private MediaPlayer fadingOutMusic;
+    private int musicRes;
+    private boolean musicPaused;
+    private static final long MUSIC_FADE_MS = 700;
+    // Wall-clock timer (not an animator), so the fade also works with "Animator duration scale" off.
+    private final Handler musicHandler = new Handler(Looper.getMainLooper());
 
     // The glow pulse is driven by hand with a Handler loop instead of ValueAnimator: on a lot of
     // devices (especially ones people tweak for performance) "Developer options > Animator
@@ -164,15 +170,11 @@ public final class UrinthHomeController {
     public void release() {
         released = true;
         ExtraCore.removeExtraListenerFromValue(ExtraConstants.REFRESH_ACCOUNT_SPINNER, accountRefreshListener);
-        if (themeMusic != null) {
-            try {
-                themeMusic.stop();
-            } catch (IllegalStateException ignored) {
-                // already stopped/released elsewhere
-            }
-            themeMusic.release();
-            themeMusic = null;
-        }
+        musicHandler.removeCallbacksAndMessages(null);
+        releasePlayer(fadingOutMusic);
+        fadingOutMusic = null;
+        releasePlayer(themeMusic);
+        themeMusic = null;
         stopGlowLoop();
         if (particleView != null) {
             particleView.release();
@@ -184,30 +186,111 @@ public final class UrinthHomeController {
         }
     }
 
-    /** Starts the looping home-screen theme (res/raw/urinth_theme). Safe to call once. */
+    /** The track for the current mode: the Performance Mode song when it is on, the home theme otherwise. */
+    private static int wantedTrack() {
+        return LauncherPreferences.PREF_PERFORMANCE_MODE ? R.raw.urinth_performance : R.raw.urinth_theme;
+    }
+
+    /** Starts the looping home-screen music for the current mode. Safe to call once. */
     private void startMusic() {
+        musicRes = wantedTrack();
+        themeMusic = createLooping(musicRes);
+        if (themeMusic != null) themeMusic.start();
+    }
+
+    private MediaPlayer createLooping(int res) {
         try {
-            themeMusic = MediaPlayer.create(context, R.raw.urinth_theme);
-            if (themeMusic != null) {
-                themeMusic.setLooping(true);
-                themeMusic.start();
-            }
+            MediaPlayer player = MediaPlayer.create(context, res);
+            if (player != null) player.setLooping(true);
+            return player;
         } catch (Exception e) {
             // Missing/corrupt audio resource shouldn't break the home screen.
-            themeMusic = null;
+            return null;
         }
     }
 
-    /** Pause the theme and the glow pulses when the app goes into the background. */
+    private static void releasePlayer(MediaPlayer player) {
+        if (player == null) return;
+        try {
+            player.stop();
+        } catch (IllegalStateException ignored) {
+            // already stopped/released elsewhere
+        }
+        player.release();
+    }
+
+    private static void setVolume(MediaPlayer player, float volume) {
+        if (player == null) return;
+        try {
+            player.setVolume(volume, volume);
+        } catch (IllegalStateException ignored) {
+            // released meanwhile
+        }
+    }
+
+    /**
+     * Swaps to the track that fits the current mode (if it is not already playing): the old song
+     * fades out while the new one fades in and loops. Does nothing when the right song is playing.
+     */
+    private void switchMusic() {
+        if (released) return;
+        int want = wantedTrack();
+        if (want == musicRes) return;
+        musicRes = want;
+        musicHandler.removeCallbacksAndMessages(null);
+        releasePlayer(fadingOutMusic);
+        fadingOutMusic = themeMusic;
+        final MediaPlayer incoming = createLooping(want);
+        themeMusic = incoming;
+        if (musicPaused) {
+            // The app is in the background: no sound now, the new song starts when it comes back.
+            releasePlayer(fadingOutMusic);
+            fadingOutMusic = null;
+            return;
+        }
+        setVolume(incoming, 0f);
+        if (incoming != null) incoming.start();
+        final long start = SystemClock.uptimeMillis();
+        musicHandler.post(new Runnable() {
+            @Override
+            public void run() {
+                if (released) return;
+                float p = Math.min(1f, (SystemClock.uptimeMillis() - start) / (float) MUSIC_FADE_MS);
+                setVolume(fadingOutMusic, 1f - p);
+                setVolume(incoming, p);
+                if (p < 1f) {
+                    musicHandler.postDelayed(this, 40);
+                } else {
+                    releasePlayer(fadingOutMusic);
+                    fadingOutMusic = null;
+                }
+            }
+        });
+    }
+
+    /** Pause the music and the glow pulses when the app goes into the background. */
     public void pauseMusic() {
+        musicPaused = true;
+        // Finish any fade at once so nothing is left half-way.
+        musicHandler.removeCallbacksAndMessages(null);
+        releasePlayer(fadingOutMusic);
+        fadingOutMusic = null;
+        setVolume(themeMusic, 1f);
         if (themeMusic != null && themeMusic.isPlaying()) themeMusic.pause();
         pauseGlowLoop();
         if (particleView != null) particleView.pause();
     }
 
-    /** Resume the theme and the glow pulses when the app comes back to the foreground. */
+    /** Resume the music and the glow pulses when the app comes back to the foreground. */
     public void resumeMusic() {
         if (released) return;
+        musicPaused = false;
+        // Performance Mode may have been changed while away (for example in settings).
+        if (wantedTrack() != musicRes) {
+            releasePlayer(themeMusic);
+            musicRes = wantedTrack();
+            themeMusic = createLooping(musicRes);
+        }
         if (themeMusic != null && !themeMusic.isPlaying()) themeMusic.start();
         resumeGlowLoop();
         if (particleView != null) particleView.resume();
@@ -450,6 +533,7 @@ public final class UrinthHomeController {
         boolean enabled = !LauncherPreferences.PREF_PERFORMANCE_MODE;
         // The setting changes at once; only what the card shows waits for the animation's burst.
         LauncherPreferences.setPerformanceMode(enabled);
+        switchMusic(); // ON: the Performance Mode song starts at once; OFF: the home theme comes back
         if (!enabled) {
             showPerformanceModeChange(false);
             return;
