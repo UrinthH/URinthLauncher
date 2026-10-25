@@ -148,7 +148,10 @@ public final class UrinthHomeController {
         if (edgeGlowView != null) edgeGlowView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
         startGlowLoop();
         particleView = root.findViewById(R.id.urinth_particles);
-        if (particleView != null) particleView.start();
+        if (particleView != null) {
+            particleView.setHackMode(LauncherPreferences.PREF_PERFORMANCE_MODE);
+            particleView.start();
+        }
         creditName = root.findViewById(R.id.urinth_credit_name);
         if (creditName != null) creditName.start();
 
@@ -286,6 +289,7 @@ public final class UrinthHomeController {
         if (released) return;
         musicPaused = false;
         // Performance Mode may have been changed while away (for example in settings).
+        if (particleView != null) particleView.setHackMode(LauncherPreferences.PREF_PERFORMANCE_MODE);
         if (wantedTrack() != musicRes) {
             releasePlayer(themeMusic);
             musicRes = wantedTrack();
@@ -533,6 +537,7 @@ public final class UrinthHomeController {
         boolean enabled = !LauncherPreferences.PREF_PERFORMANCE_MODE;
         // The setting changes at once; only what the card shows waits for the animation's burst.
         LauncherPreferences.setPerformanceMode(enabled);
+        if (particleView != null) particleView.setHackMode(enabled); // snow <-> binary rain
         switchMusic(); // ON: the Performance Mode song starts at once; OFF: the home theme comes back
         if (!enabled) {
             showPerformanceModeChange(false);
