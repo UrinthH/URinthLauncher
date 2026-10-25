@@ -448,13 +448,40 @@ public final class UrinthHomeController {
     /** Performance Mode is a plain preference; the game process reads it when it starts. */
     private void togglePerformanceMode() {
         boolean enabled = !LauncherPreferences.PREF_PERFORMANCE_MODE;
+        // The setting changes at once; only what the card shows waits for the animation's burst.
         LauncherPreferences.setPerformanceMode(enabled);
+        if (!enabled) {
+            showPerformanceModeChange(false);
+            return;
+        }
+        perfButton.setEnabled(false); // no second tap while the animation plays
+        PerformanceBoostView.play(activity, perfPanel, new PerformanceBoostView.Listener() {
+            @Override
+            public void onBurst() {
+                renderPerformanceMode();
+                bouncePerformanceCard();
+            }
+
+            @Override
+            public void onFinished() {
+                perfButton.setEnabled(true);
+                renderPerformanceMode();
+                Toast.makeText(context, R.string.urinth_perf_toast_on, Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void showPerformanceModeChange(boolean enabled) {
         renderPerformanceMode();
-        perfPanel.setScaleX(0.97f);
-        perfPanel.setScaleY(0.97f);
-        perfPanel.animate().scaleX(1f).scaleY(1f).setDuration(180).start();
+        bouncePerformanceCard();
         Toast.makeText(context, enabled ? R.string.urinth_perf_toast_on : R.string.urinth_perf_toast_off,
                 Toast.LENGTH_SHORT).show();
+    }
+
+    private void bouncePerformanceCard() {
+        perfPanel.setScaleX(0.94f);
+        perfPanel.setScaleY(0.94f);
+        perfPanel.animate().scaleX(1f).scaleY(1f).setDuration(260).start();
     }
 
     private void renderPerformanceMode() {
