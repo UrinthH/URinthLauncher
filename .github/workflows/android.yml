@@ -29,6 +29,19 @@ jobs:
           name: output-aar
           path: app_pojavlauncher/libs
 
+      # URinth build of LTW (shader cache and fixes). If it is not available the official LTW above stays.
+      - name: Get URinth LTW
+        uses: dawidd6/action-download-artifact@v6
+        continue-on-error: true
+        with:
+          repo: UrinthH/LTW
+          workflow: android.yml
+          workflow_conclusion: success
+          branch: urinth
+          name: output-aar
+          path: app_pojavlauncher/libs
+          if_no_artifact_found: warn
+
       - name: Get Mesa
         uses: dawidd6/action-download-artifact@v6  
         continue-on-error: true

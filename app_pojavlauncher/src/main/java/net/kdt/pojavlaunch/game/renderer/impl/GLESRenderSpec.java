@@ -86,6 +86,10 @@ public abstract class GLESRenderSpec implements RenderSpec {
             // between the Settings compatibility scan and game startup.
             discoverExternalProvider(context);
             super.setupEnvironment(context, envMap);
+            // LTW (URinth build) remembers translated shaders here, so the next launch and the
+            // next resource reload skip the slow translation. Older LTW builds ignore the variable.
+            File shaderCache = new File(context.getCacheDir(), "ltw_shader_cache");
+            envMap.put("LTW_SHADER_CACHE_DIR", shaderCache.getAbsolutePath());
         }
 
         public String name() {
