@@ -11,11 +11,13 @@ import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.PathMeasure;
 import android.graphics.PorterDuff;
+import android.graphics.PorterDuffColorFilter;
 import android.graphics.PorterDuffXfermode;
 import android.graphics.RadialGradient;
 import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.Shader;
+import android.graphics.Typeface;
 import android.view.Choreographer;
 import android.view.HapticFeedbackConstants;
 import android.view.View;
@@ -25,15 +27,16 @@ import android.widget.FrameLayout;
 import java.util.Random;
 
 /**
- * The animation played when Performance Mode is switched on. Original artwork built from plain
- * shapes, with no text:
+ * The animation played when Performance Mode is switched on (about 8 seconds). Original artwork
+ * built from plain shapes; the only characters are the 0s and 1s of the "hacking" effect.
  *
  * <ol>
- *   <li>Lock-on: targeting brackets close in on the Performance Mode card.</li>
- *   <li>Photo zoom: a frozen picture of the screen zooms in like a camera, with zoom blur, colour
- *       fringing, a darkening vignette and a little shake.</li>
- *   <li>Shutter: flash, glitch slices, the picture dissolves, a shock ring and an anamorphic light
- *       streak cross the screen.</li>
+ *   <li>Hack-in: the camera roams over a frozen picture of the launcher, diving from point to
+ *       point, while binary digits rain, the picture glitches, and then cracks into panels.</li>
+ *   <li>Suck: panels, digits and light streaks spiral into a black hole in the middle. The camera
+ *       dives in and the shaking builds.</li>
+ *   <li>Big bang: flash, fracture lines, shock rings. The camera punches back out fast and the
+ *       panels of the launcher blast outward and fall apart.</li>
  *   <li>The emblem draws itself: a hexagon, a gauge that fills tick by tick with a bright comet
  *       head, a bolt that powers up, orbiting rings, and a sweep of light.</li>
  *   <li>The emblem flies into the card's own icon, which pulses.</li>
@@ -46,6 +49,7 @@ public final class PerformanceBoostView extends View {
     private static final int GREEN = 0xFF1FC77A;
     private static final int CYAN = 0xFF4FD8FF;
     private static final int GOLD = 0xFFFFC83C;
+    private static final int BACKDROP = 0xFF02070C;
     private static final int[] SPARK_COLORS = {TEAL, Color.WHITE, GREEN, CYAN, TEAL, GOLD};
     private static final int HEX_SIDES = 6;
     private static final int GAUGE_TICKS = 44;
@@ -54,6 +58,15 @@ public final class PerformanceBoostView extends View {
     private static final int SPARKS = 90;
     private static final int MOTES = 26;
     private static final int GRID_LINES = 22;
+
+    private static final int COLS = 9;
+    private static final int ROWS = 6;
+    private static final int TILES = COLS * ROWS;
+    private static final int MAX_RAIN_COLUMNS = 64;
+    private static final int RAIN_TRAIL = 11;
+    private static final int STREAKS = 56;
+    private static final int CRACKS = 14;
+    private static final float GRAVITY_DP = 1100f;
 
     /** Callbacks for the owner. Both are always called, even if the screen goes away early. */
     public interface Listener {
@@ -79,21 +92,25 @@ public final class PerformanceBoostView extends View {
     private final Paint gradientPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint vignettePaint = new Paint();
     private final Paint flashPaint = new Paint();
+    private final Paint rainPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint sweepPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Path bolt = new Path();
     private final Path hexPath = new Path();
     private final Path hexSegment = new Path();
+    private final Path[] cracks = new Path[CRACKS];
     private final PathMeasure hexMeasure = new PathMeasure();
     private final RectF rect = new RectF();
+    private final RectF dstRect = new RectF();
     private final Rect srcRect = new Rect();
+    private final char[] bit = new char[1];
 
     private final ColorMatrixColorFilter redOnly = channel(0);
     private final ColorMatrixColorFilter greenOnly = channel(1);
     private final ColorMatrixColorFilter blueOnly = channel(2);
-    private final android.graphics.PorterDuffColorFilter tealFilter =
-            new android.graphics.PorterDuffColorFilter(TEAL, PorterDuff.Mode.SRC_IN);
-    private final android.graphics.PorterDuffColorFilter greenFilter =
-            new android.graphics.PorterDuffColorFilter(GREEN, PorterDuff.Mode.SRC_IN);
+    private final PorterDuffColorFilter tealFilter = new PorterDuffColorFilter(TEAL, PorterDuff.Mode.SRC_IN);
+    private final PorterDuffColorFilter greenFilter = new PorterDuffColorFilter(GREEN, PorterDuff.Mode.SRC_IN);
 
+    // Random but fixed looks of the sparks, motes, rain, streaks and panels.
     private final float[] sparkAngle = new float[SPARKS];
     private final float[] sparkSpeed = new float[SPARKS];
     private final float[] sparkLife = new float[SPARKS];
@@ -103,6 +120,21 @@ public final class PerformanceBoostView extends View {
     private final float[] moteRadius = new float[MOTES];
     private final float[] moteSpeed = new float[MOTES];
     private final float[] moteSize = new float[MOTES];
+    private final float[] rainSpeed = new float[MAX_RAIN_COLUMNS];   // px per ms
+    private final float[] rainOffset = new float[MAX_RAIN_COLUMNS];  // px
+    private final float[] streakAngle = new float[STREAKS];
+    private final float[] streakSpeed = new float[STREAKS];
+    private final float[] streakOffset = new float[STREAKS];
+    private final float[] tileRandom = new float[TILES];
+    private final float[] tileDelay = new float[TILES];
+    private final float[] tileSpin = new float[TILES];       // +1 or -1
+    private final float[] tileJitterX = new float[TILES];
+    private final float[] tileJitterY = new float[TILES];
+    private final float[] tileJitterRot = new float[TILES];
+    private final float[] tileDirX = new float[TILES];
+    private final float[] tileDirY = new float[TILES];
+    private final float[] tileSpeed = new float[TILES];      // dp per second at the bang
+    private final float[] tileSpinSpeed = new float[TILES];  // degrees per second after the bang
 
     private final Choreographer.FrameCallback frame = new Choreographer.FrameCallback() {
         @Override
@@ -116,9 +148,13 @@ public final class PerformanceBoostView extends View {
     private boolean running;
     private boolean arrivedSent;
     private boolean finishedSent;
-    private boolean shutterBuzzed;
+    private boolean suckBuzzed;
+    private boolean bangBuzzed;
 
     private float centerX, centerY, emblemRadius, hexLength;
+    private float rainSpacing, rainLineHeight, rainCycle;
+    private int rainColumns;
+    private float cameraFocusX, cameraFocusY;
 
     private PerformanceBoostView(Context context, Bitmap snapshot, RectF target,
                                  float iconX, float iconY, float iconSize, Listener listener) {
@@ -137,6 +173,9 @@ public final class PerformanceBoostView extends View {
         ringPaint.setStrokeCap(Paint.Cap.ROUND);
         linePaint.setStrokeCap(Paint.Cap.ROUND);
         addPaint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.ADD));
+        rainPaint.setTypeface(Typeface.MONOSPACE);
+        rainPaint.setTextAlign(Paint.Align.CENTER);
+        rainPaint.setTextSize(12f * density);
 
         // Lightning bolt on a 24 x 24 grid centred on (12, 12).
         bolt.moveTo(13f, 2f);
@@ -161,6 +200,24 @@ public final class PerformanceBoostView extends View {
             moteSpeed[i] = (random.nextBoolean() ? 1f : -1f) * (0.6f + random.nextFloat() * 1.4f);
             moteSize[i] = 0.8f + random.nextFloat() * 1.4f;
         }
+        for (int i = 0; i < MAX_RAIN_COLUMNS; i++) {
+            rainSpeed[i] = (110f + random.nextFloat() * 300f) * density / 1000f;
+            rainOffset[i] = random.nextFloat() * 4000f;
+        }
+        for (int i = 0; i < STREAKS; i++) {
+            streakAngle[i] = (float) (random.nextFloat() * Math.PI * 2);
+            streakSpeed[i] = 0.7f + random.nextFloat() * 0.9f;
+            streakOffset[i] = random.nextFloat();
+        }
+        for (int i = 0; i < TILES; i++) {
+            tileRandom[i] = random.nextFloat();
+            tileSpin[i] = random.nextBoolean() ? 1f : -1f;
+            tileJitterX[i] = (random.nextFloat() - 0.5f) * 2f * (2f + random.nextFloat() * 6f);
+            tileJitterY[i] = (random.nextFloat() - 0.5f) * 2f * (2f + random.nextFloat() * 6f);
+            tileJitterRot[i] = (random.nextFloat() - 0.5f) * 8f;
+            tileSpeed[i] = 650f + random.nextFloat() * 900f;
+            tileSpinSpeed[i] = tileSpin[i] * (180f + random.nextFloat() * 440f);
+        }
     }
 
     private static ColorMatrixColorFilter channel(int index) {
@@ -171,7 +228,7 @@ public final class PerformanceBoostView extends View {
     }
 
     /**
-     * Plays the animation over the whole screen, centred on the card, ending in the card's icon.
+     * Plays the animation over the whole screen, starting on the card, ending in the card's icon.
      * The listener's callbacks are always called, even if the animation cannot be shown.
      */
     public static void play(Activity activity, View card, View icon, Listener listener) {
@@ -191,7 +248,7 @@ public final class PerformanceBoostView extends View {
         float iconY = a[1] - b[1] + icon.getHeight() / 2f;
         float iconSize = Math.max(icon.getWidth(), icon.getHeight());
 
-        // A half-size picture of the screen is enough for the zoom, and cheap to redraw.
+        // A half-size picture of the screen is enough, and cheap to redraw many times a frame.
         Bitmap snapshot = null;
         try {
             snapshot = Bitmap.createBitmap(Math.max(1, content.getWidth() / 2), Math.max(1, content.getHeight() / 2), Bitmap.Config.ARGB_8888);
@@ -199,7 +256,7 @@ public final class PerformanceBoostView extends View {
             canvas.scale(0.5f, 0.5f);
             content.draw(canvas);
         } catch (RuntimeException | OutOfMemoryError failed) {
-            snapshot = null; // the effect still plays, just without the zoomed picture
+            snapshot = null; // the effect still plays, just without the launcher picture
         }
         PerformanceBoostView view = new PerformanceBoostView(activity, snapshot, cardRect, iconX, iconY, iconSize, listener);
         content.addView(view, new FrameLayout.LayoutParams(
@@ -227,8 +284,8 @@ public final class PerformanceBoostView extends View {
     @Override
     protected void onSizeChanged(int w, int h, int oldw, int oldh) {
         super.onSizeChanged(w, h, oldw, oldh);
-        centerX = w / 2f;
-        centerY = h * 0.47f;
+        centerX = w * BoostTimeline.CENTER_X;
+        centerY = h * BoostTimeline.CENTER_Y;
         emblemRadius = Math.min(h * 0.19f, w * 0.115f);
 
         glowPaint.setShader(new RadialGradient(0f, 0f, 1f,
@@ -238,6 +295,9 @@ public final class PerformanceBoostView extends View {
         // Horizontal light streak, defined from -1 to 1 and scaled when drawn.
         gradientPaint.setShader(new LinearGradient(-1f, 0f, 1f, 0f,
                 new int[]{0x004FD8FF, 0xCC4FD8FF, 0xFFFFFFFF, 0xCC4FD8FF, 0x004FD8FF}, null, Shader.TileMode.CLAMP));
+        // The light sweep across the emblem, drawn in a unit box and scaled.
+        sweepPaint.setShader(new LinearGradient(-1f, 0f, 1f, 0f,
+                new int[]{0x00FFFFFF, 0x8CFFFFFF, 0x00FFFFFF}, null, Shader.TileMode.CLAMP));
 
         // Regular hexagon with a vertex at the top, as a closed outline starting from that vertex.
         hexPath.reset();
@@ -251,6 +311,53 @@ public final class PerformanceBoostView extends View {
         hexPath.close();
         hexMeasure.setPath(hexPath, true);
         hexLength = hexMeasure.getLength();
+
+        // Rain: one column of digits every few dp, never more than the arrays hold.
+        rainSpacing = Math.max(12f * density, w / 46f);
+        rainColumns = Math.min(MAX_RAIN_COLUMNS, (int) (w / rainSpacing) + 1);
+        rainLineHeight = rainPaint.getTextSize() * 1.15f;
+        rainCycle = h + RAIN_TRAIL * rainLineHeight;
+
+        // Panels: the ones nearest the middle are pulled in first, the outer ones last.
+        float tileW = w / (float) COLS;
+        float tileH = h / (float) ROWS;
+        float maxDistance = (float) Math.hypot(w / 2f, h / 2f);
+        Random random = new Random(8);
+        for (int i = 0; i < TILES; i++) {
+            float cx = (i % COLS + 0.5f) * tileW;
+            float cy = (i / COLS + 0.5f) * tileH;
+            float dx = cx - centerX;
+            float dy = cy - centerY;
+            float distance = (float) Math.hypot(dx, dy);
+            tileDelay[i] = Math.min(0.55f, 0.45f * distance / maxDistance + tileRandom[i] * 0.1f);
+            double angle = distance < 1f ? random.nextFloat() * Math.PI * 2 : Math.atan2(dy, dx) + (random.nextFloat() - 0.5f) * 1.1f;
+            tileDirX[i] = (float) Math.cos(angle);
+            tileDirY[i] = (float) Math.sin(angle);
+        }
+
+        // Fracture lines from the middle to the edge of the screen: jagged, with a few branches.
+        float reach = maxDistance * 1.05f;
+        for (int i = 0; i < CRACKS; i++) {
+            Path path = new Path();
+            double angle = Math.PI * 2 * i / CRACKS + (random.nextFloat() - 0.5f) * 0.3f;
+            float x = 0f;
+            float y = 0f;
+            path.moveTo(0f, 0f);
+            int segments = 9;
+            for (int s = 1; s <= segments; s++) {
+                angle += (random.nextFloat() - 0.5f) * 0.45f;
+                float step = reach / segments * (0.7f + random.nextFloat() * 0.6f);
+                x += (float) Math.cos(angle) * step;
+                y += (float) Math.sin(angle) * step;
+                path.lineTo(x, y);
+                if (s == 3 || s == 6) { // a short branch
+                    double branch = angle + (random.nextBoolean() ? 0.9 : -0.9);
+                    path.lineTo(x + (float) Math.cos(branch) * step * 0.7f, y + (float) Math.sin(branch) * step * 0.7f);
+                    path.moveTo(x, y);
+                }
+            }
+            cracks[i] = path;
+        }
     }
 
     private void tick(long frameTimeNanos) {
@@ -260,8 +367,12 @@ public final class PerformanceBoostView extends View {
             if (step > 0) elapsedMs += step / 1_000_000f;
         }
         lastFrameNanos = frameTimeNanos;
-        if (!shutterBuzzed && elapsedMs >= BoostTimeline.FLASH_AT) {
-            shutterBuzzed = true;
+        if (!suckBuzzed && elapsedMs >= BoostTimeline.SUCK_START) {
+            suckBuzzed = true;
+            performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
+        }
+        if (!bangBuzzed && elapsedMs >= BoostTimeline.BANG_AT) {
+            bangBuzzed = true;
             performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
         }
         if (BoostTimeline.arrived(elapsedMs)) sendArrived();
@@ -303,135 +414,198 @@ public final class PerformanceBoostView extends View {
         int h = getHeight();
         float overall = BoostTimeline.overall(t);
 
-        scrimPaint.setColor(alpha(0xFF020A10, BoostTimeline.scrim(t)));
+        scrimPaint.setColor(alpha(BACKDROP, BoostTimeline.scrim(t)));
         canvas.drawRect(0, 0, w, h, scrimPaint);
 
-        int save = canvas.save();
-        float shake = BoostTimeline.shake(t) * density * 6f;
-        if (shake > 0f) canvas.translate((float) Math.sin(t * 0.13f) * shake, (float) Math.cos(t * 0.17f) * shake);
+        int shakeSave = canvas.save();
+        float shake = BoostTimeline.shake(t) * density * 11f;
+        canvas.translate((float) (Math.sin(t * 0.097) * Math.cos(t * 0.041)) * shake,
+                (float) (Math.cos(t * 0.083) * Math.sin(t * 0.057)) * shake);
 
-        drawFrozenScreen(canvas, t, w, h);
-        drawGrid(canvas, t, w, h);
+        // The world: the picture of the launcher, seen through the roaming camera.
+        int worldSave = canvas.save();
+        applyCamera(canvas, t, w, h);
+        if (snapshot != null && !snapshot.isRecycled()) {
+            if (t < BoostTimeline.CRACK_START) drawPicture(canvas, t, w, h);
+            else drawPanels(canvas, t, w, h);
+        }
         drawLockOn(canvas, t);
-        drawShutterEffects(canvas, t, w, h, overall);
-        drawEmblem(canvas, t, overall);
-        canvas.restoreToCount(save);
+        canvas.restoreToCount(worldSave);
 
-        drawLanding(canvas, t, overall);
+        drawRain(canvas, t, w, h);
+        drawSuckStreaks(canvas, t, w, h);
+        drawBlackHole(canvas, t);
+        drawGlitchBars(canvas, t, w, h);
 
-        float flash = BoostTimeline.flash(t);
-        if (flash > 0f) {
-            flashPaint.setColor(alpha(0xFFEAFFFB, flash * 0.9f));
-            canvas.drawRect(0, 0, w, h, flashPaint);
-        }
-    }
-
-    /** The picture of the screen, zoomed like a camera with blur, colour fringing and glitch slices. */
-    private void drawFrozenScreen(Canvas canvas, float t, int w, int h) {
-        float visible = BoostTimeline.snapshotAlpha(t);
-        if (snapshot == null || snapshot.isRecycled() || visible <= 0f) return;
-        float zoom = BoostTimeline.zoomScale(t);
-        float blur = BoostTimeline.zoomBlur(t);
-        float fringe = BoostTimeline.aberration(t);
-        float px = target.centerX();
-        float py = target.centerY();
-        rect.set(0, 0, w, h);
-
-        int save = canvas.save();
-        // Layers fade together, so the picture dissolves as a whole after the shutter.
-        if (visible < 1f) canvas.saveLayerAlpha(0, 0, w, h, Math.round(255 * visible));
-
-        if (fringe > 0.04f) {
-            // Three colour passes slightly apart: red and blue drift away from green.
-            canvas.drawRect(0, 0, w, h, flashPaintBlack());
-            float offset = fringe * density * 9f;
-            drawSnapshotPass(canvas, redOnly, zoom * (1f + fringe * 0.012f), px, py, offset);
-            drawSnapshotPass(canvas, greenOnly, zoom, px, py, 0f);
-            drawSnapshotPass(canvas, blueOnly, zoom * (1f - fringe * 0.012f), px, py, -offset);
-        } else {
-            canvas.save();
-            canvas.scale(zoom, zoom, px, py);
-            bitmapPaint.setAlpha(255);
-            canvas.drawBitmap(snapshot, null, rect, bitmapPaint);
-            canvas.restore();
-        }
-
-        // Zoom blur: copies at slightly larger scales, blended with equal weight.
-        if (blur > 0.02f) {
-            for (int k = 1; k <= 5; k++) {
-                float s = zoom * (1f + blur * 0.05f * k);
-                bitmapPaint.setAlpha(Math.round(255f / (k + 1)));
-                canvas.save();
-                canvas.scale(s, s, px, py);
-                canvas.drawBitmap(snapshot, null, rect, bitmapPaint);
-                canvas.restore();
-            }
-            bitmapPaint.setAlpha(255);
-        }
-
-        // Glitch: a few strips of the picture knocked sideways around the shutter.
-        if (BoostTimeline.glitching(t)) {
-            float strength = 1f - Math.abs(t - BoostTimeline.FLASH_AT) / 150f;
-            for (int i = 0; i < 5; i++) {
-                float top = h * (0.08f + 0.19f * i + 0.04f * (float) Math.sin(t * 0.05f + i));
-                float height = h * (0.025f + 0.03f * ((i * 7) % 3));
-                float shift = (i % 2 == 0 ? 1f : -1f) * density * (14f + 12f * i) * Math.max(0f, strength);
-                canvas.save();
-                canvas.clipRect(0, top, w, top + height);
-                canvas.translate(shift, 0f);
-                canvas.scale(zoom, zoom, px, py);
-                canvas.drawBitmap(snapshot, null, rect, bitmapPaint);
-                canvas.restore();
-            }
-        }
-
-        // Edges darken as the zoom builds.
         float vignette = BoostTimeline.vignette(t);
         if (vignette > 0f) {
             vignettePaint.setAlpha(Math.round(255 * vignette));
             canvas.drawRect(0, 0, w, h, vignettePaint);
         }
-        canvas.restoreToCount(save);
+
+        drawGrid(canvas, t, w, h);
+        drawBangEffects(canvas, t, w, h, overall);
+        drawEmblem(canvas, t, overall);
+        canvas.restoreToCount(shakeSave);
+
+        drawLanding(canvas, t, overall);
+
+        float flash = BoostTimeline.flash(t);
+        if (flash > 0f) {
+            flashPaint.setColor(alpha(0xFFEAFFFB, flash * 0.92f));
+            canvas.drawRect(0, 0, w, h, flashPaint);
+        }
     }
 
-    private Paint flashPaintBlack() {
-        flashPaint.setColor(Color.BLACK);
-        return flashPaint;
+    /** Camera: scale about a focus point that glides over the screen, with a roll. */
+    private void applyCamera(Canvas canvas, float t, int w, int h) {
+        float zoom = BoostTimeline.cameraZoom(t);
+        float pull = BoostTimeline.cameraPull(zoom);
+        cameraFocusX = BoostTimeline.cameraFocusX(t, target.centerX() / w) * w;
+        cameraFocusY = BoostTimeline.cameraFocusY(t, target.centerY() / h) * h;
+        float sx = cameraFocusX + (centerX - cameraFocusX) * pull;
+        float sy = cameraFocusY + (centerY - cameraFocusY) * pull;
+        canvas.translate(sx, sy);
+        canvas.rotate(BoostTimeline.cameraRoll(t));
+        canvas.scale(zoom, zoom);
+        canvas.translate(-cameraFocusX, -cameraFocusY);
     }
 
-    private void drawSnapshotPass(Canvas canvas, ColorMatrixColorFilter filter, float scale, float px, float py, float dx) {
+    /** The whole picture, with colour fringing, zoom blur and glitch strips. */
+    private void drawPicture(Canvas canvas, float t, int w, int h) {
+        float blur = BoostTimeline.zoomBlur(t);
+        float fringe = BoostTimeline.aberration(t);
+        float zoomed = 1f;
+        rect.set(0, 0, w, h);
+
+        if (fringe > 0.04f) {
+            // Three colour passes slightly apart: red and blue drift away from green.
+            flashPaint.setColor(Color.BLACK);
+            canvas.drawRect(0, 0, w, h, flashPaint);
+            float offset = fringe * density * 9f;
+            drawColourPass(canvas, redOnly, 1f + fringe * 0.012f, offset);
+            drawColourPass(canvas, greenOnly, zoomed, 0f);
+            drawColourPass(canvas, blueOnly, 1f - fringe * 0.012f, -offset);
+        } else {
+            bitmapPaint.setAlpha(255);
+            canvas.drawBitmap(snapshot, null, rect, bitmapPaint);
+        }
+
+        // Zoom blur: copies at slightly larger scales, blended with equal weight.
+        if (blur > 0.03f) {
+            for (int k = 1; k <= 2; k++) {
+                float s = 1f + blur * 0.05f * k;
+                bitmapPaint.setAlpha(Math.round(255f / (k + 2)));
+                canvas.save();
+                canvas.scale(s, s, cameraFocusX, cameraFocusY);
+                canvas.drawBitmap(snapshot, null, rect, bitmapPaint);
+                canvas.restore();
+            }
+            bitmapPaint.setAlpha(255);
+        }
+
+        // Glitch: strips of the picture knocked sideways.
+        float glitch = BoostTimeline.glitch(t);
+        if (glitch > 0f) {
+            int slot = (int) (t / 150f);
+            for (int i = 0; i < 4; i++) {
+                int hash = BoostTimeline.hash(slot * 7 + i);
+                float top = h * ((hash & 255) / 255f) * 0.9f;
+                float height = h * (0.02f + 0.04f * (((hash >>> 8) & 255) / 255f));
+                float shift = (((hash >>> 16) & 1) == 0 ? 1f : -1f) * density * 40f * glitch;
+                canvas.save();
+                canvas.clipRect(0, top, w, top + height);
+                canvas.translate(shift, 0f);
+                canvas.drawBitmap(snapshot, null, rect, bitmapPaint);
+                canvas.restore();
+            }
+        }
+    }
+
+    private void drawColourPass(Canvas canvas, ColorMatrixColorFilter filter, float scale, float dx) {
         addPaint.setColorFilter(filter);
         canvas.save();
         canvas.translate(dx, 0f);
-        canvas.scale(scale, scale, px, py);
+        canvas.scale(scale, scale, cameraFocusX, cameraFocusY);
         canvas.drawBitmap(snapshot, null, rect, addPaint);
         canvas.restore();
         addPaint.setColorFilter(null);
     }
 
-    /** Faint perspective-less grid that appears behind the emblem after the shutter. */
-    private void drawGrid(Canvas canvas, float t, int w, int h) {
-        float a = BoostTimeline.clamp01((t - BoostTimeline.FLASH_AT) / 400f) * BoostTimeline.overall(t);
-        if (a <= 0f) return;
-        linePaint.setStrokeWidth(Math.max(1f, density * 0.7f));
-        float step = h / (float) GRID_LINES * 1.9f;
-        float drift = (t * 0.02f * density) % step;
-        for (float x = centerX % step - step; x < w; x += step) {
-            float distance = Math.abs(x - centerX) / (w / 2f);
-            linePaint.setColor(alpha(TEAL, 0.12f * a * (1.1f - distance)));
-            canvas.drawLine(x, 0, x, h, linePaint);
+    /**
+     * The picture as a grid of loose panels. They shudder, get sucked into the black hole one by
+     * one (the middle first), and after the bang blast outward, spinning, and fall.
+     */
+    private void drawPanels(Canvas canvas, float t, int w, int h) {
+        float visible = BoostTimeline.shardAlpha(t);
+        if (visible <= 0f) return;
+        float suck = BoostTimeline.suck(t);
+        float age = BoostTimeline.popAge(t);
+        float loose = BoostTimeline.looseness(t);
+        float tileW = w / (float) COLS;
+        float tileH = h / (float) ROWS;
+        int bw = snapshot.getWidth();
+        int bh = snapshot.getHeight();
+        boolean exploding = t >= BoostTimeline.BANG_AT;
+        float grow = BoostTimeline.easeOutCubic(BoostTimeline.clamp01(age / 0.25f));
+        float fall = 0.5f * GRAVITY_DP * density * age * age;
+
+        bitmapPaint.setAlpha(Math.round(255 * visible));
+        ringPaint.setStrokeWidth(Math.max(1f, density));
+        for (int i = 0; i < TILES; i++) {
+            int col = i % COLS;
+            int row = i / COLS;
+            srcRect.set(col * bw / COLS, row * bh / ROWS, (col + 1) * bw / COLS, (row + 1) * bh / ROWS);
+            float cx = (col + 0.5f) * tileW;
+            float cy = (row + 0.5f) * tileH;
+
+            float sp = BoostTimeline.clamp01((suck - tileDelay[i]) / (1f - tileDelay[i]));
+            float e = BoostTimeline.easeInCubic(sp);
+            float px, py, rotation, scale;
+            float shudder = (0.55f + 0.45f * (float) Math.sin(t * 0.045f + i * 1.7f)) * loose;
+            if (!exploding) {
+                // Spiral in: turn the offset from the middle while it shrinks.
+                float dx = cx - centerX;
+                float dy = cy - centerY;
+                double turn = Math.toRadians(tileSpin[i] * 140f * e);
+                float cos = (float) Math.cos(turn);
+                float sin = (float) Math.sin(turn);
+                float keep = 1f - e;
+                px = centerX + (dx * cos - dy * sin) * keep + tileJitterX[i] * density * shudder;
+                py = centerY + (dx * sin + dy * cos) * keep + tileJitterY[i] * density * shudder;
+                rotation = tileSpin[i] * 540f * e + tileJitterRot[i] * shudder;
+                scale = (1f - 0.03f * loose) * (1f - 0.9f * e);
+            } else {
+                // Blast out from the middle, slowing down, then fall under gravity.
+                float travel = tileSpeed[i] * density * (1f - (float) Math.exp(-2.4f * age)) / 2.4f;
+                px = centerX + tileDirX[i] * travel;
+                py = centerY + tileDirY[i] * travel + fall;
+                rotation = tileSpin[i] * 540f + tileSpinSpeed[i] * age;
+                scale = 0.1f + 0.9f * grow;
+            }
+
+            canvas.save();
+            canvas.translate(px, py);
+            canvas.rotate(rotation);
+            canvas.scale(scale, scale);
+            dstRect.set(-tileW / 2f - 0.5f, -tileH / 2f - 0.5f, tileW / 2f + 0.5f, tileH / 2f + 0.5f);
+            canvas.drawBitmap(snapshot, srcRect, dstRect, bitmapPaint);
+            // A glowing edge makes the break line of each panel visible.
+            float edge = exploding ? 0.8f * (1f - BoostTimeline.clamp01(age / 1.2f)) : 0.7f * loose;
+            if (edge > 0.02f) {
+                ringPaint.setColor(alpha(i % 4 == 0 ? Color.WHITE : CYAN, edge * visible));
+                dstRect.set(-tileW / 2f, -tileH / 2f, tileW / 2f, tileH / 2f);
+                canvas.drawRect(dstRect, ringPaint);
+            }
+            canvas.restore();
         }
-        for (float y = -step + drift; y < h; y += step) {
-            float distance = Math.abs(y - centerY) / (h / 2f);
-            linePaint.setColor(alpha(TEAL, 0.12f * a * (1.1f - distance)));
-            canvas.drawLine(0, y, w, y, linePaint);
-        }
+        bitmapPaint.setAlpha(255);
     }
 
-    /** Targeting brackets and a scan line that close in on the card. */
+    /** Targeting brackets and a scan line that lock on the card and follow it while the camera roams. */
     private void drawLockOn(Canvas canvas, float t) {
-        float lock = BoostTimeline.lock(t);
-        float visible = 1f - BoostTimeline.clamp01((t - BoostTimeline.ZOOM_END + 150f) / 150f);
+        float lock = BoostTimeline.easeOutCubic(BoostTimeline.clamp01(t / BoostTimeline.LOCK_END));
+        float visible = 1f - BoostTimeline.clamp01((t - 1100f) / 300f);
         if (lock <= 0f || visible <= 0f) return;
         float grow = (1f - lock) * density * 46f;
         float left = target.left - grow, top = target.top - grow, right = target.right + grow, bottom = target.bottom + grow;
@@ -460,26 +634,173 @@ public final class PerformanceBoostView extends View {
         canvas.drawLine(target.centerX(), bottom, target.centerX(), bottom - tick, linePaint);
     }
 
-    /** Shock ring, light streak and sparks that leave the centre at the shutter. */
-    private void drawShutterEffects(Canvas canvas, float t, int w, int h, float overall) {
+    /** Falling columns of 0s and 1s, turned and shrunk into the black hole during the suck. */
+    private void drawRain(Canvas canvas, float t, int w, int h) {
+        float level = BoostTimeline.rainAlpha(t);
+        if (level <= 0.01f || rainColumns == 0) return;
+        float scale = BoostTimeline.rainScale(t);
+        int save = canvas.save();
+        canvas.translate(centerX, centerY);
+        canvas.rotate(BoostTimeline.rainSpin(t));
+        canvas.scale(scale, scale);
+        canvas.translate(-centerX, -centerY);
+        int tick = (int) (t / 95f);
+        for (int col = 0; col < rainColumns; col++) {
+            float x = (col + 0.5f) * rainSpacing;
+            float head = (rainOffset[col] + t * rainSpeed[col]) % rainCycle;
+            for (int j = 0; j < RAIN_TRAIL; j++) {
+                float y = head - j * rainLineHeight;
+                if (y < -rainLineHeight || y > h + rainLineHeight) continue;
+                int hash = BoostTimeline.hash(col * 131 + j * 17 + tick / (2 + col % 3));
+                bit[0] = (char) ('0' + (hash & 1));
+                float fade = 1f - j / (float) RAIN_TRAIL;
+                if (j == 0) rainPaint.setColor(alpha(0xFFE6FFF4, level));
+                else rainPaint.setColor(alpha(col % 5 == 0 ? CYAN : GREEN, level * fade * 0.6f));
+                canvas.drawText(bit, 0, 1, x, y, rainPaint);
+            }
+        }
+        canvas.restoreToCount(save);
+    }
+
+    /** Thin lines of light racing in from the edges of the screen towards the middle. */
+    private void drawSuckStreaks(Canvas canvas, float t, int w, int h) {
+        if (t >= BoostTimeline.BANG_AT) return;
+        float visible = BoostTimeline.clamp01((t - BoostTimeline.SUCK_START) / 500f);
+        if (visible <= 0f) return;
+        float maxRadius = (float) Math.hypot(w, h) / 2f;
+        for (int i = 0; i < STREAKS; i++) {
+            float p = (t * 0.0009f * streakSpeed[i] + streakOffset[i]) % 1f;
+            float radius = maxRadius * (1f - p * p);
+            float length = radius * (0.12f + 0.3f * p);
+            float cos = (float) Math.cos(streakAngle[i]);
+            float sin = (float) Math.sin(streakAngle[i]);
+            linePaint.setStrokeWidth(density * (0.8f + 0.9f * p));
+            linePaint.setColor(alpha(i % 3 == 0 ? Color.WHITE : CYAN, visible * (float) Math.sin(p * Math.PI) * 0.85f));
+            canvas.drawLine(centerX + cos * radius, centerY + sin * radius,
+                    centerX + cos * (radius + length), centerY + sin * (radius + length), linePaint);
+        }
+    }
+
+    /** The black hole that grows in the middle while everything is pulled in. */
+    private void drawBlackHole(Canvas canvas, float t) {
+        float s = BoostTimeline.singularity(t);
+        if (s <= 0.01f || emblemRadius <= 0f) return;
+        float radius = emblemRadius * (0.12f + 0.75f * s);
+        float spin = t * 0.28f;
+
+        int save = canvas.save();
+        canvas.translate(centerX, centerY);
+        int glowSave = canvas.save();
+        float glowRadius = radius * 3.2f;
+        canvas.scale(glowRadius, glowRadius);
+        glowPaint.setColorFilter(tealFilter);
+        glowPaint.setAlpha(Math.round(255 * 0.5f * s));
+        canvas.drawCircle(0f, 0f, 1f, glowPaint);
+        glowPaint.setColorFilter(null);
+        canvas.restoreToCount(glowSave);
+
+        fillPaint.setStyle(Paint.Style.FILL);
+        fillPaint.setColor(0xFF000000);
+        canvas.drawCircle(0f, 0f, radius, fillPaint);
+
+        ringPaint.setStrokeWidth(density * 2.4f);
+        for (int ring = 0; ring < 2; ring++) {
+            float r = radius * (1.28f + 0.3f * ring);
+            rect.set(-r, -r, r, r);
+            ringPaint.setColor(alpha(ring == 0 ? Color.WHITE : CYAN, s * 0.9f));
+            float direction = ring == 0 ? 1f : -1f;
+            for (int arc = 0; arc < 4; arc++) {
+                canvas.drawArc(rect, direction * spin * (1f + 0.4f * ring) + arc * 90f, 55f, false, ringPaint);
+            }
+        }
+        ringPaint.setStrokeWidth(density * 1.2f);
+        ringPaint.setColor(alpha(Color.WHITE, s));
+        canvas.drawCircle(0f, 0f, radius * 1.06f, ringPaint);
+        canvas.restoreToCount(save);
+    }
+
+    /** Hacker glitch: green bars flicker across the screen, and a scan line sweeps down it. */
+    private void drawGlitchBars(Canvas canvas, float t, int w, int h) {
+        if (t < 300f || t >= BoostTimeline.BANG_AT) return;
+        float glitch = BoostTimeline.glitch(t);
+        fillPaint.setStyle(Paint.Style.FILL);
+        if (glitch > 0f) {
+            int slot = (int) (t / 150f);
+            for (int i = 0; i < 3; i++) {
+                int hash = BoostTimeline.hash(slot * 13 + i + 5);
+                float top = h * ((hash & 255) / 255f);
+                float height = density * (4f + ((hash >>> 8) & 31));
+                fillPaint.setColor(alpha(i == 1 ? CYAN : GREEN, glitch * 0.22f));
+                canvas.drawRect(0, top, w, top + height, fillPaint);
+                linePaint.setStrokeWidth(density);
+                linePaint.setColor(alpha(Color.WHITE, glitch * 0.35f));
+                canvas.drawLine(0, top, w, top, linePaint);
+            }
+        }
+        float scanY = h * ((t / 1100f) % 1f);
+        fillPaint.setColor(alpha(CYAN, 0.07f));
+        canvas.drawRect(0, scanY - density * 22f, w, scanY, fillPaint);
+        linePaint.setStrokeWidth(density);
+        linePaint.setColor(alpha(CYAN, 0.35f));
+        canvas.drawLine(0, scanY, w, scanY, linePaint);
+    }
+
+    /** Faint grid that appears behind the emblem after the panels have gone. */
+    private void drawGrid(Canvas canvas, float t, int w, int h) {
+        float a = BoostTimeline.clamp01((t - BoostTimeline.BANG_AT - 500f) / 600f) * BoostTimeline.overall(t);
+        if (a <= 0f) return;
+        linePaint.setStrokeWidth(Math.max(1f, density * 0.7f));
+        float step = h / (float) GRID_LINES * 1.9f;
+        float drift = (t * 0.02f * density) % step;
+        for (float x = centerX % step - step; x < w; x += step) {
+            float distance = Math.abs(x - centerX) / (w / 2f);
+            linePaint.setColor(alpha(TEAL, 0.12f * a * (1.1f - distance)));
+            canvas.drawLine(x, 0, x, h, linePaint);
+        }
+        for (float y = -step + drift; y < h; y += step) {
+            float distance = Math.abs(y - centerY) / (h / 2f);
+            linePaint.setColor(alpha(TEAL, 0.12f * a * (1.1f - distance)));
+            canvas.drawLine(0, y, w, y, linePaint);
+        }
+    }
+
+    /** Fracture lines, shock rings, light streak, sparks and flying bits that leave the centre at the bang. */
+    private void drawBangEffects(Canvas canvas, float t, int w, int h, float overall) {
         float age = BoostTimeline.popAge(t);
         if (age <= 0f) return;
         float reach = Math.max(w, h) * 1.1f;
 
-        for (int i = 0; i < 2; i++) {
-            float local = BoostTimeline.clamp01((age - i * 0.12f) / 0.8f);
+        // Fracture lines of light, drawn in quickly and then fading out.
+        float crack = BoostTimeline.clamp01(1f - age / 1.4f);
+        if (crack > 0f) {
+            float grow = 0.35f + 0.65f * BoostTimeline.easeOutCubic(BoostTimeline.clamp01(age / 0.25f));
+            int save = canvas.save();
+            canvas.translate(centerX, centerY);
+            canvas.scale(grow, grow);
+            ringPaint.setStrokeJoin(Paint.Join.ROUND);
+            ringPaint.setStrokeWidth(density * 3.4f);
+            ringPaint.setColor(alpha(CYAN, crack * 0.45f * overall));
+            for (int i = 0; i < CRACKS; i++) canvas.drawPath(cracks[i], ringPaint);
+            ringPaint.setStrokeWidth(density * 1.1f);
+            ringPaint.setColor(alpha(Color.WHITE, crack * 0.95f * overall));
+            for (int i = 0; i < CRACKS; i++) canvas.drawPath(cracks[i], ringPaint);
+            canvas.restoreToCount(save);
+        }
+
+        for (int i = 0; i < 3; i++) {
+            float local = BoostTimeline.clamp01((age - i * 0.12f) / 0.85f);
             if (local <= 0f || local >= 1f) continue;
-            float radius = BoostTimeline.easeOutCubic(local) * reach * (0.6f + 0.25f * i);
-            ringPaint.setStrokeWidth(density * (4f * (1f - local) + 0.8f));
-            ringPaint.setColor(alpha(i == 0 ? Color.WHITE : TEAL, (1f - local) * 0.8f * overall));
+            float radius = BoostTimeline.easeOutCubic(local) * reach * (0.55f + 0.22f * i);
+            ringPaint.setStrokeWidth(density * (5f * (1f - local) + 0.8f));
+            ringPaint.setColor(alpha(i == 0 ? Color.WHITE : (i == 1 ? CYAN : TEAL), (1f - local) * 0.85f * overall));
             canvas.drawCircle(centerX, centerY, radius, ringPaint);
         }
 
         // Anamorphic light streak: a thin bright line stretched across the screen.
         float streak = BoostTimeline.clamp01(age / 0.9f);
         if (streak < 1f) {
-            float length = w * (0.15f + 0.6f * BoostTimeline.easeOutCubic(streak));
-            float thickness = density * (3.2f * (1f - streak) + 0.6f);
+            float length = w * (0.15f + 0.65f * BoostTimeline.easeOutCubic(streak));
+            float thickness = density * (3.4f * (1f - streak) + 0.6f);
             gradientPaint.setAlpha(Math.round(255 * (1f - streak) * overall));
             canvas.save();
             canvas.translate(centerX, centerY);
@@ -488,21 +809,28 @@ public final class PerformanceBoostView extends View {
             canvas.restore();
         }
 
-        // Thin sparks with short trails that slow down as they travel.
+        // Thin sparks with short trails; every third one is a 0 or a 1 instead.
+        int tick = (int) (t / 110f);
         for (int i = 0; i < SPARKS; i++) {
             float life = sparkLife[i];
             if (age >= life) continue;
             float fade = 1f - age / life;
             float speed = sparkSpeed[i] * density;
             float distance = speed * age * (1f - 0.55f * (age / life));
-            float previousAge = Math.max(0f, age - 0.03f);
-            float previousDistance = speed * previousAge * (1f - 0.55f * (previousAge / life));
             float cos = (float) Math.cos(sparkAngle[i]);
             float sin = (float) Math.sin(sparkAngle[i]);
-            linePaint.setStrokeWidth(density * sparkSize[i]);
-            linePaint.setColor(alpha(sparkColor[i], fade * overall));
-            canvas.drawLine(centerX + cos * previousDistance, centerY + sin * previousDistance,
-                    centerX + cos * distance, centerY + sin * distance, linePaint);
+            if (i % 3 == 0) {
+                bit[0] = (char) ('0' + (BoostTimeline.hash(i * 7 + tick) & 1));
+                rainPaint.setColor(alpha(sparkColor[i], fade * overall));
+                canvas.drawText(bit, 0, 1, centerX + cos * distance, centerY + sin * distance, rainPaint);
+            } else {
+                float previousAge = Math.max(0f, age - 0.03f);
+                float previousDistance = speed * previousAge * (1f - 0.55f * (previousAge / life));
+                linePaint.setStrokeWidth(density * sparkSize[i]);
+                linePaint.setColor(alpha(sparkColor[i], fade * overall));
+                canvas.drawLine(centerX + cos * previousDistance, centerY + sin * previousDistance,
+                        centerX + cos * distance, centerY + sin * distance, linePaint);
+            }
         }
     }
 
@@ -536,24 +864,24 @@ public final class PerformanceBoostView extends View {
         canvas.restoreToCount(glowSave);
 
         // Orbit rings turning in opposite directions, each carrying a small bright dot.
+        float frameProgress = BoostTimeline.frame(t);
         float spin = t * 0.07f;
         for (int i = 0; i < 2; i++) {
             float ringRadius = radius * (1.12f + 0.16f * i);
             float direction = i == 0 ? 1f : -1f;
             rect.set(-ringRadius, -ringRadius, ringRadius, ringRadius);
             ringPaint.setStrokeWidth(density * 1.1f);
-            ringPaint.setColor(alpha(i == 0 ? CYAN : TEAL, 0.55f * alphaNow * BoostTimeline.frame(t)));
+            ringPaint.setColor(alpha(i == 0 ? CYAN : TEAL, 0.55f * alphaNow * frameProgress));
             for (int s = 0; s < 3; s++) {
                 canvas.drawArc(rect, direction * spin * (1f + 0.5f * i) + s * 120f, 52f, false, ringPaint);
             }
             double dot = Math.toRadians(direction * spin * (1f + 0.5f * i) * 1.3f);
             fillPaint.setStyle(Paint.Style.FILL);
-            fillPaint.setColor(alpha(Color.WHITE, alphaNow * BoostTimeline.frame(t)));
+            fillPaint.setColor(alpha(Color.WHITE, alphaNow * frameProgress));
             canvas.drawCircle((float) Math.cos(dot) * ringRadius, (float) Math.sin(dot) * ringRadius, density * 2.2f, fillPaint);
         }
 
         // Hexagon outline, drawn on from its top vertex.
-        float frameProgress = BoostTimeline.frame(t);
         if (frameProgress > 0f) {
             hexSegment.reset();
             hexMeasure.getSegment(0f, hexLength * frameProgress, hexSegment, true);
@@ -579,13 +907,11 @@ public final class PerformanceBoostView extends View {
         if (sweep > 0f && sweep < 1f) {
             int sweepSave = canvas.save();
             canvas.clipPath(hexPath);
-            float bandX = -radius * 1.6f + radius * 3.2f * sweep;
-            canvas.translate(bandX, 0f);
+            canvas.translate(-radius * 1.6f + radius * 3.2f * sweep, 0f);
             canvas.rotate(20f);
-            fillPaint.setShader(new LinearGradient(-radius * 0.25f, 0f, radius * 0.25f, 0f,
-                    new int[]{0x00FFFFFF, alpha(Color.WHITE, 0.55f * alphaNow), 0x00FFFFFF}, null, Shader.TileMode.CLAMP));
-            canvas.drawRect(-radius * 0.25f, -radius * 2f, radius * 0.25f, radius * 2f, fillPaint);
-            fillPaint.setShader(null);
+            canvas.scale(radius * 0.25f, radius * 2f);
+            sweepPaint.setAlpha(Math.round(255 * alphaNow));
+            canvas.drawRect(-1f, -1f, 1f, 1f, sweepPaint);
             canvas.restoreToCount(sweepSave);
         }
 
