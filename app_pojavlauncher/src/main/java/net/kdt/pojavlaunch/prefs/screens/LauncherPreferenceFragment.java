@@ -115,7 +115,8 @@ public class LauncherPreferenceFragment extends PreferenceFragmentCompat impleme
                 provider instanceof GLESProvider.ExternalAngleProvider || provider instanceof GLESProvider.SystemAngleProvider);
         requirePreference("use_angle", SwitchPreferenceCompat.class).setChecked(LauncherPreferences.PREF_USE_ANGLE);
         ListPreference renderer = requirePreference("renderer", ListPreference.class);
-        RendererCache cache = RendererCache.getCompatibleRenderers(getContext());
+        RendererCache cache = RendererCache.getCompatibleRenderers(getContext())
+                .forSettings(LauncherPreferences.PREF_PERFORMANCE_MODE);
         renderer.setEntries(cache.rendererDisplayNames);
         renderer.setEntryValues(cache.rendererIds.toArray(new String[0]));
         requirePreference("ignoreNotch").setVisible(LauncherPreferences.hasNotch(getLauncherActivity()));

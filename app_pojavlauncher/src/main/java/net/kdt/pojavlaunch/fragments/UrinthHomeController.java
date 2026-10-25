@@ -448,10 +448,7 @@ public final class UrinthHomeController {
     /** Performance Mode is a plain preference; the game process reads it when it starts. */
     private void togglePerformanceMode() {
         boolean enabled = !LauncherPreferences.PREF_PERFORMANCE_MODE;
-        LauncherPreferences.PREF_PERFORMANCE_MODE = enabled;
-        if (LauncherPreferences.DEFAULT_PREF != null) {
-            LauncherPreferences.DEFAULT_PREF.edit().putBoolean("performanceMode", enabled).apply();
-        }
+        LauncherPreferences.setPerformanceMode(enabled);
         renderPerformanceMode();
         perfPanel.setScaleX(0.97f);
         perfPanel.setScaleY(0.97f);

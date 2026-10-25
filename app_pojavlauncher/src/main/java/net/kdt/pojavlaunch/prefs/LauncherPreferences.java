@@ -13,6 +13,8 @@ import android.util.DisplayMetrics;
 import android.util.Log;
 
 import net.kdt.pojavlaunch.*;
+import net.kdt.pojavlaunch.game.renderer.PerformanceRendererPolicy;
+import net.kdt.pojavlaunch.game.renderer.RendererCache;
 import net.kdt.pojavlaunch.multirt.MultiRTUtils;
 import net.kdt.pojavlaunch.utils.GpuUtils;
 import net.kdt.pojavlaunch.utils.JREUtils;
@@ -128,6 +130,7 @@ public class LauncherPreferences {
         // cores all report the same maximum frequency.
         PREF_BIG_CORE_AFFINITY = DEFAULT_PREF.getBoolean("bigCoreAffinity", false);
         PREF_PERFORMANCE_MODE = DEFAULT_PREF.getBoolean("performanceMode", false);
+        syncRendererWithPerformanceMode();
         PREF_ZINK_PREFER_SYSTEM_DRIVER = DEFAULT_PREF.getBoolean("zinkPreferSystemDriver", false);
         PREF_DOWNLOAD_SOURCE = DEFAULT_PREF.getString("downloadSource", "default");
         PREF_VERIFY_MANIFEST = DEFAULT_PREF.getBoolean("verifyManifest", true);
@@ -237,6 +240,46 @@ public class LauncherPreferences {
      * configuration. Only affects this process; nothing is written to SharedPreferences, so the
      * next normal launch is unchanged.
      */
+    private static final String KEY_RENDERER_BEFORE_PERFORMANCE_MODE = "rendererBeforePerformanceMode";
+
+    /**
+     * Turn Performance Mode on or off. Besides the switch itself this keeps the renderer in step:
+     * on selects the Performance Mode renderer (remembering the previous choice), off puts the
+     * previous choice back. The Settings list follows the same switch (see RendererCache.forSettings).
+     */
+    public static void setPerformanceMode(boolean enabled) {
+        PREF_PERFORMANCE_MODE = enabled;
+        applyRendererForPerformanceMode(enabled);
+        RendererCache.releaseRendererCache();
+    }
+
+    /** Make the stored renderer agree with the switch, e.g. after an update or a restored backup. */
+    private static void syncRendererWithPerformanceMode() {
+        boolean isPerformanceRenderer = PerformanceRendererPolicy.PERFORMANCE_RENDERER.equals(PREF_RENDERER);
+        if (PREF_PERFORMANCE_MODE != isPerformanceRenderer) applyRendererForPerformanceMode(PREF_PERFORMANCE_MODE);
+    }
+
+    private static void applyRendererForPerformanceMode(boolean enabled) {
+        SharedPreferences prefs = DEFAULT_PREF;
+        String current = prefs == null ? PREF_RENDERER : prefs.getString("renderer", PREF_RENDERER);
+        String remembered = prefs == null ? null : prefs.getString(KEY_RENDERER_BEFORE_PERFORMANCE_MODE, null);
+        String selected;
+        if (enabled) {
+            remembered = PerformanceRendererPolicy.rememberedOnEnable(current, remembered);
+            selected = PerformanceRendererPolicy.PERFORMANCE_RENDERER;
+        } else {
+            selected = PerformanceRendererPolicy.selectionOnDisable(current, remembered);
+        }
+        PREF_RENDERER = selected;
+        if (prefs == null) return;
+        SharedPreferences.Editor editor = prefs.edit();
+        editor.putBoolean("performanceMode", enabled);
+        editor.putString("renderer", selected);
+        if (enabled && remembered != null) editor.putString(KEY_RENDERER_BEFORE_PERFORMANCE_MODE, remembered);
+        else editor.remove(KEY_RENDERER_BEFORE_PERFORMANCE_MODE);
+        editor.apply();
+    }
+
     public static void enableSafeLaunch(Context ctx) {
         PREF_SAFE_LAUNCH = true;
         applySafeLaunchOverrides(ctx);

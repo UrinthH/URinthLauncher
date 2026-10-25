@@ -25,6 +25,22 @@ public class RendererCache {
     }
 
     /**
+     * The list shown in Settings. It follows the Performance Mode switch: with the mode on only the
+     * Performance Mode renderer is offered, with it off that renderer is left out (see
+     * {@link PerformanceRendererPolicy}). The full list stays untouched for other screens.
+     */
+    public RendererCache forSettings(boolean performanceMode) {
+        ArrayList<String> ids = new ArrayList<>(rendererIds.size());
+        ArrayList<String> names = new ArrayList<>(rendererIds.size());
+        for (int i = 0; i < rendererIds.size() && i < rendererDisplayNames.length; i++) {
+            if (!PerformanceRendererPolicy.isListed(rendererIds.get(i), performanceMode)) continue;
+            ids.add(rendererIds.get(i));
+            names.add(rendererDisplayNames[i]);
+        }
+        return new RendererCache(ids, names.toArray(new String[0]));
+    }
+
+    /**
      * Return renderers compatible with the current device.
      * Don't forget to clean the cache when the list isn't needed anymore.
      *
