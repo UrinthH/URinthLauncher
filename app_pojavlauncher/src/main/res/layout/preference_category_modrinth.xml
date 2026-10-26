@@ -1,20 +1,43 @@
 <?xml version="1.0" encoding="utf-8"?>
-<TextView xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@android:id/title"
+<!-- Section header of the settings: accent bar, small spaced capitals and a fading line.
+     Colours are set per section by UrinthPreferenceAdapter. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_marginStart="8dp"
-    android:layout_marginTop="14dp"
+    android:layout_marginTop="16dp"
     android:layout_marginEnd="8dp"
-    android:layout_marginBottom="6dp"
-    android:background="@drawable/bg_preference_category_modrinth"
-    android:fontFamily="sans-serif-medium"
+    android:layout_marginBottom="4dp"
     android:gravity="center_vertical"
-    android:minHeight="42dp"
-    android:paddingStart="14dp"
-    android:paddingTop="8dp"
-    android:paddingEnd="14dp"
-    android:paddingBottom="8dp"
-    android:textColor="#1FC77A"
-    android:textSize="13sp"
-    android:letterSpacing="0.04" />
+    android:minHeight="30dp"
+    android:orientation="horizontal"
+    android:paddingStart="4dp"
+    android:paddingEnd="4dp">
+
+    <View
+        android:id="@+id/urinth_header_bar"
+        android:layout_width="4dp"
+        android:layout_height="16dp"
+        android:layout_marginEnd="10dp"
+        android:background="@drawable/urinth_pref_header_bar" />
+
+    <TextView
+        android:id="@android:id/title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:fontFamily="sans-serif-medium"
+        android:letterSpacing="0.14"
+        android:singleLine="true"
+        android:textAllCaps="true"
+        android:textColor="#1FE0B4"
+        android:textSize="12sp"
+        android:textStyle="bold" />
+
+    <View
+        android:id="@+id/urinth_header_line"
+        android:layout_width="0dp"
+        android:layout_height="1dp"
+        android:layout_marginStart="12dp"
+        android:layout_weight="1"
+        android:background="@drawable/urinth_pref_header_line" />
+</LinearLayout>

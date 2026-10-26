@@ -28,6 +28,9 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AlertDialog;
 import androidx.preference.PreferenceFragmentCompat;
+import androidx.preference.PreferenceScreen;
+import androidx.recyclerview.widget.RecyclerView;
+import androidx.recyclerview.widget.SimpleItemAnimator;
 
 import net.kdt.pojavlaunch.LauncherActivity;
 import git.artdeell.mojo.R;
@@ -67,8 +70,23 @@ public class LauncherPreferenceFragment extends PreferenceFragmentCompat impleme
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
-        view.setBackgroundColor(Color.rgb(4, 21, 34));
+        view.setBackgroundResource(R.drawable.urinth_settings_bg);
         super.onViewCreated(view, savedInstanceState);
+        // Card spacing, and no cross-fade when a row is redrawn (the rows animate themselves).
+        float density = getResources().getDisplayMetrics().density;
+        RecyclerView list = getListView();
+        list.addItemDecoration(new UrinthPreferenceDecoration(density));
+        list.setClipToPadding(false);
+        list.setPadding(list.getPaddingLeft(), list.getPaddingTop(), list.getPaddingRight(), Math.round(16f * density));
+        if (list.getItemAnimator() instanceof SimpleItemAnimator) {
+            ((SimpleItemAnimator) list.getItemAnimator()).setSupportsChangeAnimations(false);
+        }
+    }
+
+    /** Settings rows get the launcher's card look; what they do is unchanged. */
+    @Override
+    protected RecyclerView.Adapter onCreateAdapter(@NonNull PreferenceScreen preferenceScreen) {
+        return new UrinthPreferenceAdapter(preferenceScreen);
     }
 
     @Override
@@ -78,23 +96,7 @@ public class LauncherPreferenceFragment extends PreferenceFragmentCompat impleme
         addPreferencesFromResource(allSettingsPage ? R.xml.pref_all_settings : R.xml.pref_main);
         if (allSettingsPage) setupAllSettings();
         setupNotificationRequestPreference();
-        tintPreferenceIcons(getPreferenceScreen());
-    }
-
-    private void tintPreferenceIcons(PreferenceGroup group) {
-        if (group == null) return;
-        for (int i = 0; i < group.getPreferenceCount(); i++) {
-            Preference preference = group.getPreference(i);
-            Drawable icon = preference.getIcon();
-            if (icon != null) {
-                Drawable tinted = icon.mutate();
-                tinted.setTint(Color.rgb(0, 225, 180));
-                preference.setIcon(tinted);
-            }
-            if (preference instanceof PreferenceGroup) {
-                tintPreferenceIcons((PreferenceGroup) preference);
-            }
-        }
+        // Icons are coloured per section by UrinthPreferenceAdapter.
     }
 
 

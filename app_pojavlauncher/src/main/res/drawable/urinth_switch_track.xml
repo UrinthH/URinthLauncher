@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Switch track: a dark pill when off, a lit green gradient pill when on. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_checked="true">
+        <shape android:shape="rectangle">
+            <size android:width="46dp" android:height="26dp" />
+            <gradient
+                android:angle="0"
+                android:endColor="#3CE6C0"
+                android:startColor="#14A862" />
+            <stroke android:width="1dp" android:color="#8FF5D2" />
+            <corners android:radius="13dp" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="rectangle">
+            <size android:width="46dp" android:height="26dp" />
+            <solid android:color="#0E1F2B" />
+            <stroke android:width="1dp" android:color="#2E4B5C" />
+            <corners android:radius="13dp" />
+        </shape>
+    </item>
+</selector>

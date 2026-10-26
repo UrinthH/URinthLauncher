@@ -23,19 +23,17 @@
     <style name="MojoLauncher.AppTheme" parent="MojoLauncher"/>
 
     <style name="MojoLauncher.SeekBar" parent="Widget.AppCompat.SeekBar">
-        <item name="android:progressDrawable">@drawable/minepb_progress</item>
-        <item name="android:thumb">@drawable/mineknob_on_unfiltered</item>
+        <item name="android:progressDrawable">@drawable/urinth_seek_progress</item>
+        <item name="android:thumb">@drawable/urinth_seek_thumb</item>
         <item name="android:thumbOffset">0dp</item>
-        <item name="android:maxHeight">4dp</item>
-        <item name="android:minHeight">4dp</item>
+        <item name="android:maxHeight">6dp</item>
+        <item name="android:minHeight">6dp</item>
     </style>
 
     <style name="MojoLauncher.Switch" parent="Widget.AppCompat.CompoundButton.Switch">
-        <item name="track">@drawable/mineknob_track_mask_unfiltered</item>
-        <item name="trackTint">@color/mineknob_track_tint</item>
-        <item name="trackTintMode">multiply</item>
-        <item name="android:thumb">@drawable/mineknob_switch</item>
-        <item name="switchMinWidth">40dp</item>
+        <item name="track">@drawable/urinth_switch_track</item>
+        <item name="android:thumb">@drawable/urinth_switch_thumb</item>
+        <item name="switchMinWidth">46dp</item>
     </style>
 
     <style name="MojoLauncher.Button" parent="Widget.AppCompat.Button">
