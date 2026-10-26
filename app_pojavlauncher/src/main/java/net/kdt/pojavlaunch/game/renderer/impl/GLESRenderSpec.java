@@ -90,12 +90,6 @@ public abstract class GLESRenderSpec implements RenderSpec {
             // next resource reload skip the slow translation. Older LTW builds ignore the variable.
             File shaderCache = new File(context.getCacheDir(), "ltw_shader_cache");
             envMap.put("LTW_SHADER_CACHE_DIR", shaderCache.getAbsolutePath());
-            // Performance Mode: LTW (URinth build) copies the shader text the game sends into this
-            // file, next to latestlog.txt, so shadows and other effects can be written against the
-            // real shaders. Only text is copied; nothing is changed.
-            if (LauncherPreferences.PREF_PERFORMANCE_MODE) {
-                envMap.put("LTW_SHADER_DUMP_FILE", new File(Tools.DIR_GAME_HOME, "ltw-shaders.txt").getAbsolutePath());
-            }
         }
 
         public String name() {
