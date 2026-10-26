@@ -161,7 +161,7 @@ public class JavaRunner {
     /**
      * Performance Mode: a larger young generation for G1, so short-lived garbage (the bulk of
      * Minecraft's allocations) is cleared in small quick collections instead of piling up into a
-     * long pause, and no perf-data file writes. Never overrides a flag the user already set,
+     * long pause, a shorter pause goal, parallel reference processing, and no perf-data file writes. Never overrides a flag the user already set,
      * and is only added when G1 is the collector in use.
      */
     private static void addPerformanceModeArguments(List<String> arguments) {
@@ -174,6 +174,12 @@ public class JavaRunner {
             arguments.add("-XX:G1MaxNewSizePercent=45");
         if(!hasArgument(arguments, "-XX:-UsePerfData") && !hasArgument(arguments, "-XX:+UsePerfData"))
             arguments.add("-XX:-UsePerfData");
+        // Ask G1 for short pauses (its default goal is 200 ms, which shows up as a freeze), and
+        // let it process the many weak/soft references a modded game creates on several threads.
+        if(!hasArgument(arguments, "-XX:MaxGCPauseMillis"))
+            arguments.add("-XX:MaxGCPauseMillis=50");
+        if(!hasArgument(arguments, "-XX:+ParallelRefProcEnabled") && !hasArgument(arguments, "-XX:-ParallelRefProcEnabled"))
+            arguments.add("-XX:+ParallelRefProcEnabled");
     }
 
     private static File getVmPath(File runtimeHomeDir, String arch, String flavor) {

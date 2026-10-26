@@ -30,6 +30,7 @@ import net.kdt.pojavlaunch.utils.GameOptionsUtils;
 import net.kdt.pojavlaunch.utils.JREUtils;
 import net.kdt.pojavlaunch.utils.JSONUtils;
 import net.kdt.pojavlaunch.utils.LaunchGuard;
+import net.kdt.pojavlaunch.Logger;
 import net.kdt.pojavlaunch.utils.MCOptionUtils;
 import net.kdt.pojavlaunch.utils.OldVersionsUtils;
 
@@ -434,6 +435,16 @@ public class GameRunner {
                 + "Big-core pinning: " + LauncherPreferences.PREF_BIG_CORE_AFFINITY
                 + ", sustained performance: " + LauncherPreferences.PREF_SUSTAINED_PERFORMANCE
                 + ", performance mode: " + LauncherPreferences.PREF_PERFORMANCE_MODE + "\n");
+
+        // Read-only: what options.txt holds right now. The launcher never writes this file.
+        try {
+            MCOptionUtils.load(instance.getGameDirectory().getAbsolutePath());
+            Logger.appendToLog("[Options] options.txt as the launcher found it (read only, never written): renderDistance="
+                    + MCOptionUtils.get("renderDistance") + ", simulationDistance=" + MCOptionUtils.get("simulationDistance")
+                    + ", maxFps=" + MCOptionUtils.get("maxFps") + ", enableVsync=" + MCOptionUtils.get("enableVsync"));
+        } catch (Throwable ignored) {
+            // diagnostics only
+        }
 
         try {
             JavaRunner.nativeSetupExit(activity);

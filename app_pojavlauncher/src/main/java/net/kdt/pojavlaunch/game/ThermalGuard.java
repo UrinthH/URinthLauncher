@@ -67,8 +67,8 @@ public final class ThermalGuard {
     private static final int LEVEL_CRITICAL = 3;
 
     private static final long FIRST_POLL_MS = 2_000L;
-    private static final long POLL_COOL_MS = 6_000L;
-    private static final long POLL_HOT_MS = 3_000L;
+    private static final long POLL_COOL_MS = 3_000L;
+    private static final long POLL_HOT_MS = 1_000L;
     /** Consecutive calmer readings needed before easing back down one level. */
     private static final int CALMER_READINGS_TO_EASE = 3;
     private static final float CAPPED_REFRESH_RATE = 60f;

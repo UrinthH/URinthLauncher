@@ -148,6 +148,7 @@ public class GameActivity extends BaseActivity implements ControlButtonMenuListe
         // Start the service a bit early
         ContextCompat.startForegroundService(this, gameServiceIntent);
         initLayout(R.layout.activity_basemain);
+        RefreshRateBoost.apply(this); // highest refresh rate the screen offers, up to 120 Hz
         if(safeLaunch) {
             Logger.appendToLog("[LaunchGuard] The previous launch ended during start-up. Safe launch: "
                     + "custom Java arguments, CPU pinning, sustained performance and the thermal guard are off, RAM is capped at "

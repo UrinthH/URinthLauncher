@@ -289,7 +289,8 @@ public class GameView extends FrameLayout implements PlatformGrabListener, Surfa
             Log.w("MGLSurface", "Attempt to refresh size on null surface");
             return;
         }
-        windowRate = mSurface.getDisplay().getRefreshRate();
+        // The screen may still be switching to the higher mode that RefreshRateBoost asked for.
+        windowRate = Math.max(mSurface.getDisplay().getRefreshRate(), RefreshRateBoost.targetRate());
         MojoExec.setDisplayParams(windowWidth, windowHeight, windowRate);
         mSurfaceProvider.updateSize();
     }

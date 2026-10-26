@@ -9,6 +9,7 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import net.kdt.pojavlaunch.Logger;
 import net.kdt.pojavlaunch.Tools;
 
 import java.io.BufferedReader;
@@ -27,6 +28,8 @@ public class MCOptionUtils {
     private static final ArrayList<WeakReference<MCOptionListener>> sOptionListeners = new ArrayList<>();
     private static FileObserver sFileObserver;
     private static String sOptionFolderPath = null;
+    /** Last render distance seen in options.txt; only used to log changes made by the game. */
+    private static String sLastRenderDistance;
     public interface MCOptionListener {
         /** Called when an option is changed. Don't know which one though */
         void onOptionChanged();
@@ -69,6 +72,25 @@ public class MCOptionUtils {
             reader.close();
         } catch (IOException e) {
             Log.w(Tools.APP_NAME, "Could not load options.txt", e);
+        }
+        if (sLastRenderDistance == null) sLastRenderDistance = sParameterMap.get("renderDistance");
+    }
+
+    /**
+     * Read-only diagnostic: when options.txt changes, note a changed render distance in the game
+     * log. The launcher never writes this file, so such a line always comes from the game or a mod.
+     */
+    private static void logRenderDistanceChange() {
+        String now = sParameterMap.get("renderDistance");
+        if (Objects.equals(now, sLastRenderDistance)) return;
+        String message = "[Options] options.txt renderDistance " + sLastRenderDistance + " -> " + now
+                + " (written by the game or a mod, never by the launcher)";
+        sLastRenderDistance = now;
+        Log.i(Tools.APP_NAME, message);
+        try {
+            Logger.appendToLog(message);
+        } catch (Throwable ignored) {
+            // the log is only a convenience
         }
     }
 
@@ -137,6 +159,7 @@ public class MCOptionUtils {
                 @Override
                 public void onEvent(int i, @Nullable String s) {
                     MCOptionUtils.load();
+                    logRenderDistanceChange();
                     notifyListeners();
                 }
             };
@@ -145,6 +168,7 @@ public class MCOptionUtils {
                 @Override
                 public void onEvent(int i, @Nullable String s) {
                     MCOptionUtils.load();
+                    logRenderDistanceChange();
                     notifyListeners();
                 }
             };
