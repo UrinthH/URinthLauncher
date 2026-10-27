@@ -8,6 +8,7 @@ import android.content.Context;
 import android.content.Intent;
 
 import net.kdt.pojavlaunch.game.GameActivity;
+import net.kdt.pojavlaunch.game.LaunchTransition;
 import git.artdeell.mojo.R;
 import net.kdt.pojavlaunch.Tools;
 import net.kdt.pojavlaunch.progresskeeper.ProgressKeeper;
@@ -46,11 +47,18 @@ public class ContextAwareDoneListener implements MoJsonExtras.DoneListener, Cont
 
     @Override
     public void onDownloadFailed(Throwable throwable) {
+        // The Play animation is over the launcher; take it away so the error can be seen.
+        LaunchTransition.cancel();
         Tools.showErrorRemote(mErrorString, throwable);
     }
 
     @Override
     public void executeWithActivity(Activity activity) {
+        // If the Play animation is still zooming in, let it land before the game takes over.
+        LaunchTransition.runAfterZoom(() -> startGame(activity));
+    }
+
+    private void startGame(Activity activity) {
         try {
             Intent gameStartIntent = createGameStartIntent(activity);
             activity.startActivity(gameStartIntent);

@@ -280,7 +280,7 @@ public class GameActivity extends BaseActivity implements ControlButtonMenuListe
     private void startLoadingRefresh() {
         if(mLoadingScreen == null) return;
         if(mLoadingView != null) {
-            mLoadingView.setInfo(mLoadingVersion, mGameRenderer.getCurrentRenderer().name(), PREF_PERFORMANCE_MODE);
+            mLoadingView.setInfo(mLoadingVersion, PREF_PERFORMANCE_MODE);
             mLoadingView.setRain(PREF_PERFORMANCE_MODE);
         }
         Tools.MAIN_HANDLER.postDelayed(new Runnable() {

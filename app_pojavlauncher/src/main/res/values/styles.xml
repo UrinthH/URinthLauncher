@@ -132,4 +132,10 @@
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">match_parent</item>
     </style>
+
+    <!-- The game screen: the window behind its first frame is the loading screen's colour, so
+         the hand-over from the Play animation does not flash black. -->
+    <style name="MojoLauncher.Game" parent="MojoLauncher.AppTheme">
+        <item name="android:windowBackground">@color/urinth_loading_bg</item>
+    </style>
 </resources>

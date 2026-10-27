@@ -19,4 +19,5 @@
     <color name="primary_text">#FFFFFF</color>
     <color name="secondary_text">#ABC0CB</color>
 
+    <color name="urinth_loading_bg">#FF060E14</color>
 </resources>

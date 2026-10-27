@@ -44,6 +44,7 @@ import net.kdt.pojavlaunch.instances.Instance;
 import net.kdt.pojavlaunch.instances.InstanceInstaller;
 import net.kdt.pojavlaunch.instances.Instances;
 import net.kdt.pojavlaunch.lifecycle.ContextAwareDoneListener;
+import net.kdt.pojavlaunch.game.LaunchTransition;
 import net.kdt.pojavlaunch.lifecycle.ContextExecutor;
 import net.kdt.pojavlaunch.modloaders.modpacks.imagecache.IconCacheJanitor;
 import net.kdt.pojavlaunch.prefs.LauncherPreferences;
@@ -108,6 +109,9 @@ public class LauncherActivity extends BaseActivity {
 
         String normalizedVersionId = MoJsonExtras.normalizeVersionId(selectedInstance.versionId);
         JVersionList.Version mcVersion = MoJsonExtras.getListedVersion(normalizedVersionId);
+        // The Play animation: a tiny square that zooms into the loading screen while the game
+        // files are checked. Pure decoration; the game starts with or without it.
+        LaunchTransition.start(this, normalizedVersionId);
         new MoJsonDownloader().start(
                 this.getAssets(),
                 mcVersion,
@@ -267,8 +271,16 @@ public class LauncherActivity extends BaseActivity {
     }
 
     @Override
+    protected void onRestart() {
+        super.onRestart();
+        // Back from another screen: the Play animation is stale, the launcher shows the progress.
+        LaunchTransition.cancel();
+    }
+
+    @Override
     protected void onDestroy() {
         super.onDestroy();
+        LaunchTransition.cancel();
         mProgressLayout.cleanUpObservers();
         ProgressKeeper.removeTaskCountListener(mProgressLayout);
         ProgressKeeper.removeTaskCountListener(mProgressServiceKeeper);

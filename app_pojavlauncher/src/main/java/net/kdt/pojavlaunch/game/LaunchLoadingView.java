@@ -24,18 +24,18 @@ import git.artdeell.mojo.R;
 /**
  * The loading screen shown while the game starts: a futuristic HUD in the same style as the
  * UrinthUltra intro. A grid and a scan line sweep over a dark gradient, particles drift (or, in
- * Performance Mode, binary rain falls), the logo sits inside turning rings with a progress ring
- * around it, and a five-step bar along the bottom lights up as start-up moves through its stages.
+ * Performance Mode, binary rain falls), the logo sits inside turning rings with a glowing progress
+ * ring and orbiting comets around it, energy pulses leave the core, the name glitches now and then,
+ * and a five-step bar along the bottom lights up as start-up moves through its stages.
  *
  * <p>The bar shows real progress only: a step lights when the game log shows that step has begun
  * (see {@link LaunchStage}). Inside a step the fill creeps forward but never reaches the next
  * step by itself, and nothing shows 100% until the game window has actually appeared.
  *
- * <p>It is drawn from a Choreographer frame clock (so it keeps moving even when the system's
- * animator duration scale is off), capped at about 30 frames a second so the animation does not
- * take CPU time from the Java VM that is starting at the same moment, and it stops when it is
- * hidden or detached. Everything is original artwork made of plain shapes and the launcher's own
- * logo.
+ * <p>It is drawn from a Choreographer frame clock, one frame per screen refresh (so 60 a second on
+ * a 60 Hz screen), which also keeps it moving when the system's animator duration scale is off. It
+ * allocates nothing while drawing, and stops when hidden or detached. Everything is original
+ * artwork made of plain shapes and the launcher's own logo.
  */
 public final class LaunchLoadingView extends View implements Choreographer.FrameCallback {
     private static final int COLOR_BG_TOP = 0xFF060E14;
@@ -46,18 +46,21 @@ public final class LaunchLoadingView extends View implements Choreographer.Frame
     private static final int COLOR_PURPLE = 0xFF9B3DFF;
     private static final int COLOR_DIM = 0xFF8FA9B6;
 
-    private static final String[] STEP_LABELS = {"PREPARE", "JAVA", "GAME", "WINDOW", "ASSETS"};
+    private static final String[] STEP_LABELS = {"01 PREPARE", "02 JAVA", "03 GAME", "04 WINDOW", "05 ASSETS"};
     private static final int STEPS = STEP_LABELS.length;
 
-    /** About 30 frames a second; a little under 33 ms so frame jitter does not skip a frame. */
-    private static final long FRAME_INTERVAL_NS = 31_000_000L;
     /** How long a step's fill takes to creep most of the way to the next step. */
     private static final float CREEP_MS = 18000f;
     private static final long DONE_FLASH_MS = 450;
+    /** An energy pulse leaves the logo this often. */
+    private static final float PULSE_EVERY_MS = 2400f;
+    private static final float PULSE_LIFE_MS = 1500f;
 
     private static final int PARTICLES = 34;
     private static final int RAIN_COLUMNS = 14;
     private static final int RAIN_LENGTH = 6;
+    private static final int COMETS = 3;
+    private static final int COMET_TRAIL = 8;
 
     private final float density;
     private final Bitmap logo;
@@ -85,6 +88,8 @@ public final class LaunchLoadingView extends View implements Choreographer.Frame
     private final float[] particlePhase = new float[PARTICLES];
     private final float[] rainOffset = new float[RAIN_COLUMNS];
     private final float[] rainSpeed = new float[RAIN_COLUMNS];
+    private final float[] cometSpeed = {0.075f, -0.052f, 0.118f};
+    private final float[] cometStart = {20f, 160f, 250f};
 
     private LinearGradient scanBandShader;
     private LinearGradient sweepShader;
@@ -101,9 +106,11 @@ public final class LaunchLoadingView extends View implements Choreographer.Frame
     private boolean done;
     private float doneSinceMs;
     private boolean rain;
-    private String infoVersion = "";
-    private String infoRenderer = "";
+    private String versionLine = "";
     private boolean infoPerformance;
+    private String hexLeft = "0x0000";
+    private String hexRight = "0x0000";
+    private int hexTick = -1;
 
     private float centerX;
     private float centerY;
@@ -165,9 +172,9 @@ public final class LaunchLoadingView extends View implements Choreographer.Frame
     }
 
     /** What is being launched, for the corner readouts. */
-    public void setInfo(String version, String renderer, boolean performanceMode) {
-        infoVersion = version == null ? "" : version;
-        infoRenderer = renderer == null ? "" : renderer;
+    public void setInfo(String version, boolean performanceMode) {
+        String upper = version == null ? "" : version.toUpperCase(Locale.ROOT);
+        versionLine = shorten("VERSION " + upper, 40);
         infoPerformance = performanceMode;
     }
 
@@ -209,13 +216,11 @@ public final class LaunchLoadingView extends View implements Choreographer.Frame
     public void doFrame(long frameTimeNanos) {
         if (!running) return;
         if (startNs == 0) startNs = frameTimeNanos;
-        if (lastFrameNs == 0 || frameTimeNanos - lastFrameNs >= FRAME_INTERVAL_NS) {
-            float dt = lastFrameNs == 0 ? 0.033f : (frameTimeNanos - lastFrameNs) / 1_000_000_000f;
-            lastFrameNs = frameTimeNanos;
-            timeMs = (frameTimeNanos - startNs) / 1_000_000f;
-            step(Math.min(dt, 0.25f));
-            invalidate();
-        }
+        float dt = lastFrameNs == 0 ? 0.016f : (frameTimeNanos - lastFrameNs) / 1_000_000_000f;
+        lastFrameNs = frameTimeNanos;
+        timeMs = (frameTimeNanos - startNs) / 1_000_000f;
+        step(Math.min(dt, 0.25f));
+        invalidate();
         Choreographer.getInstance().postFrameCallback(this);
     }
 
@@ -230,6 +235,16 @@ public final class LaunchLoadingView extends View implements Choreographer.Frame
             target = (stage + creep) / STEPS;
         }
         shown += (target - shown) * Math.min(1f, dt * 3f);
+
+        // The two hex readouts change a few times a second.
+        int tick = (int) (timeMs / 140f);
+        if (tick != hexTick) {
+            hexTick = tick;
+            int a = (tick * 40503 + 12345) & 0xFFFF;
+            int b = ((tick + 91) * 31337) & 0xFFFF;
+            hexLeft = String.format(Locale.US, "0x%04X", a);
+            hexRight = String.format(Locale.US, "0x%04X", b);
+        }
     }
 
     // ---- layout -----------------------------------------------------------------------------
@@ -279,6 +294,10 @@ public final class LaunchLoadingView extends View implements Choreographer.Frame
         return (color & 0x00FFFFFF) | (a << 24);
     }
 
+    private static String shorten(String text, int max) {
+        return text.length() <= max ? text : text.substring(0, max - 1) + "…";
+    }
+
     // ---- drawing ----------------------------------------------------------------------------
 
     @Override
@@ -295,11 +314,13 @@ public final class LaunchLoadingView extends View implements Choreographer.Frame
         drawBrackets(canvas, w, h);
         drawReadouts(canvas, w, h);
         drawLogoGlow(canvas);
+        drawPulses(canvas);
         drawRings(canvas);
         drawProgressRing(canvas);
+        drawComets(canvas);
         drawLogo(canvas);
         drawDoneFlash(canvas);
-        drawName(canvas, w);
+        drawName(canvas);
         drawStepBar(canvas, w, h);
     }
 
@@ -379,7 +400,7 @@ public final class LaunchLoadingView extends View implements Choreographer.Frame
         canvas.drawLine(w - inset, h - inset, w - inset, h - inset - len, ringPaint);
     }
 
-    /** Small corner readouts: what is launching, on which renderer, and whether Performance Mode is on. */
+    /** Corner readouts: what is launching, Performance Mode, and two flickering hex values. */
     private void drawReadouts(Canvas canvas, int w, int h) {
         float margin = density * 30f;
         float size = density * 9f;
@@ -395,28 +416,40 @@ public final class LaunchLoadingView extends View implements Choreographer.Frame
         smallPaint.setColor(withAlpha(COLOR_TEAL, 0.9f));
         canvas.drawText("LAUNCH SEQUENCE", margin + density * 12f, top, smallPaint);
         smallPaint.setColor(withAlpha(COLOR_DIM, 0.9f));
-        canvas.drawText(shorten("VERSION " + infoVersion.toUpperCase(Locale.ROOT), 40),
-                margin, top + size * 1.5f, smallPaint);
+        canvas.drawText(versionLine, margin, top + size * 1.5f, smallPaint);
 
         smallPaint.setTextAlign(Paint.Align.RIGHT);
-        smallPaint.setColor(withAlpha(COLOR_DIM, 0.9f));
-        canvas.drawText(shorten("RENDERER " + infoRenderer.toUpperCase(Locale.ROOT), 32),
-                w - margin, top, smallPaint);
         if (infoPerformance) {
             smallPaint.setColor(withAlpha(COLOR_TEAL, 0.95f));
-            canvas.drawText("PERFORMANCE MODE ON", w - margin, top + size * 1.5f, smallPaint);
+            canvas.drawText("PERFORMANCE MODE ON", w - margin, top, smallPaint);
         }
-        smallPaint.setTextAlign(Paint.Align.LEFT);
-    }
 
-    private static String shorten(String text, int max) {
-        return text.length() <= max ? text : text.substring(0, max - 1) + "…";
+        // Quietly flickering values in the bottom corners.
+        smallPaint.setColor(withAlpha(COLOR_DIM, 0.35f));
+        float bottom = h - margin;
+        smallPaint.setTextAlign(Paint.Align.LEFT);
+        canvas.drawText("SYS " + hexLeft, margin, bottom, smallPaint);
+        smallPaint.setTextAlign(Paint.Align.RIGHT);
+        canvas.drawText("MEM " + hexRight, w - margin, bottom, smallPaint);
+        smallPaint.setTextAlign(Paint.Align.LEFT);
     }
 
     private void drawLogoGlow(Canvas canvas) {
         float pulse = 0.55f + 0.2f * (float) Math.sin(timeMs / 210f);
         glowPaint.setAlpha(Math.round(255 * clamp01(pulse)));
         canvas.drawCircle(centerX, centerY, logoSize * 1.3f, glowPaint);
+    }
+
+    /** An energy ring leaves the logo every couple of seconds and fades as it grows. */
+    private void drawPulses(Canvas canvas) {
+        float age = timeMs % PULSE_EVERY_MS;
+        if (age > PULSE_LIFE_MS) return;
+        float p = age / PULSE_LIFE_MS;
+        float r = logoSize * (0.55f + 1.5f * smooth(p));
+        ringPaint.setShader(null);
+        ringPaint.setStrokeWidth(density * (2.2f - 1.4f * p));
+        ringPaint.setColor(withAlpha(COLOR_TEAL, 0.5f * (1f - p)));
+        canvas.drawCircle(centerX, centerY, r, ringPaint);
     }
 
     private void drawRings(Canvas canvas) {
@@ -461,23 +494,56 @@ public final class LaunchLoadingView extends View implements Choreographer.Frame
         }
     }
 
-    /** The outer ring fills as start-up moves on: the same progress as the bar below. */
+    /** The outer ring fills as start-up moves on: the same progress as the bar below, with a glow. */
     private void drawProgressRing(Canvas canvas) {
         float r = logoSize * 1.0f;
         ringPaint.setShader(null);
-        ringPaint.setStrokeWidth(density * 2.2f);
         rect.set(centerX - r, centerY - r, centerX + r, centerY + r);
+        ringPaint.setStrokeWidth(density * 2.2f);
         ringPaint.setColor(withAlpha(COLOR_TEAL, 0.12f));
         canvas.drawCircle(centerX, centerY, r, ringPaint);
         float sweep = 360f * clamp01(shown);
         if (sweep <= 0.5f) return;
-        ringPaint.setColor(withAlpha(COLOR_CYAN, 0.95f));
+        // Soft glow: the same arc drawn wider and fainter underneath.
+        ringPaint.setStrokeWidth(density * 9f);
+        ringPaint.setColor(withAlpha(COLOR_CYAN, 0.10f));
+        canvas.drawArc(rect, -90f, sweep, false, ringPaint);
+        ringPaint.setStrokeWidth(density * 5f);
+        ringPaint.setColor(withAlpha(COLOR_CYAN, 0.18f));
+        canvas.drawArc(rect, -90f, sweep, false, ringPaint);
+        ringPaint.setStrokeWidth(density * 2.2f);
+        ringPaint.setColor(withAlpha(COLOR_CYAN, 0.98f));
         canvas.drawArc(rect, -90f, sweep, false, ringPaint);
         // A bright head at the leading edge.
         double rad = Math.toRadians(-90f + sweep);
-        particlePaint.setColor(withAlpha(Color.WHITE, 0.95f));
-        canvas.drawCircle(centerX + (float) Math.cos(rad) * r, centerY + (float) Math.sin(rad) * r,
-                density * 2.6f, particlePaint);
+        float hx = centerX + (float) Math.cos(rad) * r;
+        float hy = centerY + (float) Math.sin(rad) * r;
+        particlePaint.setColor(withAlpha(COLOR_CYAN, 0.35f));
+        canvas.drawCircle(hx, hy, density * 6f, particlePaint);
+        particlePaint.setColor(withAlpha(Color.WHITE, 0.98f));
+        canvas.drawCircle(hx, hy, density * 2.8f, particlePaint);
+    }
+
+    /** Three small lights orbit outside the progress ring, each dragging a fading tail. */
+    private void drawComets(Canvas canvas) {
+        float r = logoSize * 1.14f;
+        rect.set(centerX - r, centerY - r, centerX + r, centerY + r);
+        ringPaint.setShader(null);
+        ringPaint.setStrokeWidth(density * 1.6f);
+        for (int i = 0; i < COMETS; i++) {
+            float head = cometStart[i] + timeMs * cometSpeed[i];
+            float dir = cometSpeed[i] > 0 ? 1f : -1f;
+            int color = (i == 1) ? COLOR_RED : COLOR_CYAN;
+            for (int t = COMET_TRAIL; t >= 1; t--) {
+                float a = head - dir * t * 4f;
+                ringPaint.setColor(withAlpha(color, 0.5f * (1f - t / (float) (COMET_TRAIL + 1))));
+                canvas.drawArc(rect, dir > 0 ? a : a - 4f, 4.5f, false, ringPaint);
+            }
+            double rad = Math.toRadians(head);
+            particlePaint.setColor(withAlpha(Color.WHITE, 0.95f));
+            canvas.drawCircle(centerX + (float) Math.cos(rad) * r, centerY + (float) Math.sin(rad) * r,
+                    density * 2.2f, particlePaint);
+        }
     }
 
     private void drawLogo(Canvas canvas) {
@@ -500,11 +566,23 @@ public final class LaunchLoadingView extends View implements Choreographer.Frame
         canvas.drawCircle(centerX, centerY, r, ringPaint);
     }
 
-    private void drawName(Canvas canvas, int w) {
+    private void drawName(Canvas canvas) {
         namePaint.setTextAlign(Paint.Align.LEFT);
         float whiteWidth = namePaint.measureText("Urinth");
         float redWidth = namePaint.measureText("Ultra");
         float left = centerX - (whiteWidth + redWidth) / 2f;
+
+        // Now and then the name glitches: a cyan and a red copy split apart for a moment.
+        float glitchAge = timeMs % 4200f;
+        if (glitchAge < 180f) {
+            float split = density * (2f + 2.5f * (float) Math.sin(glitchAge / 180f * Math.PI));
+            namePaint.setColor(withAlpha(COLOR_CYAN, 0.55f));
+            canvas.drawText("Urinth", left + split, nameBaseline, namePaint);
+            canvas.drawText("Ultra", left + whiteWidth + split, nameBaseline, namePaint);
+            namePaint.setColor(withAlpha(COLOR_RED, 0.55f));
+            canvas.drawText("Urinth", left - split, nameBaseline, namePaint);
+            canvas.drawText("Ultra", left + whiteWidth - split, nameBaseline, namePaint);
+        }
         namePaint.setColor(Color.WHITE);
         canvas.drawText("Urinth", left, nameBaseline, namePaint);
         namePaint.setColor(COLOR_RED);
@@ -528,14 +606,14 @@ public final class LaunchLoadingView extends View implements Choreographer.Frame
         canvas.restoreToCount(save);
     }
 
-    /** Five steps along the bottom; done steps are lit, the current one fills and pulses. */
+    /** Five steps along the bottom; done steps are lit, the current one fills, shimmers and pulses. */
     private void drawStepBar(Canvas canvas, int w, int h) {
         float barLeft = w * 0.2f;
         float barRight = w * 0.8f;
         float gap = density * 6f;
         float segW = (barRight - barLeft - gap * (STEPS - 1)) / STEPS;
         float barH = density * 3.5f;
-        float barTop = h - density * 34f;
+        float barTop = h - density * 46f;
         float labelSize = density * 8.5f;
         smallPaint.setTextSize(labelSize);
         smallPaint.setTextAlign(Paint.Align.CENTER);
@@ -547,12 +625,28 @@ public final class LaunchLoadingView extends View implements Choreographer.Frame
             barPaint.setShader(null);
             barPaint.setColor(withAlpha(Color.WHITE, 0.09f));
             canvas.drawRect(left, barTop, left + segW, barTop + barH, barPaint);
+            boolean current = !done && i == Math.min(stage, STEPS - 1);
             if (fraction > 0f) {
-                barPaint.setColor(withAlpha(i == STEPS - 1 ? COLOR_CYAN : COLOR_TEAL, 0.95f));
-                canvas.drawRect(left, barTop, left + segW * fraction, barTop + barH, barPaint);
+                int color = i == STEPS - 1 ? COLOR_CYAN : COLOR_TEAL;
+                float fillRight = left + segW * fraction;
+                // A soft glow under the lit part.
+                barPaint.setColor(withAlpha(color, current ? 0.22f : 0.12f));
+                canvas.drawRect(left, barTop - density * 2f, fillRight, barTop + barH + density * 2f, barPaint);
+                barPaint.setColor(withAlpha(color, 0.95f));
+                canvas.drawRect(left, barTop, fillRight, barTop + barH, barPaint);
+                if (current) {
+                    // A light running along the current step's fill.
+                    float band = segW * 0.28f;
+                    float sx = left + (fillRight - left + band) * ((timeMs % 1300f) / 1300f) - band;
+                    float from = Math.max(left, sx);
+                    float to = Math.min(fillRight, sx + band);
+                    if (to > from) {
+                        barPaint.setColor(withAlpha(Color.WHITE, 0.55f));
+                        canvas.drawRect(from, barTop, to, barTop + barH, barPaint);
+                    }
+                }
             }
 
-            boolean current = !done && i == Math.min(stage, STEPS - 1);
             boolean reached = fraction >= 1f || i < stage || done;
             float pulse = 0.65f + 0.35f * (float) Math.sin(timeMs / 220f);
             if (current) {
@@ -562,8 +656,7 @@ public final class LaunchLoadingView extends View implements Choreographer.Frame
             } else {
                 smallPaint.setColor(withAlpha(COLOR_DIM, 0.6f));
             }
-            canvas.drawText(String.format(Locale.US, "%02d %s", i + 1, STEP_LABELS[i]),
-                    left + segW / 2f, barTop - density * 6f, smallPaint);
+            canvas.drawText(STEP_LABELS[i], left + segW / 2f, barTop - density * 6f, smallPaint);
         }
         smallPaint.setTextAlign(Paint.Align.LEFT);
     }
