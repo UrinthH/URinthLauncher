@@ -99,6 +99,9 @@ public class GameActivity extends BaseActivity implements ControlButtonMenuListe
     private static final int LOG_TAIL_BYTES = 24 * 1024;
     private long mLoadingStartMs;
     private boolean mLoadingHiding;
+    private LaunchLoadingView mLoadingView;
+    private String mLoadingVersion = "";
+    private int mHighestStage = LaunchStage.PREPARING;
 
     public static TouchCharInput touchCharInput;
     private GameView launcherGLView;
@@ -276,6 +279,10 @@ public class GameActivity extends BaseActivity implements ControlButtonMenuListe
      */
     private void startLoadingRefresh() {
         if(mLoadingScreen == null) return;
+        if(mLoadingView != null) {
+            mLoadingView.setInfo(mLoadingVersion, mGameRenderer.getCurrentRenderer().name(), PREF_PERFORMANCE_MODE);
+            mLoadingView.setRain(PREF_PERFORMANCE_MODE);
+        }
         Tools.MAIN_HANDLER.postDelayed(new Runnable() {
             @Override
             public void run() {
@@ -294,6 +301,11 @@ public class GameActivity extends BaseActivity implements ControlButtonMenuListe
     private void showLoadingStage(int stage, long elapsedMs) {
         View screen = mLoadingScreen;
         if(screen == null || mLoadingHiding) return;
+        // The log tail is only the last part of the log, so an earlier line can scroll out of it.
+        // Start-up never goes backwards, so neither does the screen.
+        if(stage > mHighestStage) mHighestStage = stage;
+        stage = mHighestStage;
+        if(mLoadingView != null) mLoadingView.setStage(stage);
         int title;
         switch(stage) {
             case LaunchStage.STARTING_JAVA: title = R.string.loading_stage_java; break;
@@ -343,6 +355,7 @@ public class GameActivity extends BaseActivity implements ControlButtonMenuListe
             Intent activityIntent = getIntent();
             Bundle extras = Objects.requireNonNull(activityIntent.getExtras());
             String version = extras.getString(INTENT_LAUNCH_VERSION);
+            if(version != null) mLoadingVersion = version;
             File[] classpath = (File[]) extras.getSerializable(INTENT_LAUNCH_CLASSPATH);
 
             activityIntent.removeExtra(INTENT_LAUNCH_VERSION);
@@ -428,6 +441,7 @@ public class GameActivity extends BaseActivity implements ControlButtonMenuListe
         mDrawerPullButton = findViewById(R.id.drawer_button);
         mHotbarView = findViewById(R.id.hotbar_view);
         mLoadingScreen = findViewById(R.id.main_loading_screen);
+        mLoadingView = findViewById(R.id.main_loading_view);
     }
 
     @Override
@@ -635,13 +649,15 @@ public class GameActivity extends BaseActivity implements ControlButtonMenuListe
     public void hideLoadingScreen(){
         if(mLoadingScreen == null || mLoadingHiding) return;
         mLoadingHiding = true;
+        if(mLoadingView != null) mLoadingView.setDone();
         StartupTimeline.markNow("Java + Minecraft until the window");
         String startupSummary = StartupTimeline.currentSummary();
         if(startupSummary != null) Logger.appendToLog(startupSummary);
         ((TextView) mLoadingScreen.findViewById(R.id.main_loading_screen_text)).setText(getString(R.string.loading_screen_booted, PLATFORM.backendName()));
         mLoadingScreen.animate()
                 .alpha(0f)
-                .setDuration(300)
+                .setStartDelay(150)
+                .setDuration(350)
                 .withEndAction(() -> {
                     ((ViewGroup) mLoadingScreen.getParent()).removeView(mLoadingScreen);
                     mLoadingScreen = null;
