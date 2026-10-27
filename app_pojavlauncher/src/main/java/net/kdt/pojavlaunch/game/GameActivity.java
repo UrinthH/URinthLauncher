@@ -47,6 +47,7 @@ import com.kdt.LoggerView;
 
 import net.kdt.pojavlaunch.BaseActivity;
 import net.kdt.pojavlaunch.CallbackBridge;
+import net.kdt.pojavlaunch.PojavApplication;
 import net.kdt.pojavlaunch.game.renderer.GameRenderer;
 import net.kdt.pojavlaunch.game.renderer.impl.ApkRendererScanner;
 import net.kdt.pojavlaunch.game.renderer.URinthRender;
@@ -90,6 +91,14 @@ import git.artdeell.mojo.R;
 public class GameActivity extends BaseActivity implements ControlButtonMenuListener, EditorExitable, ServiceConnection {
     public static final String INTENT_LAUNCH_VERSION = "intent_version";
     public static final String INTENT_LAUNCH_CLASSPATH = "intent_classpath";
+    /** When the player tapped Play (epoch ms), for the start-up timing in the game log. */
+    public static final String INTENT_LAUNCH_TAP_MS = "intent_tap_ms";
+    /** How often the loading screen refreshes its stage and elapsed time. */
+    private static final long LOADING_REFRESH_MS = 1000;
+    /** How much of the end of the game log is read to tell what stage start-up is in. */
+    private static final int LOG_TAIL_BYTES = 24 * 1024;
+    private long mLoadingStartMs;
+    private boolean mLoadingHiding;
 
     public static TouchCharInput touchCharInput;
     private GameView launcherGLView;
@@ -121,6 +130,11 @@ public class GameActivity extends BaseActivity implements ControlButtonMenuListe
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        // Start-up timing: from the tap in the launcher (if it told us when), else from now.
+        long tapMs = getIntent().getLongExtra(INTENT_LAUNCH_TAP_MS, 0L);
+        mLoadingStartMs = tapMs > 0 ? tapMs : System.currentTimeMillis();
+        StartupTimeline.begin(mLoadingStartMs);
+        StartupTimeline.markNow("files check + game process");
         instance = Instances.loadSelectedInstance();
         account = Accounts.getCurrent();
         if(instance == null) {
@@ -249,8 +263,65 @@ public class GameActivity extends BaseActivity implements ControlButtonMenuListe
         // Set the activity for the executor. Must do this here, or else Tools.showErrorRemote() may not
         // execute the correct method
         ContextExecutor.setActivity(this);
+        StartupTimeline.markNow("game screen setup");
+        startLoadingRefresh();
         //Now, attach to the service. The game will only start when this happens, to make sure that we know the right state.
         bindService(gameServiceIntent, this, 0);
+    }
+
+    /**
+     * While the loading screen is up, show what start-up is doing and how long it has taken, so
+     * the wait is no longer one unchanging line. The stage comes from the end of the game's own
+     * log (read only); nothing here touches the game or its files.
+     */
+    private void startLoadingRefresh() {
+        if(mLoadingScreen == null) return;
+        Tools.MAIN_HANDLER.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                final View screen = mLoadingScreen;
+                if(screen == null || mLoadingHiding) return; // the window showed up
+                final long elapsedMs = System.currentTimeMillis() - mLoadingStartMs;
+                PojavApplication.sExecutorService.execute(() -> {
+                    final int stage = LaunchStage.fromLog(readLogTail());
+                    Tools.runOnUiThread(() -> showLoadingStage(stage, elapsedMs));
+                });
+                Tools.MAIN_HANDLER.postDelayed(this, LOADING_REFRESH_MS);
+            }
+        }, 0);
+    }
+
+    private void showLoadingStage(int stage, long elapsedMs) {
+        View screen = mLoadingScreen;
+        if(screen == null || mLoadingHiding) return;
+        int title;
+        switch(stage) {
+            case LaunchStage.STARTING_JAVA: title = R.string.loading_stage_java; break;
+            case LaunchStage.LOADING_GAME: title = R.string.loading_stage_game; break;
+            case LaunchStage.CREATING_WINDOW: title = R.string.loading_stage_window; break;
+            case LaunchStage.LOADING_RESOURCES: title = R.string.loading_stage_resources; break;
+            default: title = R.string.loading_stage_prepare;
+        }
+        TextView titleView = screen.findViewById(R.id.main_loading_screen_text);
+        TextView noteView = screen.findViewById(R.id.main_loading_screen_warning);
+        if(titleView != null) titleView.setText(title);
+        if(noteView != null) noteView.setText(getString(R.string.loading_stage_elapsed, LaunchStage.elapsed(elapsedMs)));
+    }
+
+    /** The end of the game log, or an empty string if it cannot be read yet. Read only. */
+    private static String readLogTail() {
+        File logFile = new File(Tools.DIR_GAME_HOME, "latestlog.txt");
+        try(java.io.RandomAccessFile file = new java.io.RandomAccessFile(logFile, "r")) {
+            long length = file.length();
+            int toRead = (int) Math.min(length, LOG_TAIL_BYTES);
+            if(toRead <= 0) return "";
+            byte[] buffer = new byte[toRead];
+            file.seek(length - toRead);
+            file.readFully(buffer);
+            return new String(buffer, java.nio.charset.StandardCharsets.UTF_8);
+        } catch (IOException | RuntimeException e) {
+            return "";
+        }
     }
 
     protected void initLayout(int resId) {
@@ -308,6 +379,7 @@ public class GameActivity extends BaseActivity implements ControlButtonMenuListe
                         });
                         return;
                     }
+                    StartupTimeline.markNow("game surface ready");
                     runCraft(version, classpath);
                 }catch (Throwable e){
                     Tools.showErrorRemote(e);
@@ -561,7 +633,11 @@ public class GameActivity extends BaseActivity implements ControlButtonMenuListe
     }
 
     public void hideLoadingScreen(){
-        if(mLoadingScreen == null) return;
+        if(mLoadingScreen == null || mLoadingHiding) return;
+        mLoadingHiding = true;
+        StartupTimeline.markNow("Java + Minecraft until the window");
+        String startupSummary = StartupTimeline.currentSummary();
+        if(startupSummary != null) Logger.appendToLog(startupSummary);
         ((TextView) mLoadingScreen.findViewById(R.id.main_loading_screen_text)).setText(getString(R.string.loading_screen_booted, PLATFORM.backendName()));
         mLoadingScreen.animate()
                 .alpha(0f)

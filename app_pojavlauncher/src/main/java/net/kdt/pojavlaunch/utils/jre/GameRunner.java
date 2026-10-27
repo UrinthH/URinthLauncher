@@ -13,6 +13,7 @@ import net.kdt.pojavlaunch.Architecture;
 import net.kdt.pojavlaunch.JVersionList;
 import net.kdt.pojavlaunch.Tools;
 import net.kdt.pojavlaunch.authenticator.accounts.Account;
+import net.kdt.pojavlaunch.game.StartupTimeline;
 import net.kdt.pojavlaunch.game.renderer.def.Renderers;
 import net.kdt.pojavlaunch.game.renderer.impl.ApkRenderSpec;
 import net.kdt.pojavlaunch.game.renderer.impl.GLESRenderSpec;
@@ -446,6 +447,7 @@ public class GameRunner {
             // diagnostics only
         }
 
+        StartupTimeline.markNow("launcher setup (renderer, Java runtime)");
         try {
             JavaRunner.nativeSetupExit(activity);
             JavaRunner.startJvm(runtime, javaArgList, launchClassPath, mainClass, launchArgs);

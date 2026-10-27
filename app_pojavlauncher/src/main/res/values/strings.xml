@@ -523,6 +523,12 @@
     <string name="loading_screen_title">Waiting for a game window to appear…</string>
     <string name="loading_screen_booted">Ready - running on %1$s!</string>
     <string name="loading_screen_warning">If you are stuck here, the game might have crashed</string>
+    <string name="loading_stage_prepare">Preparing the game…</string>
+    <string name="loading_stage_java">Starting Java…</string>
+    <string name="loading_stage_game">Loading Minecraft…</string>
+    <string name="loading_stage_window">Creating the game window…</string>
+    <string name="loading_stage_resources">Loading resources…</string>
+    <string name="loading_stage_elapsed">%1$s elapsed · if you are stuck here, the game might have crashed</string>
     <string name="preference_metadata_clear">Clear metadata cache</string>
     <string name="preference_metadata_clear_summary">Removes all strings metadata cache and forces a rebuild. Use this if the launcher can\'t see new game or modloader versions</string>
     <string name="preference_metadata_clear_fail">Failed to remove cache files</string>

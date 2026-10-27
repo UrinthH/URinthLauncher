@@ -19,15 +19,19 @@ import java.io.File;
 public class ContextAwareDoneListener implements MoJsonExtras.DoneListener, ContextExecutorTask {
     private final String mErrorString;
     private final String mNormalizedVersionid;
+    private final long mTapTimeMs;
     private File[] classpath;
 
     public ContextAwareDoneListener(Context baseContext, String versionId) {
         this.mErrorString = baseContext.getString(R.string.mc_download_failed);
         this.mNormalizedVersionid = versionId;
+        // Created the moment the player taps Play. The game process measures its start-up from here.
+        this.mTapTimeMs = System.currentTimeMillis();
     }
 
     private Intent createGameStartIntent(Context context) {
         Intent mainIntent = new Intent(context, GameActivity.class);
+        mainIntent.putExtra(GameActivity.INTENT_LAUNCH_TAP_MS, mTapTimeMs);
         mainIntent.putExtra(INTENT_LAUNCH_VERSION, mNormalizedVersionid);
         mainIntent.putExtra(INTENT_LAUNCH_CLASSPATH, classpath);
         mainIntent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);

@@ -165,6 +165,7 @@ public class JavaRunner {
      * and is only added when G1 is the collector in use.
      */
     private static void addPerformanceModeArguments(List<String> arguments) {
+        addFasterStartupArguments(arguments);
         if(!hasArgument(arguments, "-XX:+UseG1GC")) return;
         if(!hasArgument(arguments, "-XX:+UnlockExperimentalVMOptions"))
             arguments.add("-XX:+UnlockExperimentalVMOptions");
@@ -180,6 +181,25 @@ public class JavaRunner {
             arguments.add("-XX:MaxGCPauseMillis=50");
         if(!hasArgument(arguments, "-XX:+ParallelRefProcEnabled") && !hasArgument(arguments, "-XX:-ParallelRefProcEnabled"))
             arguments.add("-XX:+ParallelRefProcEnabled");
+    }
+
+    /**
+     * Performance Mode: a shorter wait before the game window shows.
+     *
+     * <p>Minecraft loads many thousands of classes while it starts, and the VM checks each one for
+     * valid bytecode as it is loaded. On a phone CPU that checking is a real part of the wait.
+     * Skipping it for game and mod classes (the VM's own classes were never checked) makes loading
+     * faster. The trade-off: a mod with broken bytecode would crash the VM instead of throwing an
+     * error the game can report. Turning Performance Mode off turns this off. A flag the user
+     * already set is never overridden, and a VM that does not know the flag ignores it.
+     */
+    private static void addFasterStartupArguments(List<String> arguments) {
+        if(!hasArgument(arguments, "-XX:+BytecodeVerificationRemote")
+                && !hasArgument(arguments, "-XX:-BytecodeVerificationRemote")
+                && !hasArgument(arguments, "-Xverify")
+                && !hasArgument(arguments, "-noverify")) {
+            arguments.add("-XX:-BytecodeVerificationRemote");
+        }
     }
 
     private static File getVmPath(File runtimeHomeDir, String arch, String flavor) {
