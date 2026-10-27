@@ -20,6 +20,8 @@ import java.io.File;
 public class ContextAwareDoneListener implements MoJsonExtras.DoneListener, ContextExecutorTask {
     private final String mErrorString;
     private final String mNormalizedVersionid;
+    /** How long the launcher stays behind the game's screen before it is closed. */
+    private static final long LAUNCHER_EXIT_DELAY_MS = 4000;
     private final long mTapTimeMs;
     private File[] classpath;
 
@@ -36,6 +38,8 @@ public class ContextAwareDoneListener implements MoJsonExtras.DoneListener, Cont
         mainIntent.putExtra(INTENT_LAUNCH_VERSION, mNormalizedVersionid);
         mainIntent.putExtra(INTENT_LAUNCH_CLASSPATH, classpath);
         mainIntent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        // Carry on the loading-screen animation from where the launcher's Play animation is.
+        mainIntent.putExtra(GameActivity.INTENT_HUD_ORIGIN_MS, LaunchTransition.originWallMs());
         return mainIntent;
     }
 
@@ -61,9 +65,22 @@ public class ContextAwareDoneListener implements MoJsonExtras.DoneListener, Cont
     private void startGame(Activity activity) {
         try {
             Intent gameStartIntent = createGameStartIntent(activity);
+            boolean animated = LaunchTransition.isActive();
+            if(animated) gameStartIntent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
             activity.startActivity(gameStartIntent);
-            activity.finish();
-            android.os.Process.killProcess(android.os.Process.myPid()); //You should kill yourself, NOW!
+            if(!animated) {
+                activity.finish();
+                android.os.Process.killProcess(android.os.Process.myPid()); //You should kill yourself, NOW!
+                return;
+            }
+            // No window animation, and the launcher stays up (still animating) until the game's
+            // screen is really on top of it, so there is no gap or flash in between. Once it has
+            // had time to do that, the launcher goes away as it always did.
+            activity.overridePendingTransition(0, 0);
+            Tools.MAIN_HANDLER.postDelayed(() -> {
+                activity.finish();
+                android.os.Process.killProcess(android.os.Process.myPid());
+            }, LAUNCHER_EXIT_DELAY_MS);
         } catch (Throwable e) {
             Tools.showError(activity.getBaseContext(), e);
         }

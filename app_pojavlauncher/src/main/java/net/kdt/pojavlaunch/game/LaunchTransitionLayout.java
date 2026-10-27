@@ -13,9 +13,12 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewOutlineProvider;
 import android.widget.FrameLayout;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import java.util.Random;
+
+import git.artdeell.mojo.R;
 
 /**
  * The Play animation. A tiny rounded square (a live miniature of the game's loading screen) pops
@@ -45,6 +48,8 @@ public final class LaunchTransitionLayout extends FrameLayout implements Choreog
     private final Bitmap snapshot;
     private final LaunchLoadingView content;
     private final TextView statusText;
+    private final View textBlockView;
+    private final String idleStatus;
 
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
     private final Paint strokePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -74,7 +79,8 @@ public final class LaunchTransitionLayout extends FrameLayout implements Choreog
     private float u;
     private float e;
 
-    public LaunchTransitionLayout(Context context, Bitmap snapshot, String version, boolean performanceMode) {
+    public LaunchTransitionLayout(Context context, Bitmap snapshot, String version,
+                                  boolean performanceMode, long originWallMs) {
         super(context);
         density = context.getResources().getDisplayMetrics().density;
         this.snapshot = snapshot;
@@ -84,6 +90,7 @@ public final class LaunchTransitionLayout extends FrameLayout implements Choreog
         content = new LaunchLoadingView(context);
         content.setInfo(version, performanceMode);
         content.setRain(performanceMode);
+        content.setTimeOriginWallMs(originWallMs);
         content.setOutlineProvider(new ViewOutlineProvider() {
             @Override
             public void getOutline(View view, Outline outline) {
@@ -95,17 +102,36 @@ public final class LaunchTransitionLayout extends FrameLayout implements Choreog
         content.setVisibility(INVISIBLE);
         addView(content, new LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
+        // The same text block the game's loading screen has, in the same place and style, so that
+        // when the game's screen takes over the words do not move. The second line is only there
+        // to take up its space; the game fades it in.
+        idleStatus = context.getString(R.string.loading_stage_prepare);
+        LinearLayout textBlock = new LinearLayout(context);
+        textBlock.setOrientation(LinearLayout.VERTICAL);
+        textBlock.setGravity(Gravity.CENTER);
         statusText = new TextView(context);
         statusText.setTextColor(0xFF3CE6C0);
         statusText.setTextSize(13f);
         statusText.setLetterSpacing(0.12f);
         statusText.setAllCaps(true);
         statusText.setTypeface(statusText.getTypeface(), android.graphics.Typeface.BOLD);
-        statusText.setAlpha(0f);
-        LayoutParams statusParams = new LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
-        statusParams.bottomMargin = Math.round(density * 64f);
-        addView(statusText, statusParams);
+        statusText.setText(idleStatus);
+        textBlock.addView(statusText, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        TextView spacer = new TextView(context);
+        spacer.setTextSize(11f);
+        spacer.setText(context.getString(R.string.loading_stage_elapsed, "0:00"));
+        spacer.setVisibility(INVISIBLE);
+        LinearLayout.LayoutParams spacerParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        spacerParams.topMargin = Math.round(density * 4f);
+        textBlock.addView(spacer, spacerParams);
+        textBlock.setAlpha(0f);
+        textBlockView = textBlock;
+        LayoutParams blockParams = new LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM);
+        blockParams.bottomMargin = Math.round(density * 64f);
+        addView(textBlock, blockParams);
 
         Random random = new Random(5);
         for (int i = 0; i < STREAKS; i++) {
@@ -145,7 +171,7 @@ public final class LaunchTransitionLayout extends FrameLayout implements Choreog
 
     /** A line of text shown under the loading screen once it fills the screen, e.g. download progress. */
     public void setStatus(CharSequence text) {
-        statusText.setText(text);
+        statusText.setText(text == null || text.length() == 0 ? idleStatus : text);
     }
 
     // ---- frame clock ------------------------------------------------------------------------
@@ -160,6 +186,8 @@ public final class LaunchTransitionLayout extends FrameLayout implements Choreog
         if (timeMs >= LaunchZoomMath.TOTAL_MS) {
             running = false;
             zoomFinished = true;
+            // The words under the logo arrive as the square lands, as they do on the game's screen.
+            textBlockView.animate().alpha(1f).setDuration(250).start();
             Runnable callback = afterZoom;
             afterZoom = null;
             if (callback != null) post(callback);
@@ -209,9 +237,7 @@ public final class LaunchTransitionLayout extends FrameLayout implements Choreog
         outlineRadius = radius / k;
         content.invalidateOutline();
 
-        // The status line appears once the square fills the screen and the game is still not ready.
-        float statusIn = LaunchZoomMath.smooth((elapsedMs - LaunchZoomMath.TOTAL_MS) / 300f);
-        statusText.setAlpha(statusText.length() == 0 ? 0f : statusIn);
+
     }
 
     // ---- drawing ----------------------------------------------------------------------------

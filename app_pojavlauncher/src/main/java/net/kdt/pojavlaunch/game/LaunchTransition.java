@@ -1,6 +1,7 @@
 package net.kdt.pojavlaunch.game;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.os.Looper;
@@ -12,6 +13,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.kdt.mcgui.ProgressLayout;
 
 import net.kdt.pojavlaunch.Tools;
+import net.kdt.pojavlaunch.services.GameWarmupService;
 import net.kdt.pojavlaunch.prefs.LauncherPreferences;
 import net.kdt.pojavlaunch.progresskeeper.ProgressKeeper;
 import net.kdt.pojavlaunch.progresskeeper.ProgressListener;
@@ -29,6 +31,8 @@ public final class LaunchTransition {
     private static LaunchTransitionLayout sActive;
     private static ProgressListener sProgressListener;
     private static OnBackPressedCallback sBackCallback;
+    /** Wall-clock moment the animation began; the game's loading screen continues from it. */
+    private static long sOriginWallMs;
 
     private LaunchTransition() {}
 
@@ -42,8 +46,9 @@ public final class LaunchTransition {
         ViewGroup content = activity.findViewById(android.R.id.content);
         if (content == null || content.getWidth() <= 0 || content.getHeight() <= 0) return;
 
+        sOriginWallMs = System.currentTimeMillis();
         LaunchTransitionLayout layout = new LaunchTransitionLayout(activity, takeSnapshot(content),
-                version, LauncherPreferences.PREF_PERFORMANCE_MODE);
+                version, LauncherPreferences.PREF_PERFORMANCE_MODE, sOriginWallMs);
         content.addView(layout, new ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         sActive = layout;
@@ -80,6 +85,26 @@ public final class LaunchTransition {
         ProgressKeeper.addListener(ProgressLayout.DOWNLOAD_GAME, sProgressListener);
 
         layout.begin();
+        warmUpGameProcess(activity);
+    }
+
+    /**
+     * Start the game's process now, while the animation plays, instead of when the game screen is
+     * asked for. A cold process start is what made the hand-over visibly stall: the system shows a
+     * blank placeholder while it waits for the process. With the process already running, the
+     * game screen opens straight over the launcher with nothing in between.
+     */
+    private static void warmUpGameProcess(Activity activity) {
+        try {
+            activity.startService(new Intent(activity, GameWarmupService.class));
+        } catch (RuntimeException ignored) {
+            // Decoration only: without the warm-up the game still starts, just a little later.
+        }
+    }
+
+    /** The moment the animation began (epoch ms), or 0 if none is showing. */
+    public static long originWallMs() {
+        return sActive != null ? sOriginWallMs : 0L;
     }
 
     /** A half-size picture of the launcher, or null if there is no memory for it. */

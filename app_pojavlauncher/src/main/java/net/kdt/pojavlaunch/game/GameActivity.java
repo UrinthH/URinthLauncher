@@ -93,12 +93,15 @@ public class GameActivity extends BaseActivity implements ControlButtonMenuListe
     public static final String INTENT_LAUNCH_CLASSPATH = "intent_classpath";
     /** When the player tapped Play (epoch ms), for the start-up timing in the game log. */
     public static final String INTENT_LAUNCH_TAP_MS = "intent_tap_ms";
+    /** When the launcher's Play animation began (epoch ms); the loading screen continues from it. 0 = none. */
+    public static final String INTENT_HUD_ORIGIN_MS = "intent_hud_origin_ms";
     /** How often the loading screen refreshes its stage and elapsed time. */
     private static final long LOADING_REFRESH_MS = 1000;
     /** How much of the end of the game log is read to tell what stage start-up is in. */
     private static final int LOG_TAIL_BYTES = 24 * 1024;
     private long mLoadingStartMs;
     private boolean mLoadingHiding;
+    private long mHudOriginMs;
     private LaunchLoadingView mLoadingView;
     private String mLoadingVersion = "";
     private int mHighestStage = LaunchStage.PREPARING;
@@ -283,6 +286,16 @@ public class GameActivity extends BaseActivity implements ControlButtonMenuListe
             mLoadingView.setInfo(mLoadingVersion, PREF_PERFORMANCE_MODE);
             mLoadingView.setRain(PREF_PERFORMANCE_MODE);
         }
+        // Show the first stage right away: the screen must not open on its placeholder text.
+        showLoadingStage(LaunchStage.PREPARING, System.currentTimeMillis() - mLoadingStartMs);
+        if(mHudOriginMs > 0) {
+            // The launcher's animation showed the title only; let the elapsed-time line arrive softly.
+            View note = mLoadingScreen.findViewById(R.id.main_loading_screen_warning);
+            if(note != null) {
+                note.setAlpha(0f);
+                note.animate().alpha(1f).setStartDelay(200).setDuration(500).start();
+            }
+        }
         Tools.MAIN_HANDLER.postDelayed(new Runnable() {
             @Override
             public void run() {
@@ -442,6 +455,10 @@ public class GameActivity extends BaseActivity implements ControlButtonMenuListe
         mHotbarView = findViewById(R.id.hotbar_view);
         mLoadingScreen = findViewById(R.id.main_loading_screen);
         mLoadingView = findViewById(R.id.main_loading_view);
+        // Coming from the launcher's Play animation: carry its clock on, so every ring, pulse and
+        // particle is exactly where it was and the hand-over between the two screens cannot be seen.
+        mHudOriginMs = getIntent().getLongExtra(INTENT_HUD_ORIGIN_MS, 0L);
+        if(mLoadingView != null) mLoadingView.setTimeOriginWallMs(mHudOriginMs);
     }
 
     @Override

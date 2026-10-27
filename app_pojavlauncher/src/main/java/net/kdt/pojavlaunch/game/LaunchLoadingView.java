@@ -99,6 +99,9 @@ public final class LaunchLoadingView extends View implements Choreographer.Frame
     private long startNs;
     private long lastFrameNs;
     private float timeMs;
+    /** Wall-clock moment (ms) this animation's time zero is counted from; 0 = from the first frame. */
+    private long originWallMs;
+    private float originOffsetMs;
 
     private int stage = LaunchStage.PREPARING;
     private float stageSinceMs;
@@ -171,6 +174,17 @@ public final class LaunchLoadingView extends View implements Choreographer.Frame
         rain = enabled;
     }
 
+    /**
+     * Count this animation's time from the given wall-clock moment instead of from its own first
+     * frame. The Play animation in the launcher and the loading screen in the game are separate
+     * screens in separate processes; giving both the same origin makes the game's screen pick up
+     * every ring, pulse and particle exactly where the launcher's left off, so the hand-over
+     * between them cannot be seen.
+     */
+    public void setTimeOriginWallMs(long wallMs) {
+        originWallMs = wallMs;
+    }
+
     /** What is being launched, for the corner readouts. */
     public void setInfo(String version, boolean performanceMode) {
         String upper = version == null ? "" : version.toUpperCase(Locale.ROOT);
@@ -215,10 +229,13 @@ public final class LaunchLoadingView extends View implements Choreographer.Frame
     @Override
     public void doFrame(long frameTimeNanos) {
         if (!running) return;
-        if (startNs == 0) startNs = frameTimeNanos;
+        if (startNs == 0) {
+            startNs = frameTimeNanos;
+            originOffsetMs = originWallMs > 0 ? Math.max(0L, System.currentTimeMillis() - originWallMs) : 0f;
+        }
         float dt = lastFrameNs == 0 ? 0.016f : (frameTimeNanos - lastFrameNs) / 1_000_000_000f;
         lastFrameNs = frameTimeNanos;
-        timeMs = (frameTimeNanos - startNs) / 1_000_000f;
+        timeMs = (frameTimeNanos - startNs) / 1_000_000f + originOffsetMs;
         step(Math.min(dt, 0.25f));
         invalidate();
         Choreographer.getInstance().postFrameCallback(this);

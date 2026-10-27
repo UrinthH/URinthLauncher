@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Android 12+: if the game's process has to be started from scratch, the system shows a
+         placeholder first. Make it the loading screen's colour with no app icon, instead of the
+         default icon splash. -->
+    <style name="MojoLauncher.Game" parent="MojoLauncher.AppTheme">
+        <item name="android:windowBackground">@color/urinth_loading_bg</item>
+        <item name="android:windowSplashScreenBackground">@color/urinth_loading_bg</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/urinth_empty_icon</item>
+    </style>
+</resources>
