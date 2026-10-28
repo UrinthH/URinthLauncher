@@ -73,6 +73,9 @@ public final class RenderScheduler {
     private final Set<Integer> mVoiceThreads = new HashSet<>();
     private boolean mVoiceBoostLogged;
     private final Map<Integer, String> mVoiceNames = new HashMap<>();
+    /** CPU ticks per thread at the start of the current summary window, for the "who used the CPU" line. */
+    private Map<Integer, Long> mWindowTicks = new HashMap<>();
+    private long mWindowStartedAt;
 
     // Numbers for the once-a-minute summary.
     private long mSummaryStartedAt;
@@ -107,6 +110,7 @@ public final class RenderScheduler {
     private void begin() {
         mRunning = true;
         mSummaryStartedAt = SystemClock.elapsedRealtime();
+        snapshotWindow();
         mHandler.postDelayed(mSampleTask, SAMPLE_MS);
         log("Started: helper threads are lowered only while the render thread is waiting for a core");
     }
@@ -292,11 +296,87 @@ public final class RenderScheduler {
                 "Last minute: the render thread waited for a CPU core %.1f%% of the time on average, %.0f%% at worst; "
                         + "helper threads were lowered for %d%% of it",
                 100 * mWaitSum / mSamples, 100 * mWaitPeak, Math.round(100f * mSamplesLowered / mSamples)));
+        logLoadReport(now);
+        snapshotWindow();
         mSummaryStartedAt = now;
         mSamples = 0;
         mSamplesLowered = 0;
         mWaitSum = 0;
         mWaitPeak = 0;
+    }
+
+    /** Remember every thread's CPU time now; one pass over /proc, once a minute. */
+    private void snapshotWindow() {
+        mWindowStartedAt = SystemClock.elapsedRealtime();
+        mWindowTicks = readAllThreadTicks(null);
+    }
+
+    /** Reads each thread's CPU ticks; when {@code names} is given, also its name. */
+    private static Map<Integer, Long> readAllThreadTicks(@Nullable Map<Integer, String> names) {
+        Map<Integer, Long> ticks = new HashMap<>();
+        File[] tasks = new File("/proc/self/task").listFiles();
+        if (tasks == null) return ticks;
+        for (File task : tasks) {
+            try {
+                int tid = Integer.parseInt(task.getName());
+                long used = SchedulerPolicy.parseCpuTicks(readFile(new File(task, "stat")));
+                if (used < 0) continue;
+                ticks.put(tid, used);
+                if (names != null) {
+                    String name = readThreadName(task);
+                    names.put(tid, name == null ? "?" : name);
+                }
+            } catch (NumberFormatException notAThread) {
+                // not a thread folder
+            }
+        }
+        return ticks;
+    }
+
+    /**
+     * One line a minute that says where the phone's CPU went and how much memory was left, so a
+     * report of "it lags" can be matched to a cause: the render thread starved, the server thread
+     * busy, the compiler or the voice chat eating cores, or Android short of memory.
+     */
+    private void logLoadReport(long now) {
+        try {
+            Map<Integer, String> names = new HashMap<>();
+            Map<Integer, Long> nowTicks = readAllThreadTicks(names);
+            Map<String, Long> byName = new HashMap<>();
+            for (Map.Entry<Integer, Long> entry : nowTicks.entrySet()) {
+                Long before = mWindowTicks.get(entry.getKey());
+                long delta = entry.getValue() - (before == null ? 0 : before);
+                if (delta <= 0) continue;
+                String name = names.get(entry.getKey());
+                // Names with a number on the end belong to one pool (Worker-Main-3, IO-Worker-1).
+                String group = name == null ? "?" : name.replaceAll("[-_ ]?\\d+$", "");
+                Long sum = byName.get(group);
+                byName.put(group, (sum == null ? 0 : sum) + delta);
+            }
+            String busiest = SchedulerPolicy.busiestThreads(byName, now - mWindowStartedAt, 100, 6);
+            String meminfo = readWhole(new File("/proc/meminfo"));
+            long available = SchedulerPolicy.parseMeminfoKb(meminfo, "MemAvailable");
+            long swapTotal = SchedulerPolicy.parseMeminfoKb(meminfo, "SwapTotal");
+            long swapFree = SchedulerPolicy.parseMeminfoKb(meminfo, "SwapFree");
+            log("CPU use (percent of one core): " + (busiest.isEmpty() ? "idle" : busiest)
+                    + " | memory available " + (available < 0 ? "?" : (available >> 10) + " MB")
+                    + (swapTotal > 0 && swapFree >= 0 ? ", swap in use " + ((swapTotal - swapFree) >> 10) + " MB" : "")
+                    + " | heat level " + ThermalGuard.currentHeatLevel());
+        } catch (Throwable ignored) {
+            // A report must never get in the way of the game.
+        }
+    }
+
+    @Nullable
+    private static String readWhole(File file) {
+        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+            StringBuilder text = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) text.append(line).append('\n');
+            return text.toString();
+        } catch (IOException error) {
+            return null;
+        }
     }
 
     @Nullable
