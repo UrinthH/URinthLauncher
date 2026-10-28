@@ -91,6 +91,16 @@ public class JREUtils {
         if(LauncherPreferences.PREF_ALSOFT_FORCE_OPENSL) envMap.put("ALSOFT_DRIVERS", "opensl");
 
         VoiceChatAudio.addEnvironment(envMap);
+        if(VoiceChatAudio.isModPresent()) {
+            // The game's audio library records with the generic microphone mode, which has no
+            // echo cancelling. Change that before the game starts recording.
+            try {
+                int result = installOpenSLMicPreset();
+                Logger.appendToLog("[Audio] microphone mode hook: " + (result >= 0 ? "on" : "failed") + " (" + result + ")");
+            } catch (Throwable t) {
+                Logger.appendToLog("[Audio] microphone mode hook not available: " + t);
+            }
+        }
 
         overrideEnvVars(envMap);
 
@@ -175,6 +185,11 @@ public class JREUtils {
         return GpuUtils.getGlInfo().glesMajorVersion;
     }
     public static native int chdir(String path);
+    /**
+     * Makes OpenSL ES recordings use the phone's "voice communication" microphone mode (echo
+     * cancelling, noise reduction) instead of the generic one. 0 done, 1 already done, below 0 failed.
+     */
+    public static native int installOpenSLMicPreset();
 
     public static native void setLdLibraryPath(String ldLibraryPath);
     static {
