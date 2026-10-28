@@ -33,13 +33,23 @@ public class InGameEventProcessor extends TouchEventProcessor {
                 checkGestures();
                 break;
             case MotionEvent.ACTION_MOVE:
-                mTracker.trackEvent(motionEvent);
-                float[] motionVector = mTracker.getMotionVector();
-                float deltaX = (float) (motionVector[0] * mSensitivity);
-                float deltaY = (float) (motionVector[1] * mSensitivity);
+                // Every touch sample Android batched into this event turns the camera by its own
+                // small step, instead of one jump per screen refresh. The camera then follows the
+                // finger at the touch panel's rate, which is what makes rotation feel smooth when
+                // the game draws faster than the screen refreshes.
+                int steps = mTracker.stepCount(motionEvent);
+                float deltaX = 0f, deltaY = 0f;
+                for(int step = 0; step < steps; step++) {
+                    float[] motionVector = mTracker.trackStep(motionEvent, step);
+                    float stepX = (float) (motionVector[0] * mSensitivity);
+                    float stepY = (float) (motionVector[1] * mSensitivity);
+                    deltaX += stepX;
+                    deltaY += stepY;
+                    // A step that did not move adds nothing; skip the call into the game for it.
+                    if(steps == 1 || stepX != 0f || stepY != 0f) applyMoveVector(stepX, stepY);
+                }
                 mLeftClickGesture.setMotion(deltaX, deltaY);
                 mRightClickGesture.setMotion(deltaX, deltaY);
-                applyMoveVector(deltaX, deltaY);
                 if(LauncherPreferences.PREF_DISABLE_GESTURES) break;
                 checkGestures();
                 break;

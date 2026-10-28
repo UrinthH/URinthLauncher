@@ -139,6 +139,9 @@ public class GameView extends FrameLayout implements PlatformGrabListener, Surfa
             return true; //mouse event handled successfully
         }
         if (mIngameProcessor == null || mInGUIProcessor == null) return true;
+        // Ask Android to hand over finger movement as it happens, not bundled once per screen
+        // refresh. Less delay between the finger and the camera, and smaller, more even steps.
+        if (e.getActionMasked() == MotionEvent.ACTION_DOWN) requestUnbufferedDispatch(e);
         boolean ret = mCurrentTouchProcessor.processTouchEvent(e);
         // Keep cursor on screen if panning with IME inset
         if(LauncherPreferences.PREF_KEYBOARD_AUTOPANNING && GameActivity.mImeHeight > 0){
