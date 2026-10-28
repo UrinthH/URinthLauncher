@@ -517,10 +517,6 @@
     <string name="migration_notice">Looks like you have already used this application in the past. You can import old launcher installation data from miscellaneous settings.</string>
     <string name="preference_voice_chat_cleanup_title">Voice chat clean-up</string>
     <string name="preference_voice_chat_cleanup_summary">With a voice chat mod and no headset, uses the phone\'s call audio mode with echo and noise cancelling, so the microphone does not pick up the game. Turns itself off when a headset is connected</string>
-    <string name="preference_voice_chat_mic_mode_title">Voice chat microphone (applies at next game start)</string>
-    <string name="voice_chat_mic_mode_communication">Echo cancelling (phone speaker)</string>
-    <string name="voice_chat_mic_mode_recognition">Light noise reduction</string>
-    <string name="voice_chat_mic_mode_unprocessed">Raw microphone (headset)</string>
     <string name="preference_alsoft_opensl_title">Forcefully use OpenSL for audio</string>
     <string name="preference_alsoft_opensl_summary">Forcefully enables OpenSL backend in ALSoft instead of Oboe. Can fix audio capture issues on some devices. Disable if you see audio playback/capture issues</string>
     <string name="preference_show_memory_warning_title">Show memory warning dialog</string>

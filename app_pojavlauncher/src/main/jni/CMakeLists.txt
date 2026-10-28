@@ -40,8 +40,6 @@ add_library(pojavexec SHARED
         affinity.c
         opensl_preset.c
         opensl_preset_hook.c
-        glibc_shim.c
-        glibc_shim_names.c
         jvm_hooks/emui_iterator_fix_hook.c
         jvm_hooks/java_exec_hooks.c
         jvm_hooks/lwjgl_dlopen_hook.c
@@ -76,18 +74,3 @@ add_library(awt_xawt SHARED
         awt_xawt/xawt_fake.c
 )
 target_link_libraries(awt_xawt PRIVATE awt_headless)
-
-# ------ Names for Linux (glibc) libraries, see glibc_shim.h ------
-# Each is an empty library that announces a glibc file name and depends on the Android library
-# that has the same functions. --no-as-needed keeps that dependency, which is what puts the
-# Android functions in reach of the library that asks for the glibc name.
-foreach(shim IN ITEMS "m;libm.so.6;m;cos" "c;libc.so.6;c;getpid" "dl;libdl.so.2;dl;dlopen" "pthread;libpthread.so.0;c;pthread_self")
-    list(GET shim 0 shim_id)
-    list(GET shim 1 shim_soname)
-    list(GET shim 2 shim_depends)
-    list(GET shim 3 shim_symbol)
-    add_library(glibc_shim_${shim_id} SHARED glibc_shim_stub.c)
-    target_compile_definitions(glibc_shim_${shim_id} PRIVATE SHIM_SYMBOL=${shim_symbol})
-    target_link_options(glibc_shim_${shim_id} PRIVATE "-Wl,-soname,${shim_soname}" "-Wl,--no-as-needed")
-    target_link_libraries(glibc_shim_${shim_id} PRIVATE ${shim_depends})
-endforeach()

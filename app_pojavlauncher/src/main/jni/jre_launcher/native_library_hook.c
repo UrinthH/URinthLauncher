@@ -10,7 +10,6 @@
 #include <jvm_hooks/jvm_hooks.h>
 #include "elf_hinter.h"
 #include "load_stages.h"
-#include <glibc_shim.h>
 
 #define TAG __FILE_NAME__
 #include <log.h>
@@ -37,10 +36,6 @@ static void library_preload_hook(JNIEnv *env, const char* name) {
     const char* lib_filename = strrchr(name, '/');
     if(lib_filename == NULL) lib_filename = name;
     else lib_filename++;
-    if(urinth_needs_glibc_shims(name)) {
-        // Simple Voice Chat's Linux libraries: give them the glibc names they ask for.
-        urinth_install_glibc_shims();
-    }
     if(strcmp(lib_filename, "liblwjgl.so") == 0) {
         LOGI("Running LWJGL preload hooks...");
         installLwjglDlopenHook(env);

@@ -76,12 +76,6 @@ jobs:
             app_pojavlauncher/src/test/native/opensl_preset_test.c app_pojavlauncher/src/main/jni/opensl_preset.c \
             -o /tmp/opensl_preset_test
           /tmp/opensl_preset_test
-      - name: Test the voice chat library name check
-        run: |
-          gcc -Wall -Wextra -fsanitize=address,undefined -g -I app_pojavlauncher/src/main/jni \
-            app_pojavlauncher/src/test/native/glibc_shim_test.c app_pojavlauncher/src/main/jni/glibc_shim_names.c \
-            -o /tmp/glibc_shim_test
-          /tmp/glibc_shim_test
       - name: Test URinthRender frame-time statistics
         run: gradle :app_pojavlauncher:testFullDebugUnitTest
       - name: Build Publishing .aab

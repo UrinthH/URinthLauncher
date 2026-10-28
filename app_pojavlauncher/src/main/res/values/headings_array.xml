@@ -28,16 +28,6 @@
         <item>@string/mcl_option_customcontrol</item>
     </string-array>
 
-    <string-array name="voice_chat_mic_mode_names">
-        <item>@string/voice_chat_mic_mode_communication</item>
-        <item>@string/voice_chat_mic_mode_recognition</item>
-        <item>@string/voice_chat_mic_mode_unprocessed</item>
-    </string-array>
-    <string-array name="voice_chat_mic_mode_values">
-        <item>communication</item>
-        <item>recognition</item>
-        <item>unprocessed</item>
-    </string-array>
     <string-array name="download_source_names">
         <item>@string/global_default</item>
         <item>BMCLAPI</item>

@@ -476,23 +476,6 @@ public class GameActivity extends BaseActivity implements ControlButtonMenuListe
     }
 
     @Override
-    public void onTrimMemory(int level) {
-        super.onTrimMemory(level);
-        // Diagnostics only: when the game freezes, this shows whether Android was short of memory.
-        if(level >= TRIM_MEMORY_RUNNING_LOW) {
-            try {
-                android.app.ActivityManager.MemoryInfo info = new android.app.ActivityManager.MemoryInfo();
-                android.app.ActivityManager manager = (android.app.ActivityManager) getSystemService(ACTIVITY_SERVICE);
-                if(manager != null) manager.getMemoryInfo(info);
-                Logger.appendToLog("[Memory] Android is short of memory (level " + level + ", "
-                        + (info.availMem >> 20) + " MB free of " + (info.totalMem >> 20) + " MB)");
-            } catch (Throwable ignored) {
-                // Diagnostics must never get in the way.
-            }
-        }
-    }
-
-    @Override
     protected void onPause() {
         ContextExecutor.clearActivity();
         mGyroControl.disable();

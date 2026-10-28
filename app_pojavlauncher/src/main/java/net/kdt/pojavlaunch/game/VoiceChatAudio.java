@@ -36,9 +36,10 @@ import java.util.Map;
  */
 public final class VoiceChatAudio {
     private static final String TAG = "[Audio] ";
+    /** AAUDIO_INPUT_PRESET_VOICE_COMMUNICATION: microphone tuned for calls, with echo cancelling. */
+    private static final String INPUT_PRESET_VOICE_COMMUNICATION = "7";
 
     private static boolean sModPresent;
-    private static String sMicMode = VoiceChatMicMode.COMMUNICATION;
     private static Runnable sOnDetected;
 
     private final Context mContext;
@@ -56,12 +57,10 @@ public final class VoiceChatAudio {
     }
 
     /** Called before the game starts: look for the mod and remember the answer. */
-    public static void detect(File gameDir, boolean enabled, String micMode) {
+    public static void detect(File gameDir, boolean enabled) {
         sModPresent = enabled && VoiceChatMods.isInstalled(gameDir);
-        sMicMode = VoiceChatMicMode.normalize(micMode);
         Logger.appendToLog(TAG + "voice chat clean-up " + (enabled ? "on" : "off")
-                + ", voice chat mod " + (sModPresent ? "found" : "not found")
-                + ", microphone mode " + sMicMode);
+                + ", voice chat mod " + (sModPresent ? "found" : "not found"));
         Runnable listener = sOnDetected;
         // The game screen is already showing by now, so tell it to start the audio set-up.
         if (sModPresent && listener != null) new Handler(Looper.getMainLooper()).post(listener);
@@ -70,11 +69,6 @@ public final class VoiceChatAudio {
     /** The game screen asks to be told when a voice chat mod has been found. */
     public static void setOnDetected(Runnable listener) {
         sOnDetected = listener;
-    }
-
-    /** The OpenSL ES recording preset for the microphone mode chosen in Settings. */
-    public static int openSlPreset() {
-        return VoiceChatMicMode.openSlPreset(sMicMode);
     }
 
     public static boolean isModPresent() {
@@ -86,17 +80,12 @@ public final class VoiceChatAudio {
         if (!sModPresent) return;
         // For anything that records through SDL (the launcher's audio library): ask for the
         // microphone that is tuned for calls, so the phone's echo cancelling is applied.
-        envMap.put("SDL_ANDROID_AAUDIO_INPUT_PRESET", String.valueOf(VoiceChatMicMode.aaudioPreset(sMicMode)));
-        // The mod's Linux-built Opus / noise remover / gain control libraries cannot load on
-        // Android by themselves (they ask for libm.so.6); the launcher gives them that name.
-        envMap.put("URINTH_GLIBC_SHIMS", "1");
+        envMap.put("SDL_ANDROID_AAUDIO_INPUT_PRESET", INPUT_PRESET_VOICE_COMMUNICATION);
     }
 
     /** Start watching for headsets and set the phone's audio up. Call from the game's onResume. */
     public void start() {
         if (!sModPresent || mAudioManager == null || mStarted) return;
-        // Only the echo cancelling mode wants the phone in its call audio mode.
-        if (!VoiceChatMicMode.usesCallMode(sMicMode)) return;
         mStarted = true;
         if (Build.VERSION.SDK_INT >= 23) {
             mCallback = new AudioDeviceCallback() {

@@ -7,7 +7,6 @@ import net.kdt.pojavlaunch.Logger;
 import net.kdt.pojavlaunch.Tools;
 import net.kdt.pojavlaunch.extra.ExtraConstants;
 import net.kdt.pojavlaunch.extra.ExtraCore;
-import net.kdt.pojavlaunch.game.FrameCap;
 import net.kdt.pojavlaunch.game.renderer.GameRenderer;
 import net.kdt.pojavlaunch.game.renderer.RenderSpec;
 import net.kdt.pojavlaunch.game.renderer.def.Renderers;
@@ -98,12 +97,6 @@ public abstract class GLESRenderSpec implements RenderSpec {
             // Nothing in the game's own files is touched.
             if (LauncherPreferences.PREF_PERFORMANCE_MODE) {
                 envMap.put("LTW_FORCE_SWAP_INTERVAL", "0");
-                // ...but not flat out: LTW keeps to a frame ceiling that drops as the phone heats
-                // up and while voice chat is installed (see FrameCap). Without this the phone
-                // heats, throttles, and stutters.
-                File frameCap = new File(context.getCacheDir(), "ltw_frame_cap.txt");
-                FrameCap.configure(frameCap);
-                envMap.put("LTW_FRAME_CAP_FILE", frameCap.getAbsolutePath());
                 Logger.appendToLog("[PerformanceMode] frame limiter off (LTW_FORCE_SWAP_INTERVAL=0)");
             }
         }
