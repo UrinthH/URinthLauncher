@@ -90,4 +90,22 @@ public class SchedulerPolicyTest {
         assertEquals(4, SchedulerPolicy.niceFor(SchedulerPolicy.LEVEL_MILD));
         assertEquals(10, SchedulerPolicy.niceFor(SchedulerPolicy.LEVEL_STRONG));
     }
+
+    @Test
+    public void voiceChatThreadsAreRecognisedLoosely() {
+        assertTrue(SchedulerPolicy.isVoiceThread("VoiceChatThread"));
+        assertTrue(SchedulerPolicy.isVoiceThread("Microphone Thread"));
+        assertTrue(SchedulerPolicy.isVoiceThread("audio capture"));
+        assertFalse(SchedulerPolicy.isVoiceThread("Render thread"));
+        assertFalse(SchedulerPolicy.isVoiceThread("Worker-Main-1"));
+        assertFalse(SchedulerPolicy.isVoiceThread("Dynamic-1"));
+        assertFalse(SchedulerPolicy.isVoiceThread(null));
+    }
+
+    @Test
+    public void voiceThreadsAreNeverTreatedAsRenderOrHelperThreads() {
+        assertFalse(SchedulerPolicy.isRenderThread("VoiceChatThread"));
+        assertFalse(SchedulerPolicy.isHelperThread("VoiceChatThread"));
+        assertTrue(SchedulerPolicy.VOICE_NICE < 0);
+    }
 }

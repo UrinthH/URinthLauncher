@@ -89,6 +89,20 @@ final class SchedulerPolicy {
                 || name.startsWith("Chunk Render") || name.startsWith("Chunk Builder");
     }
 
+    /** Priority value for the voice chat's recording and playback threads (lower is more urgent). */
+    static final int VOICE_NICE = -8;
+
+    /**
+     * Threads of a voice chat mod that record, play or send the voice. If they wait for a core,
+     * the voice cuts out. The names are matched loosely, because Android keeps only the last 15
+     * characters of a long thread name and mods name their threads differently.
+     */
+    static boolean isVoiceThread(String name) {
+        if (name == null) return false;
+        String lower = name.toLowerCase(java.util.Locale.ROOT);
+        return lower.contains("voice") || lower.contains("microphone") || lower.contains("capture");
+    }
+
     static int niceFor(int level) {
         return level >= LEVEL_STRONG ? 10 : level == LEVEL_MILD ? 4 : 0;
     }

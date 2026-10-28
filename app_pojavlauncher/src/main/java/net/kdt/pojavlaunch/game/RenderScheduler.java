@@ -68,6 +68,11 @@ public final class RenderScheduler {
     private final Map<Integer, Integer> mOriginalPriorities = new HashMap<>();
     /** Helper thread id to the priority value currently set by this class. */
     private final Map<Integer, Integer> mAppliedPriorities = new HashMap<>();
+    /** Voice chat thread id to the priority it had before it was raised. */
+    private final Map<Integer, Integer> mVoiceOriginal = new HashMap<>();
+    private final Set<Integer> mVoiceThreads = new HashSet<>();
+    private boolean mVoiceBoostLogged;
+    private final Map<Integer, String> mVoiceNames = new HashMap<>();
 
     // Numbers for the once-a-minute summary.
     private long mSummaryStartedAt;
@@ -110,6 +115,7 @@ public final class RenderScheduler {
         mRunning = false;
         mHandler.removeCallbacks(mSampleTask);
         restoreAll();
+        restoreVoiceThreads();
     }
 
     private void sample() {
@@ -117,6 +123,7 @@ public final class RenderScheduler {
         try {
             long now = SystemClock.elapsedRealtimeNanos();
             Set<Integer> helpers = scanThreads();
+            boostVoiceThreads();
             if (mRenderTid > 0) {
                 long wait = SchedulerPolicy.parseWaitNanos(readFile(new File("/proc/self/task/" + mRenderTid + "/schedstat")));
                 if (wait < 0) {
@@ -181,12 +188,43 @@ public final class RenderScheduler {
                 log("Watching the render thread");
             } else if (SchedulerPolicy.isHelperThread(name)) {
                 helpers.add(tid);
+            } else if (VoiceChatAudio.isModPresent() && SchedulerPolicy.isVoiceThread(name)) {
+                if (mVoiceThreads.add(tid)) mVoiceNames.put(tid, name);
             }
         }
+        mVoiceThreads.retainAll(alive);
+        mVoiceNames.keySet().retainAll(alive);
+        mVoiceOriginal.keySet().retainAll(alive);
         mThreadNames.keySet().retainAll(alive);
         mOriginalPriorities.keySet().retainAll(alive);
         mAppliedPriorities.keySet().retainAll(alive);
         return helpers;
+    }
+
+    /**
+     * With a voice chat mod installed, give its recording / playback threads a more urgent
+     * priority than normal, so a busy game cannot make the voice cut out. The render thread is
+     * never touched. Undone when the scheduler stops.
+     */
+    private void boostVoiceThreads() {
+        for (int tid : mVoiceThreads) {
+            if (mVoiceOriginal.containsKey(tid)) continue;
+            try {
+                mVoiceOriginal.put(tid, Process.getThreadPriority(tid));
+                Process.setThreadPriority(tid, SchedulerPolicy.VOICE_NICE);
+            } catch (RuntimeException gone) {
+                mVoiceOriginal.remove(tid); // refused or ended: leave it alone
+            }
+        }
+        if (!mVoiceBoostLogged && !mVoiceOriginal.isEmpty()) {
+            mVoiceBoostLogged = true;
+            StringBuilder names = new StringBuilder();
+            for (int tid : mVoiceOriginal.keySet()) {
+                if (names.length() > 0) names.append(", ");
+                names.append(mVoiceNames.get(tid));
+            }
+            log("Voice chat threads raised in priority: " + names);
+        }
     }
 
     private void apply(int level, Set<Integer> helpers) {
@@ -227,6 +265,17 @@ public final class RenderScheduler {
         }
         mOriginalPriorities.clear();
         mAppliedPriorities.clear();
+    }
+
+    private void restoreVoiceThreads() {
+        for (Map.Entry<Integer, Integer> original : mVoiceOriginal.entrySet()) {
+            try {
+                Process.setThreadPriority(original.getKey(), original.getValue());
+            } catch (RuntimeException gone) {
+                // Already ended.
+            }
+        }
+        mVoiceOriginal.clear();
     }
 
     private void record(double waitFraction) {

@@ -56,7 +56,9 @@ import git.artdeell.mojo.R;
  * It never changes the display refresh rate, the frame rate, the window or Sustained Performance
  * Mode, because those make the frame rate drop and can make screen rotation slow.
  * Everything is undone as the phone cools. It cannot lower an unlimited frame rate by itself: a
- * game that renders without waiting for vsync is limited only by its own frame limiter.
+ * game that renders without waiting for vsync is limited only by its own frame limiter. That is
+ * what {@link FrameCap} is for: with vsync off, it gives the renderer a ceiling that falls as the
+ * heat level rises.
  */
 public final class ThermalGuard {
     private static final String TAG = "ThermalGuard";
@@ -261,6 +263,8 @@ public final class ThermalGuard {
         int oldLevel = mLevel;
         mLevel = newLevel;
         log("Heat level " + levelName(oldLevel) + " -> " + levelName(newLevel));
+        // The frame ceiling follows the heat (only does anything when Performance Mode set it up).
+        FrameCap.update();
         long now = SystemClock.elapsedRealtime();
         if (newLevel >= LEVEL_HOT && oldLevel < LEVEL_HOT && now - mLastToastAt >= TOAST_COOLDOWN_MS) {
             mLastToastAt = now;
