@@ -95,7 +95,7 @@ public class JREUtils {
             // The game's audio library records with the generic microphone mode, which has no
             // echo cancelling. Change that before the game starts recording.
             try {
-                int result = installOpenSLMicPreset();
+                int result = installOpenSLMicPreset(VoiceChatAudio.openSlPreset());
                 Logger.appendToLog("[Audio] microphone mode hook: " + (result >= 0 ? "on" : "failed") + " (" + result + ")");
             } catch (Throwable t) {
                 Logger.appendToLog("[Audio] microphone mode hook not available: " + t);
@@ -189,7 +189,7 @@ public class JREUtils {
      * Makes OpenSL ES recordings use the phone's "voice communication" microphone mode (echo
      * cancelling, noise reduction) instead of the generic one. 0 done, 1 already done, below 0 failed.
      */
-    public static native int installOpenSLMicPreset();
+    public static native int installOpenSLMicPreset(int preset);
 
     public static native void setLdLibraryPath(String ldLibraryPath);
     static {

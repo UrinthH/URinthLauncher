@@ -23,6 +23,8 @@
 typedef SLresult (*set_configuration_fn)(SLAndroidConfigurationItf, const SLchar *, const void *, SLuint32);
 
 static set_configuration_fn original_set_configuration;
+/* The preset to record with instead of "generic": set before the hook goes in, from Settings. */
+static uint32_t target_preset = SL_ANDROID_RECORDING_PRESET_VOICE_COMMUNICATION;
 
 static SLresult hooked_set_configuration(SLAndroidConfigurationItf self, const SLchar *key,
                                          const void *value, SLuint32 size) {
@@ -30,7 +32,7 @@ static SLresult hooked_set_configuration(SLAndroidConfigurationItf self, const S
     if (urinth_preset_rewrite((const char *) key, value, size,
                               (const char *) SL_ANDROID_KEY_RECORDING_PRESET,
                               SL_ANDROID_RECORDING_PRESET_GENERIC,
-                              SL_ANDROID_RECORDING_PRESET_VOICE_COMMUNICATION, &replacement)) {
+                              target_preset, &replacement)) {
         SLuint32 preset = replacement;
         return original_set_configuration(self, key, &preset, sizeof(preset));
     }
@@ -106,10 +108,12 @@ static int install(void) {
 }
 
 JNIEXPORT jint JNICALL
-Java_net_kdt_pojavlaunch_utils_JREUtils_installOpenSLMicPreset(JNIEnv *env, jclass clazz) {
+Java_net_kdt_pojavlaunch_utils_JREUtils_installOpenSLMicPreset(JNIEnv *env, jclass clazz, jint preset) {
     (void) env;
     (void) clazz;
+    // 1 generic .. 5 unprocessed; anything else keeps the default (voice communication).
+    if (preset >= 2 && preset <= 5) target_preset = (uint32_t) preset;
     int result = install();
-    LOGI("OpenSL microphone preset hook: result %d", result);
+    LOGI("OpenSL microphone preset hook: preset %u, result %d", target_preset, result);
     return result;
 }
