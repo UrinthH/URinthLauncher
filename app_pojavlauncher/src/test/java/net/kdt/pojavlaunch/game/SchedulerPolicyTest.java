@@ -96,6 +96,7 @@ public class SchedulerPolicyTest {
         assertTrue(SchedulerPolicy.isVoiceThread("VoiceChatThread"));
         assertTrue(SchedulerPolicy.isVoiceThread("Microphone Thread"));
         assertTrue(SchedulerPolicy.isVoiceThread("audio capture"));
+        assertTrue(SchedulerPolicy.isVoiceThread("SoundSourceThre"));
         assertFalse(SchedulerPolicy.isVoiceThread("Render thread"));
         assertFalse(SchedulerPolicy.isVoiceThread("Worker-Main-1"));
         assertFalse(SchedulerPolicy.isVoiceThread("Dynamic-1"));

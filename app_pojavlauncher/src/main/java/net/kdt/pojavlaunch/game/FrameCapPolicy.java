@@ -7,7 +7,10 @@ import java.nio.charset.StandardCharsets;
 
 /**
  * What ceiling (frames per second) the game gets in Performance Mode, from how hot the phone is
- * and whether voice chat is running. 0 means no ceiling.
+ * and whether voice chat is running. 0 would mean no ceiling; there is none now, because even a
+ * cool phone is held back by the other work the game does at the same time (the integrated
+ * server, chunk building, voice chat), and a render thread that never rests takes the CPU
+ * time those need.
  *
  * <p>With vsync off the game would otherwise draw flat out, which is what heats a phone up and
  * then makes it throttle, and that is what players feel as stutter and freezes. Frames beyond
@@ -19,8 +22,8 @@ import java.nio.charset.StandardCharsets;
  */
 public final class FrameCapPolicy {
     /** Heat levels, as {@link ThermalGuard} counts them: 0 cool, 1 warm, 2 hot, 3 critical. */
-    private static final int[] BY_HEAT = {0, 120, 90, 60};
-    private static final int[] BY_HEAT_WITH_VOICE_CHAT = {120, 90, 75, 60};
+    private static final int[] BY_HEAT = {120, 90, 75, 60};
+    private static final int[] BY_HEAT_WITH_VOICE_CHAT = {90, 75, 60, 60};
 
     private FrameCapPolicy() {}
 

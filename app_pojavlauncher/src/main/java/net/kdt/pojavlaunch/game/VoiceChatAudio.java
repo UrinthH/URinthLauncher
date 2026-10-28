@@ -81,6 +81,9 @@ public final class VoiceChatAudio {
         // For anything that records through SDL (the launcher's audio library): ask for the
         // microphone that is tuned for calls, so the phone's echo cancelling is applied.
         envMap.put("SDL_ANDROID_AAUDIO_INPUT_PRESET", INPUT_PRESET_VOICE_COMMUNICATION);
+        // The mod's Linux-built Opus / noise remover / gain control libraries cannot load on
+        // Android by themselves (they ask for libm.so.6); the launcher gives them that name.
+        envMap.put("URINTH_GLIBC_SHIMS", "1");
     }
 
     /** Start watching for headsets and set the phone's audio up. Call from the game's onResume. */

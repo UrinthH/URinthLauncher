@@ -11,14 +11,14 @@ import org.junit.Test;
 
 public class FrameCapPolicyTest {
     @Test
-    public void coolPhoneWithoutVoiceChatIsNotCapped() {
-        assertEquals(0, FrameCapPolicy.capFor(0, false));
+    public void coolPhoneIsCappedHighEnoughToFeelUnlocked() {
+        assertEquals(120, FrameCapPolicy.capFor(0, false));
     }
 
     @Test
     public void ceilingFallsAsThePhoneHeatsUp() {
-        assertEquals(120, FrameCapPolicy.capFor(1, false));
-        assertEquals(90, FrameCapPolicy.capFor(2, false));
+        assertEquals(90, FrameCapPolicy.capFor(1, false));
+        assertEquals(75, FrameCapPolicy.capFor(2, false));
         assertEquals(60, FrameCapPolicy.capFor(3, false));
     }
 

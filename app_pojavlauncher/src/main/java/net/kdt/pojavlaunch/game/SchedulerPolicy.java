@@ -100,7 +100,9 @@ final class SchedulerPolicy {
     static boolean isVoiceThread(String name) {
         if (name == null) return false;
         String lower = name.toLowerCase(java.util.Locale.ROOT);
-        return lower.contains("voice") || lower.contains("microphone") || lower.contains("capture");
+        // e.g. VoiceChatPacket.., MicrophoneThrea.., SoundSourceThre.. (the kernel keeps 15 characters)
+        return lower.contains("voice") || lower.contains("microphone") || lower.contains("capture")
+                || lower.contains("soundsource");
     }
 
     static int niceFor(int level) {
