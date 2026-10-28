@@ -114,6 +114,7 @@ public class GameActivity extends BaseActivity implements ControlButtonMenuListe
     private ListView navDrawer;
     private View mDrawerPullButton;
     private GyroControl mGyroControl = null;
+    private VoiceChatAudio mVoiceChatAudio;
     private ControlLayout mControlLayout;
     private HotbarView mHotbarView;
     private View mLoadingScreen;
@@ -136,6 +137,10 @@ public class GameActivity extends BaseActivity implements ControlButtonMenuListe
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        mVoiceChatAudio = new VoiceChatAudio(this);
+        // The volume keys always change the game volume, even while the phone is in call mode.
+        setVolumeControlStream(android.media.AudioManager.STREAM_MUSIC);
+        VoiceChatAudio.setOnDetected(() -> { if(mVoiceChatAudio != null) mVoiceChatAudio.start(); });
         // Start-up timing: from the tap in the launcher (if it told us when), else from now.
         long tapMs = getIntent().getLongExtra(INTENT_LAUNCH_TAP_MS, 0L);
         mLoadingStartMs = tapMs > 0 ? tapMs : System.currentTimeMillis();
@@ -466,6 +471,7 @@ public class GameActivity extends BaseActivity implements ControlButtonMenuListe
         super.onResume();
         ContextExecutor.setActivity(this);
         if(PREF_ENABLE_GYRO) mGyroControl.enable();
+        if(mVoiceChatAudio != null) mVoiceChatAudio.start();
         PLATFORM.setHovered(true);
     }
 
@@ -473,6 +479,7 @@ public class GameActivity extends BaseActivity implements ControlButtonMenuListe
     protected void onPause() {
         ContextExecutor.clearActivity();
         mGyroControl.disable();
+        if(mVoiceChatAudio != null) mVoiceChatAudio.stop();
         // Avoid going through the JNI each time.
         if (Platform.isGrabbing()){
             CallbackBridge.sendKeyPress(KeyEvent.KEYCODE_ESCAPE);
@@ -498,6 +505,8 @@ public class GameActivity extends BaseActivity implements ControlButtonMenuListe
 
     @Override
     protected void onDestroy() {
+        VoiceChatAudio.setOnDetected(null);
+        if(mVoiceChatAudio != null) mVoiceChatAudio.stop();
         RenderScheduler.stop();
         ThermalGuard.stop();
         URinthRender.stopThermalMonitoring();

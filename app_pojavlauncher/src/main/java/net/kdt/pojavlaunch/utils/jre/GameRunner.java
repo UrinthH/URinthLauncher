@@ -14,6 +14,7 @@ import net.kdt.pojavlaunch.JVersionList;
 import net.kdt.pojavlaunch.Tools;
 import net.kdt.pojavlaunch.authenticator.accounts.Account;
 import net.kdt.pojavlaunch.game.StartupTimeline;
+import net.kdt.pojavlaunch.game.VoiceChatAudio;
 import net.kdt.pojavlaunch.game.renderer.def.Renderers;
 import net.kdt.pojavlaunch.game.renderer.impl.ApkRenderSpec;
 import net.kdt.pojavlaunch.game.renderer.impl.GLESRenderSpec;
@@ -396,6 +397,7 @@ public class GameRunner {
         final String requestedLibrary = gameRenderer.getCurrentRenderer().library();
         final String requestedPlugins = android.text.TextUtils.join(", ", gameRenderer.getCurrentRenderer().pluginPackages());
         gameRenderer.setupEnvironment(activity, isMobileGluesSupportedVersion(versionInfo));
+        VoiceChatAudio.detect(instance.getGameDirectory(), LauncherPreferences.PREF_VOICE_CHAT_CLEANUP);
         JREUtils.setGameEnvironment(activity);
         JREUtils.chdir(instance.getGameDirectory().getAbsolutePath());
 

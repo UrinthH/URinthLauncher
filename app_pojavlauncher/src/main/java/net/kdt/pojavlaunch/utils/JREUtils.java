@@ -12,6 +12,7 @@ import net.kdt.pojavlaunch.*;
 import net.kdt.pojavlaunch.multirt.Runtime;
 import net.kdt.pojavlaunch.plugins.LibraryPlugin;
 import net.kdt.pojavlaunch.prefs.*;
+import net.kdt.pojavlaunch.game.VoiceChatAudio;
 import net.kdt.pojavlaunch.game.renderer.GameRenderer;
 
 public class JREUtils {
@@ -88,6 +89,8 @@ public class JREUtils {
 
         if(LauncherPreferences.PREF_BIG_CORE_AFFINITY) envMap.put("POJAV_BIG_CORE_AFFINITY", "1");
         if(LauncherPreferences.PREF_ALSOFT_FORCE_OPENSL) envMap.put("ALSOFT_DRIVERS", "opensl");
+
+        VoiceChatAudio.addEnvironment(envMap);
 
         overrideEnvVars(envMap);
 

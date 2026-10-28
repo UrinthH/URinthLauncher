@@ -3,6 +3,7 @@ package net.kdt.pojavlaunch.game.renderer.impl;
 import android.content.Context;
 import android.util.Log;
 
+import net.kdt.pojavlaunch.Logger;
 import net.kdt.pojavlaunch.Tools;
 import net.kdt.pojavlaunch.extra.ExtraConstants;
 import net.kdt.pojavlaunch.extra.ExtraCore;
@@ -90,6 +91,14 @@ public abstract class GLESRenderSpec implements RenderSpec {
             // next resource reload skip the slow translation. Older LTW builds ignore the variable.
             File shaderCache = new File(context.getCacheDir(), "ltw_shader_cache");
             envMap.put("LTW_SHADER_CACHE_DIR", shaderCache.getAbsolutePath());
+            // Performance Mode with this renderer: do not let the game wait for the screen's
+            // refresh between frames (the game asks for that through its "VSync" setting). LTW
+            // reads this and hands the system swap interval 0. Older LTW builds ignore it.
+            // Nothing in the game's own files is touched.
+            if (LauncherPreferences.PREF_PERFORMANCE_MODE) {
+                envMap.put("LTW_FORCE_SWAP_INTERVAL", "0");
+                Logger.appendToLog("[PerformanceMode] frame limiter off (LTW_FORCE_SWAP_INTERVAL=0)");
+            }
         }
 
         public String name() {

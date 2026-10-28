@@ -82,6 +82,7 @@ public class LauncherPreferences {
     public static boolean PREF_KEYBOARD_AUTOPANNING = true;
     public static boolean PREF_MIGRATION_NOTICE = true;
     public static boolean PREF_ALSOFT_FORCE_OPENSL = false;
+    public static boolean PREF_VOICE_CHAT_CLEANUP = true;
     public static boolean PREF_SHOW_MEMORY_WARNING_DIALOG = true;
     public static short PREF_BUTTON_TRANSPARENCY = 100;
     public static boolean PREF_UBWC_WORKAROUND = false;
@@ -141,6 +142,7 @@ public class LauncherPreferences {
         PREF_KEYBOARD_AUTOPANNING = DEFAULT_PREF.getBoolean("keyboardAutoPanning", true);
         PREF_MIGRATION_NOTICE = DEFAULT_PREF.getBoolean("migrationNotice", true);
         PREF_ALSOFT_FORCE_OPENSL = DEFAULT_PREF.getBoolean("alsoftForceOpenSL", false);
+        PREF_VOICE_CHAT_CLEANUP = DEFAULT_PREF.getBoolean("voiceChatCleanup", true);
         PREF_SHOW_MEMORY_WARNING_DIALOG = DEFAULT_PREF.getBoolean("showMemoryWarning", true);
         PREF_BUTTON_TRANSPARENCY = (short) DEFAULT_PREF.getInt("buttonTransparency", 100);
         PREF_UBWC_WORKAROUND = DEFAULT_PREF.getBoolean("ubwcWorkaround", false);
