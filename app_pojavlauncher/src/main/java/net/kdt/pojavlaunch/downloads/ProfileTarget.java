@@ -63,6 +63,22 @@ public final class ProfileTarget {
         return new ProfileTarget(game, loader);
     }
 
+    /**
+     * The "inheritsFrom" entry of a version's JSON text (the plain Minecraft version a modded
+     * version builds on), or null when there is none or the text cannot be read.
+     */
+    public static String inheritsFromJson(String json) {
+        if (json == null || json.trim().isEmpty()) return null;
+        try {
+            com.google.gson.JsonElement root = com.google.gson.JsonParser.parseString(json);
+            if (!root.isJsonObject() || !root.getAsJsonObject().has("inheritsFrom")) return null;
+            com.google.gson.JsonElement value = root.getAsJsonObject().get("inheritsFrom");
+            return value.isJsonPrimitive() && !value.getAsString().trim().isEmpty() ? value.getAsString().trim() : null;
+        } catch (RuntimeException e) {
+            return null; // a half-written or odd file is treated like no entry
+        }
+    }
+
     /** Loader names to ask Modrinth for: Quilt also runs Fabric mods. Empty for plain Minecraft. */
     public String[] modLoaders() {
         switch (loader) {

@@ -1,11 +1,12 @@
 package net.kdt.pojavlaunch.downloads;
 
-import com.sun.net.httpserver.HttpExchange;
-import com.sun.net.httpserver.HttpServer;
-
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.InetSocketAddress;
+import java.net.InetAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -13,22 +14,56 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/** A tiny local stand-in for Modrinth's API and file server, for the tests. */
+/**
+ * A tiny local stand-in for Modrinth's API and file server, for the tests. Plain sockets, because
+ * the JDK's own web server classes are not on the unit-test classpath of an Android module.
+ * One request per connection, answered with "Connection: close".
+ */
 final class FakeModrinth implements AutoCloseable {
-    private final HttpServer server;
-    private final Map<String, byte[]> bodies = new HashMap<>();
-    private final Map<String, Integer> statuses = new HashMap<>();
-    final List<String> requests = Collections.synchronizedList(new ArrayList<>());
-    final List<String> userAgents = Collections.synchronizedList(new ArrayList<>());
+    private final ServerSocket socket;
+    private final Thread acceptor;
+    private final Map<String, byte[]> bodies = Collections.synchronizedMap(new HashMap<String, byte[]>());
+    private final Map<String, Integer> statuses = Collections.synchronizedMap(new HashMap<String, Integer>());
+    final List<String> requests = Collections.synchronizedList(new ArrayList<String>());
+    final List<String> userAgents = Collections.synchronizedList(new ArrayList<String>());
+    private volatile boolean closed;
 
     FakeModrinth() throws IOException {
-        server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
-        server.createContext("/", this::handle);
-        server.start();
+        socket = new ServerSocket(0, 50, InetAddress.getByName("127.0.0.1"));
+        acceptor = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                while (!closed) {
+                    try {
+                        final Socket client = socket.accept();
+                        new Thread(new Runnable() {
+                            @Override
+                            public void run() {
+                                try {
+                                    handle(client);
+                                } catch (IOException ignored) {
+                                    // the client went away
+                                } finally {
+                                    try {
+                                        client.close();
+                                    } catch (IOException ignored) {
+                                        // closing anyway
+                                    }
+                                }
+                            }
+                        }).start();
+                    } catch (IOException e) {
+                        return; // closed
+                    }
+                }
+            }
+        });
+        acceptor.setDaemon(true);
+        acceptor.start();
     }
 
     String base() {
-        return "http://127.0.0.1:" + server.getAddress().getPort();
+        return "http://127.0.0.1:" + socket.getLocalPort();
     }
 
     void json(String pathAndQuery, String body) {
@@ -43,29 +78,57 @@ final class FakeModrinth implements AutoCloseable {
         statuses.put(path, code);
     }
 
-    private void handle(HttpExchange exchange) throws IOException {
-        String key = exchange.getRequestURI().getRawPath()
-                + (exchange.getRequestURI().getRawQuery() == null ? "" : "?" + exchange.getRequestURI().getRawQuery());
+    private static String readLine(InputStream in) throws IOException {
+        ByteArrayOutputStream line = new ByteArrayOutputStream();
+        int value;
+        while ((value = in.read()) != -1) {
+            if (value == '\n') break;
+            if (value != '\r') line.write(value);
+        }
+        if (value == -1 && line.size() == 0) return null;
+        return new String(line.toByteArray(), StandardCharsets.ISO_8859_1);
+    }
+
+    private void handle(Socket client) throws IOException {
+        InputStream in = client.getInputStream();
+        String requestLine = readLine(in);
+        if (requestLine == null) return;
+        String[] parts = requestLine.split(" ");
+        String key = parts.length > 1 ? parts[1] : "/";
+        String path = key.contains("?") ? key.substring(0, key.indexOf('?')) : key;
+        String agent = "";
+        int contentLength = 0;
+        String header;
+        while ((header = readLine(in)) != null && !header.isEmpty()) {
+            String lower = header.toLowerCase(java.util.Locale.ROOT);
+            if (lower.startsWith("user-agent:")) agent = header.substring(11).trim();
+            if (lower.startsWith("content-length:")) contentLength = Integer.parseInt(header.substring(15).trim());
+        }
+        for (int i = 0; i < contentLength; i++) {
+            if (in.read() == -1) break; // the body of a POST is not needed
+        }
         requests.add(key);
-        String agent = exchange.getRequestHeaders().getFirst("User-Agent");
-        userAgents.add(agent == null ? "" : agent);
+        userAgents.add(agent);
         Integer forced = statuses.get(key);
-        if (forced == null) forced = statuses.get(exchange.getRequestURI().getRawPath());
+        if (forced == null) forced = statuses.get(path);
         byte[] body = bodies.get(key);
-        if (body == null) body = bodies.get(exchange.getRequestURI().getRawPath());
+        if (body == null) body = bodies.get(path);
         int code = forced != null ? forced : body != null ? 200 : 404;
         if (body == null) body = new byte[0];
-        exchange.sendResponseHeaders(code, body.length == 0 ? -1 : body.length);
-        if (body.length > 0) {
-            try (OutputStream out = exchange.getResponseBody()) {
-                out.write(body);
-            }
-        }
-        exchange.close();
+        OutputStream out = client.getOutputStream();
+        out.write(("HTTP/1.1 " + code + " X\r\nContent-Length: " + body.length + "\r\nConnection: close\r\n\r\n")
+                .getBytes(StandardCharsets.ISO_8859_1));
+        out.write(body);
+        out.flush();
     }
 
     @Override
     public void close() {
-        server.stop(0);
+        closed = true;
+        try {
+            socket.close();
+        } catch (IOException ignored) {
+            // already closed
+        }
     }
 }

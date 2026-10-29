@@ -69,6 +69,11 @@ public class ModrinthClient {
         return versions;
     }
 
+    /** The full page of one project: long description, links, counts. */
+    public ProjectInfo project(String projectId) throws IOException {
+        return ProjectInfo.parse(get(apiBase + "/project/" + SearchQuery.encode(projectId)));
+    }
+
     public ProjectVersion version(String versionId) throws IOException {
         try {
             JsonElement element = JsonParser.parseString(get(apiBase + "/version/" + SearchQuery.encode(versionId)));
