@@ -77,7 +77,9 @@ jobs:
             -o /tmp/opensl_preset_test
           /tmp/opensl_preset_test
       - name: Test URinthRender frame-time statistics
-        run: gradle :app_pojavlauncher:testFullDebugUnitTest
+        run: |
+          set -o pipefail
+          gradle :app_pojavlauncher:testFullDebugUnitTest 2>&1 | tee /tmp/gradle-unit-tests.log
       - name: Show failing unit tests
         if: failure()
         run: |
@@ -92,6 +94,13 @@ jobs:
                       print('::error title=' + case.get('classname', '') + '.' + case.get('name', '') + '::' + text[:900])
                       shown += 1
           print('failing tests shown:', shown)
+          try:
+              lines = open('/tmp/gradle-unit-tests.log', errors='replace').read().splitlines()
+          except OSError:
+              lines = []
+          picked = [l for l in lines if 'error:' in l or 'FAILED' in l or 'wrong' in l.lower()][:12]
+          for line in picked:
+              print('::error title=gradle::' + line.replace('%', '%25')[:600])
           PY
       - name: Build Publishing .aab
         if: github.repository_owner == 'MojoLauncher' && github.ref_name == 'v3_openjdk'
