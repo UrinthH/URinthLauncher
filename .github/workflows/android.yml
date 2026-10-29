@@ -78,6 +78,21 @@ jobs:
           /tmp/opensl_preset_test
       - name: Test URinthRender frame-time statistics
         run: gradle :app_pojavlauncher:testFullDebugUnitTest
+      - name: Show failing unit tests
+        if: failure()
+        run: |
+          python3 - <<'PY'
+          import glob, xml.etree.ElementTree as ET
+          shown = 0
+          for path in glob.glob('app_pojavlauncher/build/test-results/**/*.xml', recursive=True):
+              for case in ET.parse(path).getroot().iter('testcase'):
+                  for bad in list(case.findall('failure')) + list(case.findall('error')):
+                      text = (bad.get('message') or '') + ' | ' + (bad.text or '')[:600]
+                      text = text.replace('%', '%25').replace('\r', '').replace('\n', '%0A')
+                      print('::error title=' + case.get('classname', '') + '.' + case.get('name', '') + '::' + text[:900])
+                      shown += 1
+          print('failing tests shown:', shown)
+          PY
       - name: Build Publishing .aab
         if: github.repository_owner == 'MojoLauncher' && github.ref_name == 'v3_openjdk'
         run: |
