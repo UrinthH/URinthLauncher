@@ -218,6 +218,8 @@
     <string name="preference_misc_description">Version list and libraries check</string>
     <string name="preference_experimental_title">Experimental Stuff</string>
     <string name="preference_experimental_description">Use things there with consideration, no support</string>
+    <string name="preference_unlimited_fps_title">Unlimited FPS (Performance Mode)</string>
+    <string name="preference_unlimited_fps_description">Off is smoother and keeps the phone cooler. On removes the game\'s VSync limit in Performance Mode, which can raise the number but make the phone hot and the game lag. Applies at next game start</string>
     <string name="preference_sustained_performance_title">Enable sustained performance mode</string>
     <string name="preference_sustained_performance_description">Limit thermal throttling by limiting peak performance.</string>
     <string name="preference_force_vsync_title">Force enable VSync</string>

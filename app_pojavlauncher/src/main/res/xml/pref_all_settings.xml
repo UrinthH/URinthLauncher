@@ -57,6 +57,13 @@
             android:defaultValue="false"
             />
 
+        <androidx.preference.SwitchPreferenceCompat
+            android:title="@string/preference_unlimited_fps_title"
+            android:summary="@string/preference_unlimited_fps_description"
+            android:key="performanceUncappedFps"
+            android:defaultValue="false"
+            />
+
 
         <androidx.preference.SwitchPreferenceCompat
             android:defaultValue="false"

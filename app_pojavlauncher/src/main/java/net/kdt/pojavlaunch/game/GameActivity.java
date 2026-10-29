@@ -186,8 +186,12 @@ public class GameActivity extends BaseActivity implements ControlButtonMenuListe
         mGyroControl = new GyroControl(this);
 
         // Enabling this on TextureView results in a broken white result
-        if(PREF_USE_ALTERNATE_SURFACE) getWindow().setBackgroundDrawable(null);
+        if(LauncherPreferences.useSurfaceView()) getWindow().setBackgroundDrawable(null);
         else getWindow().setBackgroundDrawable(new ColorDrawable(Color.BLACK));
+        if(PREF_PERFORMANCE_MODE) {
+            Logger.appendToLog("[PerformanceMode] game picture goes straight to the system compositor ("
+                    + (LauncherPreferences.useSurfaceView() ? "SurfaceView" : "TextureView") + ")");
+        }
 
         // Set the sustained performance mode for available APIs
         if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.N)

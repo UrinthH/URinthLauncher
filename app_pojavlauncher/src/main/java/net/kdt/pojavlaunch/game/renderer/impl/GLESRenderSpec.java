@@ -91,13 +91,19 @@ public abstract class GLESRenderSpec implements RenderSpec {
             // next resource reload skip the slow translation. Older LTW builds ignore the variable.
             File shaderCache = new File(context.getCacheDir(), "ltw_shader_cache");
             envMap.put("LTW_SHADER_CACHE_DIR", shaderCache.getAbsolutePath());
-            // Performance Mode with this renderer: do not let the game wait for the screen's
-            // refresh between frames (the game asks for that through its "VSync" setting). LTW
-            // reads this and hands the system swap interval 0. Older LTW builds ignore it.
-            // Nothing in the game's own files is touched.
+            // Performance Mode: by default the game keeps its own VSync setting. That is the setup
+            // that ran at a steady 90 fps; with the limit removed the game draws as fast as it
+            // can, which heats the phone, and a hot phone slows itself down (a player saw about 50).
+            // Only with the "Unlimited FPS" switch is the limit removed (LTW then hands the
+            // system swap interval 0). Older LTW builds ignore the variable. Nothing in the game's
+            // own files is touched.
             if (LauncherPreferences.PREF_PERFORMANCE_MODE) {
-                envMap.put("LTW_FORCE_SWAP_INTERVAL", "0");
-                Logger.appendToLog("[PerformanceMode] frame limiter off (LTW_FORCE_SWAP_INTERVAL=0)");
+                if (LauncherPreferences.PREF_UNCAPPED_FPS) {
+                    envMap.put("LTW_FORCE_SWAP_INTERVAL", "0");
+                    Logger.appendToLog("[PerformanceMode] unlimited FPS on (LTW_FORCE_SWAP_INTERVAL=0)");
+                } else {
+                    Logger.appendToLog("[PerformanceMode] frame rate follows the game's VSync setting");
+                }
             }
         }
 

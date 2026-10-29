@@ -66,6 +66,8 @@ public class LauncherPreferences {
     public static boolean PREF_BIG_CORE_AFFINITY = false;
     /** Watch device temperature while the game runs and ease CPU/GPU load when it gets hot. */
     public static boolean PREF_PERFORMANCE_MODE = false;
+    /** Performance Mode only: also drop the game's vsync so the frame rate is not held to the screen. Off by default. */
+    public static boolean PREF_UNCAPPED_FPS = false;
     /**
      * Set for the lifetime of one game process that LaunchGuard put into safe launch.
      * Never written to SharedPreferences.
@@ -131,6 +133,7 @@ public class LauncherPreferences {
         // cores all report the same maximum frequency.
         PREF_BIG_CORE_AFFINITY = DEFAULT_PREF.getBoolean("bigCoreAffinity", false);
         PREF_PERFORMANCE_MODE = DEFAULT_PREF.getBoolean("performanceMode", false);
+        PREF_UNCAPPED_FPS = DEFAULT_PREF.getBoolean("performanceUncappedFps", false);
         syncRendererWithPerformanceMode();
         PREF_ZINK_PREFER_SYSTEM_DRIVER = DEFAULT_PREF.getBoolean("zinkPreferSystemDriver", false);
         PREF_DOWNLOAD_SOURCE = DEFAULT_PREF.getString("downloadSource", "default");
@@ -280,6 +283,17 @@ public class LauncherPreferences {
         if (enabled && remembered != null) editor.putString(KEY_RENDERER_BEFORE_PERFORMANCE_MODE, remembered);
         else editor.remove(KEY_RENDERER_BEFORE_PERFORMANCE_MODE);
         editor.apply();
+    }
+
+    /**
+     * Whether the game draws into a SurfaceView (instead of a TextureView). A SurfaceView hands the
+     * game's frames straight to the system compositor; a TextureView makes the app copy every frame
+     * once more onto its own window, which costs graphics time on every frame and one extra frame
+     * of delay between a touch and the picture. Phones the launcher does not count as powerful
+     * start with the TextureView, so Performance Mode switches to the SurfaceView.
+     */
+    public static boolean useSurfaceView() {
+        return PREF_USE_ALTERNATE_SURFACE || PREF_PERFORMANCE_MODE;
     }
 
     public static void enableSafeLaunch(Context ctx) {
