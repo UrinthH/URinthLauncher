@@ -698,9 +698,9 @@ public class DownloadsFragment extends Fragment {
             Object row = mRows.get(position);
             if (holder instanceof CardHolder) {
                 ((CardHolder) holder).bind((ProjectHit) row, mShownQuery.category);
-            } else if (holder.itemViewType == TYPE_PAGER) {
+            } else if (holder.getItemViewType() == TYPE_PAGER) {
                 bindPager((LinearLayout) holder.itemView);
-            } else if (holder.itemViewType == TYPE_STATUS) {
+            } else if (holder.getItemViewType() == TYPE_STATUS) {
                 bindStatus((LinearLayout) holder.itemView);
             }
         }

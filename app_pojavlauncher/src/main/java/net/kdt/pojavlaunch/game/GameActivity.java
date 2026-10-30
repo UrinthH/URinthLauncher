@@ -197,6 +197,9 @@ public class GameActivity extends BaseActivity implements ControlButtonMenuListe
         if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.N)
             getWindow().setSustainedPerformanceMode(PREF_SUSTAINED_PERFORMANCE);
 
+        // A line every 30 s in the game log about memory, page faults, CPU and heat.
+        PerfReport.start(this);
+
         // Repeating temperature check while the game is open; eases CPU/GPU load when hot.
         if(PREF_PERFORMANCE_MODE) {
             ThermalGuard.start(this, launcherGLView);
@@ -511,6 +514,7 @@ public class GameActivity extends BaseActivity implements ControlButtonMenuListe
     protected void onDestroy() {
         VoiceChatAudio.setOnDetected(null);
         if(mVoiceChatAudio != null) mVoiceChatAudio.stop();
+        PerfReport.stop();
         RenderScheduler.stop();
         ThermalGuard.stop();
         URinthRender.stopThermalMonitoring();
