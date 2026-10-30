@@ -1,5 +1,7 @@
 package net.kdt.pojavlaunch.fragments;
 
+import net.kdt.pojavlaunch.downloads.DownloadCategory;
+import net.kdt.pojavlaunch.downloads.ui.DownloadsFragment;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.media.MediaPlayer;
@@ -380,10 +382,9 @@ public final class UrinthHomeController {
                 toast(R.string.urinth_not_set_up);
             }
         });
-        // Downloads and Servers aren't built yet, so they stay on the home screen and just say so
-        // rather than moving the active highlight somewhere nothing actually opened.
-        navNews.setOnClickListener(v -> toast(R.string.urinth_news_not_set_up));
-        navSkins.setOnClickListener(v -> toast(R.string.urinth_not_set_up));
+        // Downloads (mods, packs, shaders, modpacks...) and the Servers tab of the same page.
+        navNews.setOnClickListener(v -> openDownloads(DownloadCategory.MODS, navNews));
+        navSkins.setOnClickListener(v -> openDownloads(DownloadCategory.SERVERS, navSkins));
         navSettings.setOnClickListener(v -> {
             setActiveNav(navSettings);
             openSettings();
@@ -397,7 +398,7 @@ public final class UrinthHomeController {
         playButton.setOnClickListener(v -> launch(pickPlayTarget()));
         root.findViewById(R.id.urinth_last_played_btn).setOnClickListener(this::showLastPlayedMenu);
         root.findViewById(R.id.urinth_explore_worlds).setOnClickListener(v -> openBrowser("world"));
-        root.findViewById(R.id.urinth_addons_btn).setOnClickListener(v -> openBrowser("mod"));
+        root.findViewById(R.id.urinth_addons_btn).setOnClickListener(v -> openDownloads(DownloadCategory.MODS, navNews));
 
         root.findViewById(R.id.urinth_link_quick).setOnClickListener(v -> toast(R.string.urinth_not_set_up));
         root.findViewById(R.id.urinth_link_website).setOnClickListener(v -> toast(R.string.urinth_not_set_up));
@@ -641,6 +642,17 @@ public final class UrinthHomeController {
         } else {
             toast(R.string.urinth_not_set_up);
         }
+    }
+
+    private void openDownloads(DownloadCategory category, View nav) {
+        if (host == null) {
+            toast(R.string.urinth_not_set_up);
+            return;
+        }
+        setActiveNav(nav);
+        android.os.Bundle args = new android.os.Bundle();
+        args.putString(DownloadsFragment.ARG_CATEGORY, category.key);
+        host.showCenterFragment(DownloadsFragment.class, DownloadsFragment.TAG, args);
     }
 
     private void openBrowser(String category) {
