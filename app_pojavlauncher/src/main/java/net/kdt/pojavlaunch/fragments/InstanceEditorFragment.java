@@ -25,6 +25,8 @@ import androidx.fragment.app.Fragment;
 
 import git.artdeell.mojo.R;
 import net.kdt.pojavlaunch.Tools;
+import net.kdt.pojavlaunch.content.ui.Fx;
+import net.kdt.pojavlaunch.content.ui.InstallationChrome;
 import net.kdt.pojavlaunch.extra.ExtraConstants;
 import net.kdt.pojavlaunch.extra.ExtraCore;
 import net.kdt.pojavlaunch.game.renderer.RendererCache;
@@ -128,6 +130,10 @@ public class InstanceEditorFragment extends Fragment implements CropperUtils.Cro
             getParentFragmentManager().popBackStack();
         }else {
             loadValues(selectedInstance, context);
+            // Back button, the installation's name, and the Mods / Resource Packs / Shaders buttons.
+            if (view instanceof android.widget.LinearLayout) {
+                InstallationChrome.attach(this, (android.widget.LinearLayout) view, selectedInstance);
+            }
         }
     }
 
@@ -216,13 +222,9 @@ public class InstanceEditorFragment extends Fragment implements CropperUtils.Cro
     }
 
     private void styleModrinthEditor(@NonNull View root) {
-        // Re-skin the existing editor controls without changing their behavior or IDs.
-        GradientDrawable background = new GradientDrawable(
-                GradientDrawable.Orientation.TL_BR,
-                new int[]{Color.argb(102, 7, 32, 47), Color.argb(102, 3, 17, 29)});
-        background.setCornerRadius(dpEditor(18));
-        background.setStroke(dpEditor(1), Color.argb(170, 0, 230, 170));
-        root.setBackground(background);
+        // Re-skin the existing editor controls (dark glass, teal edges) without changing their behavior or IDs.
+        Context context = root.getContext();
+        root.setBackground(Fx.glass(context, 18, 0xAA00E6AA));
 
         int[] fieldIds = {
                 R.id.vprof_editor_instance_name,
@@ -236,11 +238,12 @@ public class InstanceEditorFragment extends Fragment implements CropperUtils.Cro
         for (int id : fieldIds) {
             View field = root.findViewById(id);
             if (field != null) {
-                field.setBackground(editorShape(Color.argb(102, 8, 39, 54), Color.rgb(29, 105, 126)));
-                field.setPadding(dpEditor(12), field.getPaddingTop(), dpEditor(12), field.getPaddingBottom());
+                field.setBackground(Fx.fill(context, 0x88051A28, 14, 0xFF1D697E));
+                field.setPadding(dpEditor(14), field.getPaddingTop(), dpEditor(14), field.getPaddingBottom());
             }
         }
 
+        // Small teal captions above the fields, like a control panel.
         int[] labelIds = {
                 R.id.vprof_editor_profile_name_sub, R.id.textView4, R.id.textView7,
                 R.id.textView6, R.id.textView2, R.id.textView3
@@ -248,35 +251,42 @@ public class InstanceEditorFragment extends Fragment implements CropperUtils.Cro
         for (int id : labelIds) {
             TextView label = root.findViewById(id);
             if (label != null) {
-                label.setTextColor(Color.rgb(214, 232, 239));
-                label.setLetterSpacing(0.02f);
+                label.setTextColor(0xFF5FE3C4);
+                label.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 11);
+                label.setAllCaps(true);
+                label.setLetterSpacing(0.14f);
             }
         }
 
-        mDefaultName.setTextColor(Color.rgb(242, 248, 250));
-        mDefaultName.setHintTextColor(Color.rgb(145, 170, 184));
-        mDefaultJvmArgument.setTextColor(Color.rgb(242, 248, 250));
-        mDefaultJvmArgument.setHintTextColor(Color.rgb(145, 170, 184));
-        mDefaultVersion.setTextColor(Color.rgb(242, 248, 250));
-        mDefaultControl.setTextColor(Color.rgb(242, 248, 250));
-        mSharedDataCheckbox.setTextColor(Color.rgb(242, 248, 250));
+        mInstanceIcon.setBackground(Fx.fill(context, 0x88051A28, 18, 0xFF00E6AA));
 
-        Button[] outlineButtons = {mControlSelectButton, mVersionSelectButton};
-        for (Button button : outlineButtons) {
-            button.setTextColor(Color.rgb(0, 34, 36));
-            button.setBackground(editorShape(Color.rgb(0, 230, 170), Color.rgb(99, 255, 220)));
+        mDefaultName.setTextColor(Fx.TEXT);
+        mDefaultName.setHintTextColor(Fx.MUTED);
+        mDefaultJvmArgument.setTextColor(Fx.TEXT);
+        mDefaultJvmArgument.setHintTextColor(Fx.MUTED);
+        mDefaultVersion.setTextColor(Fx.TEXT);
+        mDefaultControl.setTextColor(Fx.TEXT);
+        mSharedDataCheckbox.setTextColor(Fx.TEXT);
+
+        Button[] selectButtons = {mControlSelectButton, mVersionSelectButton};
+        for (Button button : selectButtons) {
+            button.setBackgroundTintList(null);
+            button.setTextColor(Fx.ON_ACCENT);
+            button.setBackground(Fx.accentGradient(context, 14));
             button.setAllCaps(false);
-            button.setElevation(dpEditor(2));
+            button.setElevation(0);
         }
-        mSaveButton.setTextColor(Color.rgb(0, 34, 36));
-        mSaveButton.setBackground(editorShape(Color.rgb(0, 230, 170), Color.rgb(99, 255, 220)));
+        mSaveButton.setBackgroundTintList(null);
+        mSaveButton.setTextColor(Fx.ON_ACCENT);
+        mSaveButton.setBackground(Fx.accentGradient(context, 16));
         mSaveButton.setAllCaps(false);
-        mDeleteButton.setTextColor(Color.rgb(255, 224, 226));
-        mDeleteButton.setBackground(editorShape(Color.argb(150, 111, 34, 46), Color.rgb(196, 72, 87)));
+        mDeleteButton.setBackgroundTintList(null);
+        mDeleteButton.setTextColor(0xFFFFE0E2);
+        mDeleteButton.setBackground(Fx.fill(context, Fx.DANGER_FILL, 16, 0xFFC44857));
         mDeleteButton.setAllCaps(false);
 
-        mDefaultRuntime.setPopupBackgroundDrawable(editorShape(Color.rgb(7, 31, 46), Color.rgb(29, 105, 126)));
-        mDefaultRenderer.setPopupBackgroundDrawable(editorShape(Color.rgb(7, 31, 46), Color.rgb(29, 105, 126)));
+        mDefaultRuntime.setPopupBackgroundDrawable(Fx.fill(context, 0xFF071F2E, 12, 0xFF1D697E));
+        mDefaultRenderer.setPopupBackgroundDrawable(Fx.fill(context, 0xFF071F2E, 12, 0xFF1D697E));
     }
 
     private void save(){

@@ -30,7 +30,7 @@ import java.util.concurrent.Executors;
  * Icons are fetched off the main thread; a view that was given another address in the meantime
  * (because its row was reused) never shows the older icon.
  */
-final class IconLoader {
+public final class IconLoader {
     private IconLoader() {}
 
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
@@ -47,7 +47,7 @@ final class IconLoader {
      * Shows the icon of {@code url} in {@code view}, rounded by {@code cornerDp}. {@code placeholder}
      * stays until the picture is there (and stays if it cannot be loaded).
      */
-    static void load(final ImageView view, final String url, final int sizePx, final float cornerDp, Drawable placeholder) {
+    public static void load(final ImageView view, final String url, final int sizePx, final float cornerDp, Drawable placeholder) {
         final String wanted = url == null ? "" : url;
         view.setTag(wanted);
         view.setImageDrawable(placeholder);

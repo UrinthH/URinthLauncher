@@ -87,7 +87,7 @@ public final class FileInstaller {
         return name;
     }
 
-    static String sha1(File file) throws IOException {
+    public static String sha1(File file) throws IOException {
         try (InputStream in = new FileInputStream(file)) {
             MessageDigest digest = MessageDigest.getInstance("SHA-1");
             byte[] buffer = new byte[16 * 1024];
