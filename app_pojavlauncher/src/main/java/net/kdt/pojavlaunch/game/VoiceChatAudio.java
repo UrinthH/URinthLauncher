@@ -133,8 +133,22 @@ public final class VoiceChatAudio {
             routeToSpeaker(true);
             mActive = true;
             Logger.appendToLog(TAG + "no headset: call mode on, loudspeaker route, echo cancelling asked for");
+            Logger.appendToLog(TAG + levels());
         } catch (Throwable t) {
             Logger.appendToLog(TAG + "could not set call mode: " + t);
+        }
+    }
+
+    /** The volume levels in play, so a "voices are too quiet" report says which volume was low. */
+    private String levels() {
+        try {
+            return "levels: game/media " + mAudioManager.getStreamVolume(AudioManager.STREAM_MUSIC) + "/"
+                    + mAudioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+                    + ", call " + mAudioManager.getStreamVolume(AudioManager.STREAM_VOICE_CALL) + "/"
+                    + mAudioManager.getStreamMaxVolume(AudioManager.STREAM_VOICE_CALL)
+                    + ", mode " + mAudioManager.getMode() + ", speakerphone " + mAudioManager.isSpeakerphoneOn();
+        } catch (Throwable t) {
+            return "levels: unreadable (" + t + ")";
         }
     }
 
