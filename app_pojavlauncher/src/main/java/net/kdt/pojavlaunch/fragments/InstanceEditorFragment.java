@@ -27,6 +27,7 @@ import git.artdeell.mojo.R;
 import net.kdt.pojavlaunch.Tools;
 import net.kdt.pojavlaunch.content.ui.Fx;
 import net.kdt.pojavlaunch.content.ui.InstallationChrome;
+import net.kdt.pojavlaunch.content.ui.Motion;
 import net.kdt.pojavlaunch.extra.ExtraConstants;
 import net.kdt.pojavlaunch.extra.ExtraCore;
 import net.kdt.pojavlaunch.game.renderer.RendererCache;
@@ -287,6 +288,22 @@ public class InstanceEditorFragment extends Fragment implements CropperUtils.Cro
 
         mDefaultRuntime.setPopupBackgroundDrawable(Fx.fill(context, 0xFF071F2E, 12, 0xFF1D697E));
         mDefaultRenderer.setPopupBackgroundDrawable(Fx.fill(context, 0xFF071F2E, 12, 0xFF1D697E));
+
+        // Alive: fields light up when touched, buttons press in, and everything slides in once.
+        EditText[] typed = {mDefaultName, mDefaultJvmArgument};
+        for (final EditText field : typed) {
+            field.setOnFocusChangeListener((v, focused) -> v.setBackground(focused
+                    ? Fx.fill(context, 0xAA062433, 14, 0xFF00E6AA)
+                    : Fx.fill(context, 0x88051A28, 14, 0xFF1D697E)));
+        }
+        View[] pressable = {mSaveButton, mDeleteButton, mControlSelectButton, mVersionSelectButton, mInstanceIcon};
+        for (View view : pressable) Motion.press(view);
+        View iconView = root.findViewById(R.id.vprof_editor_instance_icon);
+        if (iconView != null && iconView.getParent() instanceof ViewGroup) {
+            ViewGroup form = (ViewGroup) iconView.getParent();
+            for (int i = 0; i < form.getChildCount(); i++) Motion.enter(form.getChildAt(i), i / 2);
+        }
+        if (mSaveButton.getParent() instanceof View) Motion.enter((View) mSaveButton.getParent(), 4);
     }
 
     private void save(){

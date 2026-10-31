@@ -103,6 +103,7 @@ public class MainMenuFragment extends Fragment {
                 centerContainer.setVisibility(View.GONE);
                 centerContainer.setAlpha(1f);
                 centerContainer.setTranslationY(0f);
+                if (homeController != null) homeController.setCenterOpen(false);
                 if (launcherView != null) launcherView.onCenterContentClosed();
                 // Returning to the home screen from the editor, the installer or anywhere else
                 // that could have added/removed/renamed an installation. onResume() alone isn't
@@ -180,6 +181,7 @@ public class MainMenuFragment extends Fragment {
         // This runs for first opens and for every category switch.
         centerContainer.animate().cancel();
         centerContainer.setVisibility(View.VISIBLE);
+        if (homeController != null) homeController.setCenterOpen(true);
         centerContainer.setAlpha(0.72f);
         centerContainer.setTranslationY(dp(30));
         centerContainer.animate()

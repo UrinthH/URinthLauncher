@@ -19,6 +19,7 @@ import net.kdt.pojavlaunch.Tools;
 import net.kdt.pojavlaunch.content.ContentKind;
 import net.kdt.pojavlaunch.content.ContentList;
 import net.kdt.pojavlaunch.fragments.MainMenuFragment;
+import net.kdt.pojavlaunch.instances.InstanceIconProvider;
 import net.kdt.pojavlaunch.instances.Instance;
 
 import java.io.File;
@@ -59,18 +60,17 @@ public final class InstallationChrome {
         back.addView(Fx.text(context, "Back", 15, Fx.TEXT, true),
                 Fx.margins(Fx.lp(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT), context, 6, 0, 0, 0));
         back.setOnClickListener(v -> goBack(fragment));
+        Motion.press(back);
         row.addView(back, Fx.lp(ViewGroup.LayoutParams.WRAP_CONTENT, Fx.dp(context, 42)));
 
-        LinearLayout titles = new LinearLayout(context);
-        titles.setOrientation(LinearLayout.VERTICAL);
-        TextView small = Fx.text(context, "INSTALLATION", 11, Fx.ACCENT, true);
-        small.setLetterSpacing(0.2f);
-        titles.addView(small);
-        TextView name = Fx.text(context, instance == null || instance.name == null || instance.name.isEmpty() ? "Settings" : instance.name, 20, Fx.TEXT, true);
-        name.setSingleLine(true);
-        name.setEllipsize(TextUtils.TruncateAt.END);
-        titles.addView(name, Fx.margins(Fx.lp(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT), context, 0, 3, 0, 0));
-        row.addView(titles, Fx.margins(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f), context, 14, 0, 0, 0));
+        NeonBanner banner = new NeonBanner(context);
+        android.graphics.drawable.Drawable icon = instance == null ? null
+                : InstanceIconProvider.fetchIcon(context.getResources(), instance);
+        String name = instance == null || instance.name == null || instance.name.isEmpty() ? "Installation" : instance.name;
+        String version = instance == null || instance.versionId == null ? "" : instance.versionId;
+        banner.setContent(icon, name, version.isEmpty() ? "Installation settings" : version, Fx.ACCENT);
+        row.addView(banner, Fx.margins(new LinearLayout.LayoutParams(0, Fx.dp(context, 60), 1f), context, 12, 0, 0, 0));
+        Motion.fadeIn(banner, 60);
         return row;
     }
 
@@ -100,6 +100,8 @@ public final class InstallationChrome {
                 args.putString(InstalledContentFragment.ARG_KIND, kind.key);
                 Tools.swapFragment(fragment.requireActivity(), InstalledContentFragment.class, InstalledContentFragment.TAG, args);
             });
+            Motion.press(tile);
+            Motion.enter(tile, i + 1);
             row.addView(tile, Fx.margins(new LinearLayout.LayoutParams(0, Fx.dp(context, 44), 1f), context, i == 0 ? 0 : 5, 0, i == kinds.length - 1 ? 0 : 5, 0));
         }
         countFiles(instance, kinds, counts);
@@ -118,6 +120,7 @@ public final class InstallationChrome {
                 for (int i = 0; i < kinds.length; i++) {
                     counts[i].setText(String.valueOf(found[i]));
                     counts[i].setVisibility(View.VISIBLE);
+                    Motion.pop(counts[i]);
                 }
             });
         });

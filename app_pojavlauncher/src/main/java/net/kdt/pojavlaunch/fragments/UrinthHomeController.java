@@ -644,6 +644,11 @@ public final class UrinthHomeController {
         }
     }
 
+    /** While a settings or manager screen is open the falling specks fade back, so they do not cross the text. */
+    public void setCenterOpen(boolean open) {
+        if (particleView != null) particleView.animate().alpha(open ? 0.22f : 1f).setDuration(320).start();
+    }
+
     private void openDownloads(DownloadCategory category, View nav) {
         if (host == null) {
             toast(R.string.urinth_not_set_up);

@@ -147,16 +147,20 @@ public class InstalledContentFragment extends Fragment {
         back.addView(Fx.icon(context, R.drawable.ic_dl_back, Fx.ACCENT, 20));
         back.addView(Fx.text(context, "Back", 15, Fx.TEXT, true), Fx.margins(Fx.lp(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT), context, 6, 0, 0, 0));
         back.setOnClickListener(v -> InstallationChrome.goBack(InstalledContentFragment.this));
+        Motion.press(back);
         row.addView(back, Fx.lp(ViewGroup.LayoutParams.WRAP_CONTENT, Fx.dp(context, 42)));
 
-        LinearLayout titles = new LinearLayout(context);
-        titles.setOrientation(LinearLayout.VERTICAL);
-        titles.addView(Fx.text(context, mKind.label, 20, Fx.TEXT, true));
-        TextView subtitle = Fx.text(context, mInstance == null ? "" : "Installation: " + mInstance.name, 13, Fx.MUTED, false);
-        subtitle.setSingleLine(true);
-        subtitle.setEllipsize(TextUtils.TruncateAt.END);
-        titles.addView(subtitle, Fx.margins(Fx.lp(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT), context, 0, 3, 0, 0));
-        row.addView(titles, Fx.margins(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f), context, 14, 0, 8, 0));
+        NeonBanner banner = new NeonBanner(context);
+        int iconRes = mKind == ContentKind.MODS ? R.drawable.ic_fx_mods
+                : mKind == ContentKind.SHADERS ? R.drawable.ic_fx_shaders : R.drawable.ic_fx_packs;
+        android.graphics.drawable.Drawable kindIcon = androidx.core.content.ContextCompat.getDrawable(context, iconRes);
+        if (kindIcon != null) {
+            kindIcon = kindIcon.mutate();
+            kindIcon.setTint(Fx.ACCENT);
+        }
+        banner.setContent(kindIcon, mKind.label, mInstance == null ? "" : "Installation: " + mInstance.name, Fx.ACCENT);
+        row.addView(banner, Fx.margins(new LinearLayout.LayoutParams(0, Fx.dp(context, 58), 1f), context, 12, 0, 10, 0));
+        Motion.fadeIn(banner, 40);
 
         TextView more = Fx.button(context, "Find more", Fx.PRIMARY);
         more.setOnClickListener(v -> {
@@ -164,6 +168,7 @@ public class InstalledContentFragment extends Fragment {
             args.putString(DownloadsFragment.ARG_CATEGORY, mKind.category.key);
             Tools.swapFragment(requireActivity(), DownloadsFragment.class, DownloadsFragment.TAG, args);
         });
+        Motion.press(more);
         row.addView(more);
         return row;
     }

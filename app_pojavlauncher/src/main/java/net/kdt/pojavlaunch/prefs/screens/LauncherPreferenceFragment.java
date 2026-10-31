@@ -96,6 +96,10 @@ public class LauncherPreferenceFragment extends PreferenceFragmentCompat impleme
         addPreferencesFromResource(allSettingsPage ? R.xml.pref_all_settings : R.xml.pref_main);
         if (allSettingsPage) setupAllSettings();
         setupNotificationRequestPreference();
+        // The animated banner on top of the full settings list (it sorts before every other row).
+        if (allSettingsPage && getPreferenceScreen() != null) {
+            getPreferenceScreen().addPreference(new UrinthHeroPreference(requireContext()));
+        }
         // Icons are coloured per section by UrinthPreferenceAdapter.
     }
 

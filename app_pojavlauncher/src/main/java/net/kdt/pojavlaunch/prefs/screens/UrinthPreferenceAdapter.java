@@ -4,9 +4,11 @@ import android.annotation.SuppressLint;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.RippleDrawable;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.animation.DecelerateInterpolator;
+import android.view.animation.OvershootInterpolator;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -52,7 +54,8 @@ final class UrinthPreferenceAdapter extends PreferenceGroupAdapter {
     private static final int MAX_STAGGER_STEPS = 8;
 
     private final Map<Preference, Integer> accents = new HashMap<>();
-    private final Set<Preference> entered = new HashSet<>();
+    private final Set<Object> entered = new HashSet<>();
+    private final Set<Object> headersPulsed = new HashSet<>();
     private final Set<Preference> lastOn = new HashSet<>();
 
     UrinthPreferenceAdapter(@NonNull PreferenceGroup group) {
@@ -89,7 +92,7 @@ final class UrinthPreferenceAdapter extends PreferenceGroupAdapter {
         item.setTranslationY(0f);
         item.setScaleX(1f);
         item.setScaleY(1f);
-        if (preference == null) return;
+        if (preference == null || preference instanceof UrinthHeroPreference) return;
 
         int accent = accentOf(preference);
         if (preference instanceof PreferenceCategory) {
@@ -111,13 +114,39 @@ final class UrinthPreferenceAdapter extends PreferenceGroupAdapter {
         View bar = holder.findViewById(R.id.urinth_header_bar);
         if (bar != null) bar.setBackgroundTintList(ColorStateList.valueOf(accent));
         View line = holder.findViewById(R.id.urinth_header_line);
-        if (line != null) line.setBackgroundTintList(ColorStateList.valueOf(withAlpha(accent, 0xAA)));
+        if (line != null) {
+            line.setBackgroundTintList(ColorStateList.valueOf(withAlpha(accent, 0xAA)));
+            // The line draws itself out from the bar, once, the first time the section appears.
+            line.animate().cancel();
+            line.setPivotX(0f);
+            line.setScaleX(1f);
+            if (entered.add(holderKey(holder))) {
+                line.setScaleX(0f);
+                line.animate().scaleX(1f).setStartDelay(120).setDuration(520)
+                        .setInterpolator(new DecelerateInterpolator(1.8f)).start();
+            }
+        }
+        if (bar != null) {
+            bar.animate().cancel();
+            bar.setScaleY(1f);
+            if (!headersPulsed.contains(holderKey(holder))) {
+                headersPulsed.add(holderKey(holder));
+                bar.setScaleY(0.2f);
+                bar.animate().scaleY(1f).setDuration(420).setInterpolator(new OvershootInterpolator(2.2f)).start();
+            }
+        }
+    }
+
+    /** Headers are recycled too, so each one is remembered by the text it shows. */
+    private Object holderKey(PreferenceViewHolder holder) {
+        TextView title = (TextView) holder.findViewById(android.R.id.title);
+        return "header:" + (title == null ? "" : title.getText());
     }
 
     private void styleRow(PreferenceViewHolder holder, Preference preference, int accent) {
         View item = holder.itemView;
         boolean on = preference instanceof SwitchPreferenceCompat && ((SwitchPreferenceCompat) preference).isChecked();
-        item.setBackgroundResource(on ? R.drawable.urinth_pref_card_on : R.drawable.urinth_pref_card);
+        item.setBackground(cardFor(item, accent, on));
 
         TextView title = (TextView) holder.findViewById(android.R.id.title);
         if (title != null) title.setTextColor(TITLE_COLOR);
@@ -155,13 +184,36 @@ final class UrinthPreferenceAdapter extends PreferenceGroupAdapter {
         addPressEffect(item);
     }
 
+    /**
+     * The card of a row: dark glass tinted with the section's colour, a thin edge in that colour,
+     * and, for a switch that is on, a brighter edge and glow.
+     */
+    private static RippleDrawable cardFor(View item, int accent, boolean on) {
+        float density = item.getResources().getDisplayMetrics().density;
+        GradientDrawable shape = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
+                new int[]{blend(0xFF12293A, accent, on ? 0.30f : 0.10f), blend(0xFF0A1B27, accent, on ? 0.12f : 0.02f)});
+        shape.setCornerRadius(14f * density);
+        shape.setStroke(Math.max(1, Math.round(density * (on ? 1.5f : 1f))), withAlpha(accent, on ? 0xC8 : 0x4A));
+        GradientDrawable mask = new GradientDrawable();
+        mask.setColor(Color.WHITE);
+        mask.setCornerRadius(14f * density);
+        return new RippleDrawable(ColorStateList.valueOf(withAlpha(accent, 0x44)), shape, mask);
+    }
+
+    private static int blend(int base, int tint, float amount) {
+        int r = Math.round(Color.red(base) * (1 - amount) + Color.red(tint) * amount);
+        int g = Math.round(Color.green(base) * (1 - amount) + Color.green(tint) * amount);
+        int b = Math.round(Color.blue(base) * (1 - amount) + Color.blue(tint) * amount);
+        return Color.rgb(r, g, b);
+    }
+
     /** One small pulse when a switch has just been turned on. */
     private void pulseIfTurnedOn(View item, Preference preference, boolean on) {
         if (!(preference instanceof SwitchPreferenceCompat)) return;
         boolean was = lastOn.contains(preference);
         if (on) lastOn.add(preference); else lastOn.remove(preference);
         if (on && !was && entered.contains(preference)) {
-            item.animate().scaleX(1.025f).scaleY(1.025f).setDuration(110)
+            item.animate().scaleX(1.04f).scaleY(1.04f).setDuration(120)
                     .withEndAction(() -> item.animate().scaleX(1f).scaleY(1f).setDuration(170).start())
                     .start();
         }
@@ -171,11 +223,13 @@ final class UrinthPreferenceAdapter extends PreferenceGroupAdapter {
         if (!entered.add(preference)) return;
         float density = item.getResources().getDisplayMetrics().density;
         item.setAlpha(0f);
-        item.setTranslationY(18f * density);
-        item.animate().alpha(1f).translationY(0f)
-                .setStartDelay((position % MAX_STAGGER_STEPS) * 28L)
-                .setDuration(300)
-                .setInterpolator(new DecelerateInterpolator(1.6f))
+        item.setTranslationY(26f * density);
+        item.setScaleX(0.95f);
+        item.setScaleY(0.95f);
+        item.animate().alpha(1f).translationY(0f).scaleX(1f).scaleY(1f)
+                .setStartDelay((position % MAX_STAGGER_STEPS) * 34L)
+                .setDuration(420)
+                .setInterpolator(new OvershootInterpolator(0.8f))
                 .start();
     }
 
