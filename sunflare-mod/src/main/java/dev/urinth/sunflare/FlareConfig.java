@@ -14,8 +14,12 @@ public final class FlareConfig {
     public static final int OFF = 0;
     public static final int SUBTLE = 1;
     public static final int FULL = 2;
+    public static final int STRONG = 3;
 
-    private static final double[] STRENGTH = {0.0, 0.5, 1.0};
+    public static final String[] NAMES = {"Off", "Subtle", "Full", "Strong"};
+
+    /** The pack's LENS_POWER for each mode. 0.25 is the pack's own default (Full). */
+    private static final double[] POWER = {0.0, 0.15, 0.25, 0.40};
 
     private final Path file;
     private int mode = FULL;
@@ -28,12 +32,12 @@ public final class FlareConfig {
         return mode;
     }
 
-    public double strength() {
-        return STRENGTH[mode];
+    public double power() {
+        return POWER[mode];
     }
 
     public int cycle() {
-        mode = (mode + 1) % STRENGTH.length;
+        mode = (mode + 1) % POWER.length;
         return mode;
     }
 
@@ -41,7 +45,7 @@ public final class FlareConfig {
         if (raw == null) return fallback;
         try {
             int v = Integer.parseInt(raw.trim());
-            return v >= OFF && v <= FULL ? v : fallback;
+            return v >= OFF && v <= STRONG ? v : fallback;
         } catch (NumberFormatException e) {
             return fallback;
         }
@@ -65,7 +69,7 @@ public final class FlareConfig {
             Path parent = file.getParent();
             if (parent != null) Files.createDirectories(parent);
             try (OutputStream out = Files.newOutputStream(file)) {
-                p.store(out, "URinth sun lens flare. mode: 0 = off, 1 = subtle, 2 = full");
+                p.store(out, "URinth sun lens flare. mode: 0 = off, 1 = subtle, 2 = full, 3 = strong");
             }
         } catch (IOException ignored) {
             // the toggle still works for this session

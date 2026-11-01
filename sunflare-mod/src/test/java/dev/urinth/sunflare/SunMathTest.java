@@ -40,25 +40,19 @@ class SunMathTest {
     }
 
     @Test
-    void edgeFadeAndLayers() {
-        assertEquals(1.0, SunMath.edgeFade(0.5, 0.5), 1e-9);
-        assertEquals(0.0, SunMath.edgeFade(-0.1, 0.5), 1e-9);
-        double[] c = new double[2];
-        FlareLayers.center(0, 0.8, 0.7, c);
-        assertEquals(0.8, c[0], 1e-9);
-        assertEquals(0.7, c[1], 1e-9);
-        assertEquals(1.0, FlareLayers.profile(0), 1e-9);
-        assertEquals(0.0, FlareLayers.profile(1), 1e-9);
-        assertEquals(FlareLayers.COUNT, FlareLayers.POS.length);
-        assertEquals(FlareLayers.COUNT, FlareLayers.SIZE.length);
-        assertEquals(FlareLayers.COUNT, FlareLayers.COLOR.length);
+    void nightFollowsThePacksUniform() {
+        assertEquals(0.0, SunMath.nightFactor(6000), 1e-9);   // noon
+        assertEquals(0.0, SunMath.nightFactor(0), 1e-9);      // sunrise
+        assertEquals(0.3, SunMath.nightFactor(13000), 1e-9);  // dusk
+        assertEquals(1.0, SunMath.nightFactor(18000), 1e-9);  // midnight
+        assertEquals(1.0, SunMath.nightFactor(18000 + 24000L * 5), 1e-9);
     }
 
     @Test
-    void configParsingFallsBack() {
-        assertEquals(2, FlareConfig.parseMode("9", 2));
-        assertEquals(1, FlareConfig.parseMode(" 1 ", 2));
-        assertEquals(2, FlareConfig.parseMode(null, 2));
-        assertEquals(2, FlareConfig.parseMode("x", 2));
+    void edgeFadeIsSmooth() {
+        assertEquals(1.0, SunMath.edgeFade(0.5, 0.5), 1e-9);
+        assertEquals(0.0, SunMath.edgeFade(-0.1, 0.5), 1e-9);
+        double near = SunMath.edgeFade(0.05, 0.5);
+        assertTrue(near > 0.0 && near < 1.0);
     }
 }

@@ -1,0 +1,82 @@
+package dev.urinth.sunflare;
+
+/**
+ * Works out, for one frame, which flare elements to draw and where. Plain maths: no Minecraft classes.
+ * All screen positions are in 0..1 with v pointing up.
+ */
+final class FlareFrame {
+    /** One quad to draw. */
+    static final class Draw {
+        int element;
+        double cx;
+        double cy;
+        double rx;
+        double ry;
+        double red;
+        double green;
+        double blue;
+        /** Set for crescent pairs: this quad uses a texture baked for this frame. */
+        boolean pair;
+    }
+
+    /** Below this brightness an element is not worth drawing. */
+    static final double MIN_AMPLITUDE = 1.0 / 400.0;
+
+    final Draw[] draws = new Draw[FlareSet.COUNT];
+    int count;
+    /** The pack's sunmask for this frame. */
+    double sm;
+    /** How much the whole picture is darkened (0..1), as the pack does when the sun is near the screen centre. */
+    double dim;
+    double flareScale;
+
+    FlareFrame() {
+        for (int i = 0; i < draws.length; i++) draws[i] = new Draw();
+    }
+
+    /**
+     * @param lx,ly  sun position on the screen (0..1, v up)
+     * @param power  the pack's LENS_POWER
+     * @param mask   0..1 visibility of the sun (covered, screen edge, ...)
+     */
+    void compute(double lx, double ly, double aspect, double power, double mask, double night, double rain) {
+        count = 0;
+        sm = power * mask * (1.0 - night) * (1.0 - SunMath.clamp(rain, 0.0, 1.0));
+        dim = 0.0;
+        flareScale = 1.0;
+        if (sm <= 0.0) return;
+
+        double dist = Math.hypot(lx - 0.5, ly - 0.5);
+        double centerMask = (1.0 - SunMath.clamp(dist * 2.0, 0.0, 1.0)) * sm;
+        dim = centerMask;
+        flareScale = 1.0 - centerMask;
+        double edgeX = SunMath.clamp(Math.abs(lx - 0.5) * 8.0 - 3.0, 0.0, 1.0);
+
+        for (int i = 0; i < FlareSet.COUNT; i++) {
+            FlareElement e = FlareSet.ELEMENTS[i];
+            double amp = amplitude(e, sm) * (e.edgeMaskX ? edgeX : 1.0);
+            double top = Math.max(e.red, Math.max(e.green, e.blue)) * amp;
+            if (top < MIN_AMPLITUDE) continue;
+            Draw d = draws[count++];
+            d.element = i;
+            d.pair = e.isPair();
+            d.cx = e.mainGeo.centerU(lx);
+            d.cy = e.mainGeo.centerV(ly);
+            d.rx = e.mainGeo.radiusU(e.main.radius, aspect, flareScale);
+            d.ry = e.mainGeo.radiusV(e.main.radius, flareScale);
+            d.red = e.red * amp;
+            d.green = e.green * amp;
+            d.blue = e.blue * amp;
+        }
+    }
+
+    /** Brightness at the centre-most point of an element for a given sm (the texture stores the shape, this the level). */
+    static double amplitude(FlareElement e, double sm) {
+        if (e.isPair()) {
+            // the pair is baked per frame, so only an upper bound is needed here
+            double a = FlareLut.peak(e.main) * (e.smOutside ? sm : Math.pow(sm, e.main.smExponent()));
+            return a;
+        }
+        return FlareLut.peak(e.main) * Math.pow(sm, e.main.smExponent());
+    }
+}

@@ -17,7 +17,6 @@ import org.slf4j.LoggerFactory;
  */
 public final class SunFlareMod implements ClientModInitializer {
     static final Logger LOG = LoggerFactory.getLogger("urinth_sunflare");
-    private static final String[] NAMES = {"Off", "Subtle", "Full"};
 
     private FlareConfig config;
 
@@ -39,10 +38,10 @@ public final class SunFlareMod implements ClientModInitializer {
             }).bounds(width - w - 4, 6, w, 20).build();
             Screens.getButtons(screen).add(button);
         });
-        LOG.info("[SunFlare] ready, mode={}", NAMES[config.mode()]);
+        LOG.info("[SunFlare] ready, mode={}", FlareConfig.NAMES[config.mode()]);
     }
 
     private Component label() {
-        return Component.literal("Sun Flare: " + NAMES[config.mode()]);
+        return Component.literal("Sun Flare: " + FlareConfig.NAMES[config.mode()]);
     }
 }

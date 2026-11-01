@@ -56,6 +56,13 @@ public final class SunMath {
         return true;
     }
 
+    /** The pack's "night" (0 = day, 1 = night) for a world day time, as in its shaders.properties. */
+    public static double nightFactor(long dayTime) {
+        double worldTime = Math.floorMod(dayTime, 24000L);
+        double ticks = Math.abs(((worldTime / 1000.0 + 6.0) % 24.0) - 12.0);
+        return clamp(ticks - 6.7, 0.0, 1.0);
+    }
+
     /** The shader fades the flare out in the last 20% towards any screen edge. */
     public static double edgeFade(double u, double v) {
         double shortest = Math.min(Math.min(u, 1.0 - u), Math.min(v, 1.0 - v));

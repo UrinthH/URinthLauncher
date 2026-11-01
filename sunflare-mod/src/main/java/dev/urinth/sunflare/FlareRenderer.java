@@ -1,6 +1,7 @@
 package dev.urinth.sunflare;
 
 import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.BufferUploader;
@@ -8,12 +9,11 @@ import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.MeshData;
 import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
-import com.mojang.blaze3d.platform.NativeImage;
 import net.minecraft.client.Camera;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.CoreShaders;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.resources.ResourceLocation;
@@ -26,24 +26,30 @@ import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
 
 /**
- * Draws the 13 flare discs in one batch on top of the finished frame.
+ * Draws the sun lens flare of the CilokGaming pack (see {@link FlareSet}) on top of the finished frame.
  *
- * Cost per frame: 13 quads and one draw call. Visibility is decided by a few block ray casts a few times a second,
- * not by reading the depth buffer back from the GPU.
+ * Cost per frame: at most about 27 textured quads in two draw calls and one full-screen quad for the slight darkening.
+ * Visibility comes from a few block ray casts a few times a second, not from reading the depth buffer back from the GPU.
  */
 final class FlareRenderer {
-    private static final int TEX_SIZE = 64;
     private static final long RAY_INTERVAL_NANOS = 60_000_000L;
     private static final double RAY_LENGTH = 128.0;
     private static final double SPREAD = 0.04;
 
     private final FlareConfig config;
     private final FlareFade fade = new FlareFade(10.0);
+    private final FlareFrame frame = new FlareFrame();
+    private final PairBaker baker = new PairBaker();
     private final double[] dir = new double[3];
     private final double[] sun = new double[2];
-    private final double[] center = new double[2];
+    private final double[] rect = new double[4];
+    private final double[] pairLevel = new double[FlareSet.COUNT];
 
-    private ResourceLocation texture;
+    private DynamicTexture atlas;
+    private DynamicTexture pairs;
+    private ResourceLocation atlasId;
+    private ResourceLocation pairsId;
+    private byte[] pairBytes;
     private boolean failed;
     private long lastNanos;
     private long lastRay;
@@ -75,58 +81,116 @@ final class FlareRenderer {
         Camera camera = mc.gameRenderer.getMainCamera();
         boolean usable = level.dimension() == Level.OVERWORLD && camera.isInitialized()
                 && camera.getFluidInCamera() == FogType.NONE;
-        SunMath.sunDirection(level.getDayTime(), dir);
+        long dayTime = level.getDayTime();
+        SunMath.sunDirection(dayTime, dir);
         usable &= dir[1] > -0.02;
 
         if (usable && now - lastRay > RAY_INTERVAL_NANOS) {
             lastRay = now;
             rayTarget = sunVisible(level, mc, camera);
         }
-        double rain = level.getRainLevel(tracker.getGameTimeDeltaPartialTick(false));
-        double target = usable ? rayTarget * SunMath.clamp(1.0 - rain / 0.3, 0.0, 1.0) : 0.0;
-        double vis = fade.update(target, dt);
+        double vis = fade.update(usable ? rayTarget : 0.0, dt);
         if (vis <= 0.0) return;
 
         int w = g.guiWidth();
         int h = g.guiHeight();
         if (w <= 0 || h <= 0) return;
+        double aspect = (double) w / h;
         double fov = mc.options.fov().get();
-        if (!SunMath.project(dir, camera.getYRot(), camera.getXRot(), fov, (double) w / h, sun)) return;
-        double scale = vis * SunMath.edgeFade(sun[0], sun[1]) * config.strength();
-        if (scale <= 0.0) return;
+        if (!SunMath.project(dir, camera.getYRot(), camera.getXRot(), fov, aspect, sun)) return;
+        double mask = vis * SunMath.edgeFade(sun[0], sun[1]);
+        if (mask <= 0.0) return;
 
-        ensureTexture(mc);
+        double night = SunMath.nightFactor(dayTime);
+        double rain = level.getRainLevel(tracker.getGameTimeDeltaPartialTick(false));
+        frame.compute(sun[0], sun[1], aspect, config.power(), mask, night, rain);
+        if (frame.count == 0 && frame.dim <= 0.0) return;
+
+        ensureTextures(mc);
         g.flush();
-
         Matrix4f matrix = g.pose().last().pose();
+
+        double dim = frame.dim * (1.0 - night);
+        if (dim > 0.002) drawDim(matrix, w, h, (float) dim);
+        drawFlares(matrix, w, h, aspect);
+
+        RenderSystem.defaultBlendFunc();
+        RenderSystem.disableBlend();
+    }
+
+    /** The pack darkens the scene a little when the sun is near the middle of the screen. */
+    private void drawDim(Matrix4f matrix, int w, int h, float alpha) {
+        RenderSystem.setShader(CoreShaders.POSITION_COLOR);
+        RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
+        BufferBuilder buf = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
+        buf.addVertex(matrix, 0f, 0f, 0f).setColor(0f, 0f, 0f, alpha);
+        buf.addVertex(matrix, 0f, h, 0f).setColor(0f, 0f, 0f, alpha);
+        buf.addVertex(matrix, w, h, 0f).setColor(0f, 0f, 0f, alpha);
+        buf.addVertex(matrix, w, 0f, 0f).setColor(0f, 0f, 0f, alpha);
+        MeshData mesh = buf.build();
+        if (mesh != null) BufferUploader.drawWithShader(mesh);
+    }
+
+    private void drawFlares(Matrix4f matrix, int w, int h, double aspect) {
+        // Bake this frame's crescents first (they depend on where the sun is).
+        boolean anyPair = false;
+        double[] level = pairLevel;
+        java.util.Arrays.fill(level, 0.0);
+        for (int i = 0; i < frame.count; i++) {
+            FlareFrame.Draw d = frame.draws[i];
+            if (!d.pair) continue;
+            level[i] = baker.bake(FlareSet.ELEMENTS[d.element], d, sun[0], sun[1], aspect, frame.sm, frame.flareScale, pairBytes);
+            anyPair |= level[i] > 0.0;
+        }
+        if (anyPair) uploadPairs();
+
         RenderSystem.setShader(CoreShaders.POSITION_TEX_COLOR);
-        RenderSystem.setShaderTexture(0, texture);
         RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
         RenderSystem.enableBlend();
         RenderSystem.blendFunc(GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ONE);
 
+        drawBatch(matrix, w, h, atlasId, false, level);
+        if (anyPair) drawBatch(matrix, w, h, pairsId, true, level);
+    }
+
+    private void drawBatch(Matrix4f matrix, int w, int h, ResourceLocation texture, boolean pairBatch, double[] level) {
+        RenderSystem.setShaderTexture(0, texture);
         BufferBuilder buf = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
-        for (int i = 0; i < FlareLayers.COUNT; i++) {
-            FlareLayers.center(i, sun[0], sun[1], center);
-            float cx = (float) (center[0] * w);
-            float cy = (float) ((1.0 - center[1]) * h);
-            float r = (float) (FlareLayers.SIZE[i] * h);
-            if (cx + r < 0 || cx - r > w || cy + r < 0 || cy - r > h) continue;
-            double[] c = FlareLayers.COLOR[i];
-            float k = (float) (c[3] * scale);
-            float red = Math.min(1f, (float) c[0] * k);
-            float green = Math.min(1f, (float) c[1] * k);
-            float blue = Math.min(1f, (float) c[2] * k);
-            buf.addVertex(matrix, cx - r, cy - r, 0f).setUv(0f, 0f).setColor(red, green, blue, 1f);
-            buf.addVertex(matrix, cx - r, cy + r, 0f).setUv(0f, 1f).setColor(red, green, blue, 1f);
-            buf.addVertex(matrix, cx + r, cy + r, 0f).setUv(1f, 1f).setColor(red, green, blue, 1f);
-            buf.addVertex(matrix, cx + r, cy - r, 0f).setUv(1f, 0f).setColor(red, green, blue, 1f);
+        for (int i = 0; i < frame.count; i++) {
+            FlareFrame.Draw d = frame.draws[i];
+            if (d.pair != pairBatch) continue;
+            FlareElement e = FlareSet.ELEMENTS[d.element];
+            double red = d.red;
+            double green = d.green;
+            double blue = d.blue;
+            if (pairBatch) {
+                if (level[i] <= 0.0) continue;
+                red = e.red * level[i];
+                green = e.green * level[i];
+                blue = e.blue * level[i];
+            }
+            float cx = (float) (d.cx * w);
+            float cy = (float) ((1.0 - d.cy) * h);
+            float rx = (float) (d.rx * w);
+            float ry = (float) (d.ry * h);
+            if (cx + rx < 0 || cx - rx > w || cy + ry < 0 || cy - ry > h) continue;
+            FlareAtlas.uvRect(d.element, rect);
+            float u0 = (float) rect[0];
+            float v0 = (float) rect[1];
+            float u1 = (float) rect[2];
+            float v1 = (float) rect[3];
+            float r = Math.min(1f, (float) red);
+            float gr = Math.min(1f, (float) green);
+            float b = Math.min(1f, (float) blue);
+            buf.addVertex(matrix, cx - rx, cy - ry, 0f).setUv(u0, v0).setColor(r, gr, b, 1f);
+            buf.addVertex(matrix, cx - rx, cy + ry, 0f).setUv(u0, v1).setColor(r, gr, b, 1f);
+            buf.addVertex(matrix, cx + rx, cy + ry, 0f).setUv(u1, v1).setColor(r, gr, b, 1f);
+            buf.addVertex(matrix, cx + rx, cy - ry, 0f).setUv(u1, v0).setColor(r, gr, b, 1f);
         }
         MeshData mesh = buf.build();
         if (mesh != null) BufferUploader.drawWithShader(mesh);
-
-        RenderSystem.defaultBlendFunc();
-        RenderSystem.disableBlend();
     }
 
     /** Fraction (0..1) of five rays towards the sun that reach the sky. Leaves and stone block, glass does not. */
@@ -142,23 +206,46 @@ final class FlareRenderer {
         return clear / (double) offsets.length;
     }
 
-    /** A grey disc: brightness = the shader's smoothstep falloff. Alpha stays 1 so the GUI shader never discards pixels. */
-    private void ensureTexture(Minecraft mc) {
-        if (texture != null) return;
-        NativeImage image = new NativeImage(NativeImage.Format.RGBA, TEX_SIZE, TEX_SIZE, false);
-        for (int y = 0; y < TEX_SIZE; y++) {
-            for (int x = 0; x < TEX_SIZE; x++) {
-                double dx = (x + 0.5) / TEX_SIZE * 2.0 - 1.0;
-                double dy = (y + 0.5) / TEX_SIZE * 2.0 - 1.0;
-                double r = Math.min(1.0, Math.sqrt(dx * dx + dy * dy));
-                int v = (int) Math.round(255.0 * FlareLayers.profile(r));
+    /**
+     * Grey textures with alpha always 255, so the GUI shader never throws pixels away. The brightness lives in the vertex
+     * colour, and the blend is plain addition.
+     */
+    private void ensureTextures(Minecraft mc) {
+        if (atlas != null) return;
+        byte[] singles = FlareAtlas.buildSingles();
+        NativeImage image = new NativeImage(NativeImage.Format.RGBA, FlareAtlas.WIDTH, FlareAtlas.HEIGHT, false);
+        for (int y = 0; y < FlareAtlas.HEIGHT; y++) {
+            for (int x = 0; x < FlareAtlas.WIDTH; x++) {
+                int v = singles[y * FlareAtlas.WIDTH + x] & 0xFF;
                 image.setPixel(x, y, 0xFF000000 | (v << 16) | (v << 8) | v);
             }
         }
-        DynamicTexture dyn = new DynamicTexture(image);
-        dyn.setFilter(true, false);
-        ResourceLocation id = ResourceLocation.fromNamespaceAndPath("urinth_sunflare", "flare");
-        mc.getTextureManager().register(id, dyn);
-        texture = id;
+        atlas = new DynamicTexture(image);
+        atlas.setFilter(true, false);
+        atlasId = ResourceLocation.fromNamespaceAndPath("urinth_sunflare", "atlas");
+        mc.getTextureManager().register(atlasId, atlas);
+
+        pairBytes = new byte[FlareAtlas.PAIR_SIZE * FlareAtlas.PAIR_SIZE];
+        NativeImage pairImage = new NativeImage(NativeImage.Format.RGBA, FlareAtlas.PAIR_SIZE, FlareAtlas.PAIR_SIZE, false);
+        for (int y = 0; y < FlareAtlas.PAIR_SIZE; y++) {
+            for (int x = 0; x < FlareAtlas.PAIR_SIZE; x++) pairImage.setPixel(x, y, 0xFF000000);
+        }
+        pairs = new DynamicTexture(pairImage);
+        pairs.setFilter(true, false);
+        pairsId = ResourceLocation.fromNamespaceAndPath("urinth_sunflare", "pairs");
+        mc.getTextureManager().register(pairsId, pairs);
+    }
+
+    private void uploadPairs() {
+        NativeImage image = pairs.getPixels();
+        if (image == null) return;
+        int n = FlareAtlas.PAIR_SIZE;
+        for (int y = 0; y < n; y++) {
+            for (int x = 0; x < n; x++) {
+                int v = pairBytes[y * n + x] & 0xFF;
+                image.setPixel(x, y, 0xFF000000 | (v << 16) | (v << 8) | v);
+            }
+        }
+        pairs.upload();
     }
 }
