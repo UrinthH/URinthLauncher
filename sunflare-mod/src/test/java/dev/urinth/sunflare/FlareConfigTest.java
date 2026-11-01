@@ -33,4 +33,16 @@ class FlareConfigTest {
         again.load();
         assertEquals(FlareConfig.SUBTLE, again.mode());
     }
+
+    @Test
+    void setModeAndNamesWorkForTheCommand() throws IOException {
+        FlareConfig c = new FlareConfig(Files.createTempDirectory("sunflare-cmd").resolve("c.properties"));
+        assertEquals(FlareConfig.OFF, FlareConfig.modeFromName("OFF"));
+        assertEquals(FlareConfig.STRONG, FlareConfig.modeFromName(" strong "));
+        assertEquals(-1, FlareConfig.modeFromName("max"));
+        assertEquals(-1, FlareConfig.modeFromName(null));
+        assertEquals(FlareConfig.SUBTLE, c.setMode(FlareConfig.SUBTLE));
+        assertEquals(FlareConfig.SUBTLE, c.setMode(9));
+        assertEquals(FlareConfig.SUBTLE, c.mode());
+    }
 }

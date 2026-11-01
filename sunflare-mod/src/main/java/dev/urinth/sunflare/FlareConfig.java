@@ -41,6 +41,21 @@ public final class FlareConfig {
         return mode;
     }
 
+    /** Sets a mode directly (used by the /sunflare command). Out-of-range values are ignored. Returns the active mode. */
+    public int setMode(int value) {
+        if (value >= OFF && value <= STRONG) mode = value;
+        return mode;
+    }
+
+    /** "off", "subtle", "full" or "strong" (any case) to a mode, or -1. */
+    public static int modeFromName(String name) {
+        if (name == null) return -1;
+        for (int i = 0; i < NAMES.length; i++) {
+            if (NAMES[i].equalsIgnoreCase(name.trim())) return i;
+        }
+        return -1;
+    }
+
     public static int parseMode(String raw, int fallback) {
         if (raw == null) return fallback;
         try {
