@@ -1,6 +1,8 @@
 package dev.urinth.sunflare;
 
 import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.pipeline.RenderTarget;
+import com.mojang.blaze3d.pipeline.TextureTarget;
 import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
@@ -28,13 +30,18 @@ import org.joml.Matrix4f;
 /**
  * Draws the sun lens flare of the CilokGaming pack (see {@link FlareSet}) on top of the finished frame.
  *
- * Cost per frame: at most about 27 textured quads in two draw calls and one full-screen quad for the slight darkening.
- * Visibility comes from a few block ray casts a few times a second, not from reading the depth buffer back from the GPU.
+ * The flare is made of big, soft, overlapping layers. Blending them all at full resolution costs several screens of pixels,
+ * which is too much for a phone GPU. So the big layers are blended into a quarter-resolution picture, and that picture is
+ * copied onto the screen once, only where the flare is bright enough to matter. Small sharp elements (the glints) are drawn
+ * straight to the screen. Visibility comes from a few block ray casts a few times a second, not from reading the depth buffer
+ * back from the GPU.
  */
 final class FlareRenderer {
     private static final long RAY_INTERVAL_NANOS = 60_000_000L;
     private static final double RAY_LENGTH = 128.0;
     private static final double SPREAD = 0.04;
+    /** The small picture is this many times smaller than the window in each direction. */
+    private static final int DIVISOR = 4;
 
     private final FlareConfig config;
     private final FlareFade fade = new FlareFade(10.0);
@@ -44,6 +51,17 @@ final class FlareRenderer {
     private final double[] sun = new double[2];
     private final double[] rect = new double[4];
     private final double[] pairLevel = new double[FlareSet.COUNT];
+    private final FlareCoverage coverage = new FlareCoverage();
+    private final double[] pairLast = new double[FlareSet.COUNT];
+    private final boolean[] pairFresh = new boolean[FlareSet.COUNT];
+    private final boolean[] pairSeen = new boolean[FlareSet.COUNT];
+    private long frameNo;
+    private boolean reached;
+    private boolean coverageValid;
+    private RenderTarget lowRes;
+    private int lowWidth;
+    private int lowHeight;
+    private boolean bufferFailed;
 
     private DynamicTexture atlas;
     private DynamicTexture pairs;
@@ -62,7 +80,12 @@ final class FlareRenderer {
     void render(GuiGraphics g, DeltaTracker tracker) {
         if (failed || config.mode() == FlareConfig.OFF) return;
         try {
+            reached = false;
             draw(g, tracker);
+            if (!reached) {
+                java.util.Arrays.fill(pairFresh, false);
+                coverageValid = false;
+            }
         } catch (Throwable t) {
             failed = true;
             SunFlareMod.LOG.error("[SunFlare] turned itself off after an error", t);
@@ -104,63 +127,141 @@ final class FlareRenderer {
         double night = SunMath.nightFactor(dayTime);
         double rain = level.getRainLevel(tracker.getGameTimeDeltaPartialTick(false));
         frame.compute(sun[0], sun[1], aspect, config.power(), mask, night, rain);
-        if (frame.count == 0 && frame.dim <= 0.0) return;
+        if (frame.count == 0) return;
 
         ensureTextures(mc);
         g.flush();
         Matrix4f matrix = g.pose().last().pose();
 
-        double dim = frame.dim * (1.0 - night);
-        if (dim > 0.002) drawDim(matrix, w, h, (float) dim);
-        drawFlares(matrix, w, h, aspect);
+        drawFlares(mc, matrix, w, h, aspect);
 
         RenderSystem.defaultBlendFunc();
         RenderSystem.disableBlend();
     }
 
-    /** The pack darkens the scene a little when the sun is near the middle of the screen. */
-    private void drawDim(Matrix4f matrix, int w, int h, float alpha) {
-        RenderSystem.setShader(CoreShaders.POSITION_COLOR);
-        RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
-        RenderSystem.enableBlend();
-        RenderSystem.defaultBlendFunc();
-        BufferBuilder buf = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
-        buf.addVertex(matrix, 0f, 0f, 0f).setColor(0f, 0f, 0f, alpha);
-        buf.addVertex(matrix, 0f, h, 0f).setColor(0f, 0f, 0f, alpha);
-        buf.addVertex(matrix, w, h, 0f).setColor(0f, 0f, 0f, alpha);
-        buf.addVertex(matrix, w, 0f, 0f).setColor(0f, 0f, 0f, alpha);
-        MeshData mesh = buf.build();
-        if (mesh != null) BufferUploader.drawWithShader(mesh);
-    }
-
-    private void drawFlares(Matrix4f matrix, int w, int h, double aspect) {
+    private void drawFlares(Minecraft mc, Matrix4f matrix, int w, int h, double aspect) {
+        reached = true;
         // Bake this frame's crescents first (they depend on where the sun is).
         boolean anyPair = false;
+        boolean baked = false;
         double[] level = pairLevel;
         java.util.Arrays.fill(level, 0.0);
+        boolean anyBig = false;
+        frameNo++;
+        java.util.Arrays.fill(pairSeen, false);
         for (int i = 0; i < frame.count; i++) {
             FlareFrame.Draw d = frame.draws[i];
+            anyBig |= !d.small;
             if (!d.pair) continue;
-            level[i] = baker.bake(FlareSet.ELEMENTS[d.element], d, sun[0], sun[1], aspect, frame.sm, frame.flareScale, pairBytes);
+            pairSeen[d.element] = true;
+            // Each crescent is re-baked every other frame (a one frame lag in a soft crescent cannot be seen),
+            // and straight away the first time it appears.
+            boolean myTurn = (FlareAtlas.pairSlot(d.element) & 1) == (frameNo & 1);
+            if (myTurn || !pairFresh[d.element]) {
+                pairLast[d.element] = baker.bake(FlareSet.ELEMENTS[d.element], d, sun[0], sun[1], aspect, frame.sm, frame.flareScale, pairBytes);
+                pairFresh[d.element] = true;
+                baked = true;
+            }
+            level[i] = pairLast[d.element];
             anyPair |= level[i] > 0.0;
         }
-        if (anyPair) uploadPairs();
+        // a crescent that was not drawn this frame must be baked again the moment it comes back
+        for (int e = 0; e < FlareSet.COUNT; e++) {
+            if (FlareSet.ELEMENTS[e].isPair() && !pairSeen[e]) pairFresh[e] = false;
+        }
+        if (baked) uploadPairs();
+
+        boolean bigDone = !anyBig;
+        if (anyBig && !bufferFailed) {
+            try {
+                bigDone = drawBigThroughBuffer(mc, matrix, w, h, anyPair, level);
+            } catch (Throwable t) {
+                bufferFailed = true;
+                SunFlareMod.LOG.error("[SunFlare] the small buffer failed, drawing at full resolution instead", t);
+                mc.getMainRenderTarget().bindWrite(true);
+            }
+        }
 
         RenderSystem.setShader(CoreShaders.POSITION_TEX_COLOR);
         RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
         RenderSystem.enableBlend();
         RenderSystem.blendFunc(GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ONE);
-
-        drawBatch(matrix, w, h, atlasId, false, level);
-        if (anyPair) drawBatch(matrix, w, h, pairsId, true, level);
+        if (!bigDone) drawBatches(matrix, w, h, false, anyPair, level);
+        drawBatches(matrix, w, h, true, anyPair, level);
     }
 
-    private void drawBatch(Matrix4f matrix, int w, int h, ResourceLocation texture, boolean pairBatch, double[] level) {
+    /** The big layers, blended at a fraction of the resolution, then copied onto the screen once. */
+    private boolean drawBigThroughBuffer(Minecraft mc, Matrix4f matrix, int w, int h, boolean anyPair, double[] level) {
+        int lw = Math.max(32, mc.getWindow().getWidth() / DIVISOR);
+        int lh = Math.max(32, mc.getWindow().getHeight() / DIVISOR);
+        if (lowRes == null || lowWidth != lw || lowHeight != lh) {
+            if (lowRes != null) lowRes.destroyBuffers();
+            lowRes = new TextureTarget(lw, lh, false);
+            lowRes.setClearColor(0f, 0f, 0f, 0f);
+            lowRes.setFilterMode(9729); // GL_LINEAR, so the small picture is smoothly enlarged
+            lowWidth = lw;
+            lowHeight = lh;
+        }
+
+        lowRes.clear();
+        lowRes.bindWrite(true);
+        RenderSystem.setShader(CoreShaders.POSITION_TEX_COLOR);
+        RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
+        RenderSystem.enableBlend();
+        RenderSystem.blendFunc(GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ONE);
+        drawBatches(matrix, w, h, false, anyPair, level);
+        mc.getMainRenderTarget().bindWrite(true);
+
+        // the mask has a tile of margin, so it only needs refreshing every other frame
+        if (!coverageValid || (frameNo & 1) == 0) {
+            coverage.compute(frame);
+            coverageValid = true;
+        }
+        RenderSystem.setShader(CoreShaders.POSITION_TEX_COLOR);
+        RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
+        RenderSystem.enableBlend();
+        RenderSystem.blendFunc(GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ONE);
+        RenderSystem.setShaderTexture(0, lowRes.getColorTextureId());
+        BufferBuilder buf = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
+        for (int gy = 0; gy < FlareCoverage.GY; gy++) {
+            int gx = 0;
+            while (gx < FlareCoverage.GX) {
+                if (!coverage.cells[gy * FlareCoverage.GX + gx]) {
+                    gx++;
+                    continue;
+                }
+                int start = gx;
+                while (gx < FlareCoverage.GX && coverage.cells[gy * FlareCoverage.GX + gx]) gx++;
+                float x0 = (float) w * start / FlareCoverage.GX;
+                float x1 = (float) w * gx / FlareCoverage.GX;
+                float y0 = (float) h * gy / FlareCoverage.GY;
+                float y1 = (float) h * (gy + 1) / FlareCoverage.GY;
+                float u0 = (float) start / FlareCoverage.GX;
+                float u1 = (float) gx / FlareCoverage.GX;
+                float vTop = 1f - (float) gy / FlareCoverage.GY;
+                float vBottom = 1f - (float) (gy + 1) / FlareCoverage.GY;
+                buf.addVertex(matrix, x0, y0, 0f).setUv(u0, vTop).setColor(1f, 1f, 1f, 1f);
+                buf.addVertex(matrix, x0, y1, 0f).setUv(u0, vBottom).setColor(1f, 1f, 1f, 1f);
+                buf.addVertex(matrix, x1, y1, 0f).setUv(u1, vBottom).setColor(1f, 1f, 1f, 1f);
+                buf.addVertex(matrix, x1, y0, 0f).setUv(u1, vTop).setColor(1f, 1f, 1f, 1f);
+            }
+        }
+        MeshData mesh = buf.build();
+        if (mesh != null) BufferUploader.drawWithShader(mesh);
+        return true;
+    }
+
+    private void drawBatches(Matrix4f matrix, int w, int h, boolean small, boolean anyPair, double[] level) {
+        drawBatch(matrix, w, h, atlasId, false, small, level);
+        if (anyPair) drawBatch(matrix, w, h, pairsId, true, small, level);
+    }
+
+    private void drawBatch(Matrix4f matrix, int w, int h, ResourceLocation texture, boolean pairBatch, boolean small, double[] level) {
         RenderSystem.setShaderTexture(0, texture);
         BufferBuilder buf = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
         for (int i = 0; i < frame.count; i++) {
             FlareFrame.Draw d = frame.draws[i];
-            if (d.pair != pairBatch) continue;
+            if (d.pair != pairBatch || d.small != small) continue;
             FlareElement e = FlareSet.ELEMENTS[d.element];
             double red = d.red;
             double green = d.green;
@@ -173,14 +274,16 @@ final class FlareRenderer {
             }
             float cx = (float) (d.cx * w);
             float cy = (float) ((1.0 - d.cy) * h);
-            float rx = (float) (d.rx * w);
-            float ry = (float) (d.ry * h);
+            float rx = (float) (d.rx * d.support * w);
+            float ry = (float) (d.ry * d.support * h);
             if (cx + rx < 0 || cx - rx > w || cy + ry < 0 || cy - ry > h) continue;
             FlareAtlas.uvRect(d.element, rect);
-            float u0 = (float) rect[0];
-            float v0 = (float) rect[1];
-            float u1 = (float) rect[2];
-            float v1 = (float) rect[3];
+            double um = (rect[0] + rect[2]) / 2;
+            double vm = (rect[1] + rect[3]) / 2;
+            float u0 = (float) (um - (um - rect[0]) * d.support);
+            float u1 = (float) (um + (rect[2] - um) * d.support);
+            float v0 = (float) (vm - (vm - rect[1]) * d.support);
+            float v1 = (float) (vm + (rect[3] - vm) * d.support);
             float r = Math.min(1f, (float) red);
             float gr = Math.min(1f, (float) green);
             float b = Math.min(1f, (float) blue);

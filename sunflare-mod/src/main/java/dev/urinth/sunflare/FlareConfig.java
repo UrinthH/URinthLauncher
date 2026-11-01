@@ -18,8 +18,8 @@ public final class FlareConfig {
 
     public static final String[] NAMES = {"Off", "Subtle", "Full", "Strong"};
 
-    /** The pack's LENS_POWER for each mode. 0.25 is the pack's own default (Full). */
-    private static final double[] POWER = {0.0, 0.15, 0.25, 0.40};
+    /** The pack's LENS_POWER for each mode: 20%, 35% (the default) and 50% (the pack's maximum). */
+    private static final double[] POWER = {0.0, 0.20, 0.35, 0.50};
 
     private final Path file;
     private int mode = FULL;

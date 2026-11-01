@@ -17,10 +17,16 @@ final class FlareFrame {
         double blue;
         /** Set for crescent pairs: this quad uses a texture baked for this frame. */
         boolean pair;
+        /** 0..1: only this inner fraction of the ellipse is brighter than the output can show. The quad is cut to it. */
+        double support;
+        /** Small, sharp elements are drawn straight to the screen; only the big soft ones go through the small buffer. */
+        boolean small;
     }
 
-    /** Below this brightness an element is not worth drawing. */
-    static final double MIN_AMPLITUDE = 1.0 / 400.0;
+    /** Below about one level of the 8-bit output an element is not worth drawing, and neither is its faint tail. */
+    static final double MIN_AMPLITUDE = 1.2 / 255.0;
+    /** Quads smaller than this share of the screen are drawn at full resolution. */
+    static final double SMALL_AREA = 0.05;
 
     final Draw[] draws = new Draw[FlareSet.COUNT];
     int count;
@@ -57,13 +63,17 @@ final class FlareFrame {
             double amp = amplitude(e, sm) * (e.edgeMaskX ? edgeX : 1.0);
             double top = Math.max(e.red, Math.max(e.green, e.blue)) * amp;
             if (top < MIN_AMPLITUDE) continue;
+            double support = FlareLut.support(e.main, MIN_AMPLITUDE / top);
+            if (support <= 0.0) continue;
             Draw d = draws[count++];
+            d.support = support;
             d.element = i;
             d.pair = e.isPair();
             d.cx = e.mainGeo.centerU(lx);
             d.cy = e.mainGeo.centerV(ly);
             d.rx = e.mainGeo.radiusU(e.main.radius, aspect, flareScale);
             d.ry = e.mainGeo.radiusV(e.main.radius, flareScale);
+            d.small = 4.0 * d.rx * d.ry * support * support < SMALL_AREA;
             d.red = e.red * amp;
             d.green = e.green * amp;
             d.blue = e.blue * amp;

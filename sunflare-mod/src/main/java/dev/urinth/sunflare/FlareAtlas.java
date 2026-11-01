@@ -13,7 +13,9 @@ final class FlareAtlas {
     static final int WIDTH = CELL * COLS;
     static final int HEIGHT = CELL * ROWS;
     static final int PAIR_COLS = 2;
-    static final int PAIR_SIZE = CELL * PAIR_COLS;
+    /** Crescents are smooth, so they are baked small: 4 x 32 x 32 values per frame. */
+    static final int PAIR_CELL = 32;
+    static final int PAIR_SIZE = PAIR_CELL * PAIR_COLS;
 
     private static final int[] SLOT = new int[FlareSet.COUNT];
     private static final int[] PAIR_SLOT = new int[FlareSet.COUNT];
@@ -41,6 +43,14 @@ final class FlareAtlas {
         return SLOT[element];
     }
 
+    /** How many texels across a crescent is baked: the larger ones on screen get more. */
+    static int pairTexels(int element) {
+        String name = FlareSet.ELEMENTS[element].name;
+        if (name.equals("3")) return PAIR_CELL;
+        if (name.equals("3C")) return 24;
+        return 16;
+    }
+
     static int pairSlot(int element) {
         return PAIR_SLOT[element];
     }
@@ -57,10 +67,11 @@ final class FlareAtlas {
         } else {
             int c = PAIR_SLOT[element] % PAIR_COLS;
             int r = PAIR_SLOT[element] / PAIR_COLS;
-            out[0] = c * CELL / (double) PAIR_SIZE;
-            out[1] = r * CELL / (double) PAIR_SIZE;
-            out[2] = (c + 1) * CELL / (double) PAIR_SIZE;
-            out[3] = (r + 1) * CELL / (double) PAIR_SIZE;
+            out[0] = c * PAIR_CELL / (double) PAIR_SIZE;
+            out[1] = r * PAIR_CELL / (double) PAIR_SIZE;
+            int n = pairTexels(element);
+            out[2] = (c * PAIR_CELL + n) / (double) PAIR_SIZE;
+            out[3] = (r * PAIR_CELL + n) / (double) PAIR_SIZE;
         }
     }
 

@@ -146,4 +146,61 @@ class FlareModelTest {
         }
         assertTrue(baked > 0);
     }
+
+    @Test
+    void everyDrawnElementHasASensibleSupport() {
+        FlareFrame f = new FlareFrame();
+        f.compute(0.4, 0.6, ASPECT, 0.35, 1.0, 0.0, 0.0);
+        assertTrue(f.count > 10);
+        for (int i = 0; i < f.count; i++) {
+            double s = f.draws[i].support;
+            assertTrue(s > 0.0 && s <= 1.0, "support " + s);
+        }
+    }
+
+    @Test
+    void smallGlintsAreSplitFromTheBigGlows() {
+        FlareFrame f = new FlareFrame();
+        f.compute(0.4, 0.6, ASPECT, 0.35, 1.0, 0.0, 0.0);
+        int small = 0;
+        int big = 0;
+        for (int i = 0; i < f.count; i++) {
+            FlareFrame.Draw d = f.draws[i];
+            double area = 4.0 * d.rx * d.ry * d.support * d.support;
+            assertEquals(area < FlareFrame.SMALL_AREA, d.small);
+            if (d.small) small++; else big++;
+        }
+        assertTrue(small > 0 && big > 0);
+        // the big soft halo (element 1B) is never drawn directly to the screen
+        for (int i = 0; i < f.count; i++) {
+            if (FlareSet.ELEMENTS[f.draws[i].element].name.equals("1B")) assertTrue(!f.draws[i].small);
+        }
+    }
+
+    @Test
+    void coverageCoversTheSunAndEverySmallElement() {
+        FlareFrame f = new FlareFrame();
+        f.compute(0.8, 0.3, ASPECT, 0.35, 1.0, 0.0, 0.0);
+        FlareCoverage c = new FlareCoverage();
+        int tiles = c.compute(f);
+        assertTrue(tiles > 0 && tiles <= FlareCoverage.GX * FlareCoverage.GY);
+        // the tile holding the sun is on (screen y runs down, v runs up)
+        int gx = (int) (0.8 * FlareCoverage.GX);
+        int gy = (int) ((1.0 - 0.3) * FlareCoverage.GY);
+        assertTrue(c.cells[gy * FlareCoverage.GX + gx]);
+        for (int i = 0; i < f.count; i++) {
+            FlareFrame.Draw d = f.draws[i];
+            if (!d.small || d.cx < 0 || d.cx >= 1 || d.cy < 0 || d.cy >= 1) continue;
+            int tx = (int) (d.cx * FlareCoverage.GX);
+            int ty = (int) ((1.0 - d.cy) * FlareCoverage.GY);
+            assertTrue(c.cells[ty * FlareCoverage.GX + tx], "small element " + FlareSet.ELEMENTS[d.element].name);
+        }
+    }
+
+    @Test
+    void nothingIsCoveredWithoutAFlare() {
+        FlareFrame f = new FlareFrame();
+        f.compute(0.5, 0.5, ASPECT, 0.35, 0.0, 0.0, 0.0);
+        assertEquals(0, new FlareCoverage().compute(f));
+    }
 }

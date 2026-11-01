@@ -28,6 +28,9 @@ final class FlareProfile {
     final double pw;
     final double sinK;
     final boolean smInside;
+    /** Filled by {@link FlareLut}: value at sm = 1 for rp = i / (N - 1), and its largest value. */
+    double[] table;
+    double peakValue;
 
     private FlareProfile(Kind kind, double radius, double fill, double exp, double pw, double sinK, boolean smInside) {
         this.kind = kind;
