@@ -21,12 +21,13 @@ class FlareConfigTest {
         Path dir = Files.createTempDirectory("sunflare-config");
         FlareConfig c = new FlareConfig(dir.resolve("urinth-sunflare.properties"));
         assertEquals(FlareConfig.FULL, c.mode());
-        assertEquals(0.25, c.power(), 1e-12);
+        assertEquals(0.35, c.power(), 1e-12);
         assertEquals(FlareConfig.STRONG, c.cycle());
-        assertEquals(0.40, c.power(), 1e-12);
+        assertEquals(0.50, c.power(), 1e-12);
         assertEquals(FlareConfig.OFF, c.cycle());
         assertEquals(0.0, c.power(), 1e-12);
         assertEquals(FlareConfig.SUBTLE, c.cycle());
+        assertEquals(0.20, c.power(), 1e-12);
         c.save();
         FlareConfig again = new FlareConfig(dir.resolve("urinth-sunflare.properties"));
         again.load();
