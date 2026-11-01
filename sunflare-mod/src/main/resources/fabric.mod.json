@@ -1,0 +1,19 @@
+{
+	"schemaVersion": 1,
+	"id": "urinth_sunflare",
+	"version": "${version}",
+	"name": "URinth Sun Lens Flare",
+	"description": "A lightweight sun lens flare drawn as a single overlay. No shader loader needed. Switch it in Options > Video Settings.",
+	"authors": ["URinth"],
+	"license": "MIT",
+	"environment": "client",
+	"entrypoints": {
+		"client": ["dev.urinth.sunflare.SunFlareMod"]
+	},
+	"depends": {
+		"fabricloader": ">=0.16.0",
+		"minecraft": "~1.21.4",
+		"java": ">=21",
+		"fabric-api": "*"
+	}
+}
