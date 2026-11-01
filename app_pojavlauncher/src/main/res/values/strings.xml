@@ -517,6 +517,8 @@
     <string name="migration_progress_warning_summary">You\'re going to launch a data migration process. This process will copy all selected launcher\'s instances and control maps to the current app installation. All conflicting files will be OVERWRITTEN! Consider making backups. You have been warned.</string>
     <string name="migration_progress_space">Your device does not have enough space for data migration. Free minimum $%1l MB or greater to continue.</string>
     <string name="migration_notice">Looks like you have already used this application in the past. You can import old launcher installation data from miscellaneous settings.</string>
+    <string name="preference_sun_flare_title">Sun lens flare</string>
+    <string name="preference_sun_flare_description">Adds a light sun lens flare to Fabric 1.21.4 games, with no shader loader (no Iris or OptiFine) needed. It puts the small URinth Sun Flare mod in the version\'s mods folder, and removes it when this is turned off. Turn it on or off in the game under Options, Video Settings, \"Sun Flare\". Costs almost no FPS</string>
     <string name="preference_voice_chat_cleanup_title">Voice chat clean-up</string>
     <string name="preference_voice_chat_cleanup_summary">With a voice chat mod and no headset, uses the phone\'s call audio mode with echo and noise cancelling, so the microphone does not pick up the game. Turns itself off when a headset is connected. If voices or your microphone sound too quiet, turn this off (and use headphones to avoid echo)</string>
     <string name="preference_alsoft_opensl_title">Forcefully use OpenSL for audio</string>

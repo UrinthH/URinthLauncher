@@ -14,6 +14,7 @@ import net.kdt.pojavlaunch.JVersionList;
 import net.kdt.pojavlaunch.Tools;
 import net.kdt.pojavlaunch.authenticator.accounts.Account;
 import net.kdt.pojavlaunch.game.StartupTimeline;
+import net.kdt.pojavlaunch.game.SunFlareInstaller;
 import net.kdt.pojavlaunch.game.VoiceChatAudio;
 import net.kdt.pojavlaunch.game.renderer.def.Renderers;
 import net.kdt.pojavlaunch.game.renderer.impl.ApkRenderSpec;
@@ -211,6 +212,17 @@ public class GameRunner {
         }
     }
 
+    /** Puts the sun lens flare mod into the instance, or takes it out, depending on the Settings switch. */
+    private static void prepareSunFlare(AppCompatActivity activity, Instance instance, String versionId) {
+        try {
+            SunFlareInstaller.Result result = SunFlareInstaller.sync(instance.getGameDirectory(), versionId,
+                    LauncherPreferences.PREF_SUN_FLARE_MOD, () -> activity.getAssets().open(SunFlareInstaller.ASSET_PATH));
+            Logger.appendToLog("[SunFlare] " + result);
+        } catch (Throwable t) {
+            Logger.appendToLog("[SunFlare] skipped: " + t);
+        }
+    }
+
     public static void launchGame(final AppCompatActivity activity, Account account,
                                   Instance instance, String versionId, File[] classpath, GameRenderer gameRenderer) throws Throwable {
         int freeDeviceMemory = Tools.getFreeDeviceMemory(activity);
@@ -398,6 +410,7 @@ public class GameRunner {
         final String requestedPlugins = android.text.TextUtils.join(", ", gameRenderer.getCurrentRenderer().pluginPackages());
         gameRenderer.setupEnvironment(activity, isMobileGluesSupportedVersion(versionInfo));
         VoiceChatAudio.detect(instance.getGameDirectory(), LauncherPreferences.PREF_VOICE_CHAT_CLEANUP);
+        prepareSunFlare(activity, instance, versionId);
         JREUtils.setGameEnvironment(activity);
         JREUtils.chdir(instance.getGameDirectory().getAbsolutePath());
 
