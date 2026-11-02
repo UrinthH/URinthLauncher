@@ -32,6 +32,8 @@ public final class FlareConfig {
     private final Path file;
     private int mode = FULL;
     private int beams = BEAMS_DEFAULT;
+    /** The photographic "Real" look (default) or the pack's own colourful flare. */
+    private boolean real = true;
 
     public FlareConfig(Path file) {
         this.file = file;
@@ -63,6 +65,20 @@ public final class FlareConfig {
             if (NAMES[i].equalsIgnoreCase(name.trim())) return i;
         }
         return -1;
+    }
+
+    public boolean realStyle() {
+        return real;
+    }
+
+    public boolean setRealStyle(boolean value) {
+        real = value;
+        return real;
+    }
+
+    public boolean toggleStyle() {
+        real = !real;
+        return real;
     }
 
     public int beams() {
@@ -121,17 +137,19 @@ public final class FlareConfig {
         mode = parseMode(p.getProperty("mode"), mode);
         int b = parseMode(p.getProperty("beams"), beams);
         beams = Math.min(b, BEAM_NAMES.length - 1);
+        real = !"pack".equalsIgnoreCase(p.getProperty("style", "real").trim());
     }
 
     public void save() {
         Properties p = new Properties();
         p.setProperty("mode", Integer.toString(mode));
         p.setProperty("beams", Integer.toString(beams));
+        p.setProperty("style", real ? "real" : "pack");
         try {
             Path parent = file.getParent();
             if (parent != null) Files.createDirectories(parent);
             try (OutputStream out = Files.newOutputStream(file)) {
-                p.store(out, "URinth sun lens flare. mode: 0 = off, 1 = subtle, 2 = full, 3 = strong. beams (light shafts): 0 = off, 1 = low, 2 = medium, 3 = high");
+                p.store(out, "URinth sun lens flare. mode: 0 = off, 1 = subtle, 2 = full, 3 = strong. beams (light shafts): 0 = off, 1 = low, 2 = medium, 3 = high. style: real or pack");
             }
         } catch (IOException ignored) {
             // the toggle still works for this session

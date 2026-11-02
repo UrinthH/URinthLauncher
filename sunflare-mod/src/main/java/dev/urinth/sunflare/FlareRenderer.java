@@ -126,6 +126,7 @@ final class FlareRenderer {
 
         double night = SunMath.nightFactor(dayTime);
         double rain = level.getRainLevel(tracker.getGameTimeDeltaPartialTick(false));
+        frame.real = config.realStyle();
         frame.compute(sun[0], sun[1], aspect, config.power(), mask, night, rain);
         if (frame.count == 0) return;
 
@@ -268,9 +269,9 @@ final class FlareRenderer {
             double blue = d.blue;
             if (pairBatch) {
                 if (level[i] <= 0.0) continue;
-                red = e.red * level[i];
-                green = e.green * level[i];
-                blue = e.blue * level[i];
+                red = d.baseR * level[i];
+                green = d.baseG * level[i];
+                blue = d.baseB * level[i];
             }
             float cx = (float) (d.cx * w);
             float cy = (float) ((1.0 - d.cy) * h);

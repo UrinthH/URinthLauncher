@@ -15,6 +15,10 @@ final class FlareFrame {
         double red;
         double green;
         double blue;
+        /** The element's colour in the active style, before the brightness is applied (crescents are scaled by their baked level). */
+        double baseR;
+        double baseG;
+        double baseB;
         /** Set for crescent pairs: this quad uses a texture baked for this frame. */
         boolean pair;
         /** 0..1: only this inner fraction of the ellipse is brighter than the output can show. The quad is cut to it. */
@@ -28,6 +32,9 @@ final class FlareFrame {
     /** Quads smaller than this share of the screen are drawn at full resolution. */
     static final double SMALL_AREA = 0.05;
 
+    /** True: the photographic style; false: the pack's own colours. Set before {@link #compute}. */
+    boolean real;
+    private final double[] tint = new double[3];
     final Draw[] draws = new Draw[FlareSet.COUNT];
     int count;
     /** The pack's sunmask for this frame. */
@@ -60,8 +67,9 @@ final class FlareFrame {
 
         for (int i = 0; i < FlareSet.COUNT; i++) {
             FlareElement e = FlareSet.ELEMENTS[i];
+            FlareSet.colour(e, real, tint);
             double amp = amplitude(e, sm) * (e.edgeMaskX ? edgeX : 1.0);
-            double top = Math.max(e.red, Math.max(e.green, e.blue)) * amp;
+            double top = Math.max(tint[0], Math.max(tint[1], tint[2])) * amp;
             if (top < MIN_AMPLITUDE) continue;
             double support = FlareLut.support(e.main, MIN_AMPLITUDE / top);
             if (support <= 0.0) continue;
@@ -74,9 +82,12 @@ final class FlareFrame {
             d.rx = e.mainGeo.radiusU(e.main.radius, aspect, flareScale);
             d.ry = e.mainGeo.radiusV(e.main.radius, flareScale);
             d.small = 4.0 * d.rx * d.ry * support * support < SMALL_AREA;
-            d.red = e.red * amp;
-            d.green = e.green * amp;
-            d.blue = e.blue * amp;
+            d.baseR = tint[0];
+            d.baseG = tint[1];
+            d.baseB = tint[2];
+            d.red = tint[0] * amp;
+            d.green = tint[1] * amp;
+            d.blue = tint[2] * amp;
         }
     }
 

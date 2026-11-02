@@ -28,7 +28,7 @@ import org.slf4j.LoggerFactory;
  * <ul>
  *   <li>"Sun Flare: ..." and "Sun Beams: ..." buttons on Sodium's video settings screen,</li>
  *   <li>the same button on the vanilla Video Settings screen,</li>
- *   <li>the chat commands /sunflare [off|subtle|full|strong] and /sunflare beams [off|low|medium|high],</li>
+ *   <li>the chat commands /sunflare [off|subtle|full|strong] /sunflare beams [off|low|medium|high] and /sunflare style [real|pack],</li>
  *   <li>a key binding in Controls (unbound by default).</li>
  * </ul>
  */
@@ -90,7 +90,13 @@ public final class SunFlareMod implements ClientModInitializer {
             config.save();
             x.setMessage(label(SettingsScreens.BEAMS, x.getWidth()));
         }).bounds(b[0], b[1], b[2], b[3]).build();
-        return new Button[] {flare, beams};
+        int[] st = SettingsScreens.bounds(kind, width, SettingsScreens.STYLE);
+        Button style = Button.builder(label(SettingsScreens.STYLE, st[2]), x -> {
+            config.toggleStyle();
+            config.save();
+            x.setMessage(label(SettingsScreens.STYLE, x.getWidth()));
+        }).bounds(st[0], st[1], st[2], st[3]).build();
+        return new Button[] {flare, beams, style};
     }
 
     /** Puts the buttons back on the screen if a rebuild removed them. Safe to call as often as wanted. */
@@ -115,7 +121,8 @@ public final class SunFlareMod implements ClientModInitializer {
     }
 
     private Component label(int slot, int width) {
-        return Component.literal(SettingsScreens.label(slot, slot == SettingsScreens.FLARE ? config.mode() : config.beams(), width));
+        int value = slot == SettingsScreens.FLARE ? config.mode() : slot == SettingsScreens.BEAMS ? config.beams() : (config.realStyle() ? 0 : 1);
+        return Component.literal(SettingsScreens.label(slot, value, width));
     }
 
     // ---- /sunflare ---------------------------------------------------------------------------------------------------
@@ -153,6 +160,21 @@ public final class SunFlareMod implements ClientModInitializer {
                 }));
             }
             root.then(beamsNode);
+            var styleNode = ClientCommandManager.literal("style").executes(ctx -> {
+                config.toggleStyle();
+                config.save();
+                ctx.getSource().sendFeedback(styleStatus());
+                return 1;
+            });
+            for (String name : new String[] {"real", "pack"}) {
+                styleNode.then(ClientCommandManager.literal(name).executes(ctx -> {
+                    config.setRealStyle(name.equals("real"));
+                    config.save();
+                    ctx.getSource().sendFeedback(styleStatus());
+                    return 1;
+                }));
+            }
+            root.then(styleNode);
             dispatcher.register(root);
         });
     }
@@ -169,6 +191,10 @@ public final class SunFlareMod implements ClientModInitializer {
                 if (client.player != null) client.player.displayClientMessage(status(), true);
             }
         });
+    }
+
+    private Component styleStatus() {
+        return Component.literal("Flare Style: " + (config.realStyle() ? "Real" : "Pack"));
     }
 
     private Component beamStatus() {

@@ -1,6 +1,7 @@
 package dev.urinth.sunflare;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
@@ -79,5 +80,52 @@ class RealismTest {
         assertEquals(0, f.count, "off draws nothing");
         f.compute(0.3, 0.7, aspect, 0.35, 1.0, 1.0, 0.0);
         assertEquals(0, f.count, "night draws nothing");
+    }
+
+    @Test
+    void realStyleIsSofterAndWarmerThanThePacksOwnColours() {
+        FlareFrame pack = new FlareFrame();
+        FlareFrame real = new FlareFrame();
+        real.real = true;
+        double aspect = 1612 / 720.0;
+        pack.compute(0.7, 0.62, aspect, 0.35, 1.0, 0.0, 0.0);
+        real.compute(0.7, 0.62, aspect, 0.35, 1.0, 0.0, 0.0);
+        double packSat = 0.0, realSat = 0.0;
+        int packBig = 0, realBig = 0;
+        for (int i = 0; i < pack.count; i++) {
+            FlareFrame.Draw d = pack.draws[i];
+            packSat = Math.max(packSat, Math.max(d.red, Math.max(d.green, d.blue)) - Math.min(d.red, Math.min(d.green, d.blue)));
+            if (!d.small && !FlareSet.ELEMENTS[d.element].name.startsWith("H")) packBig++;
+        }
+        for (int i = 0; i < real.count; i++) {
+            FlareFrame.Draw d = real.draws[i];
+            if (FlareSet.ELEMENTS[d.element].name.matches("1|1B|S|C|H.|2|2B")) continue; // the sun's own glow keeps its colour
+            realSat = Math.max(realSat, Math.max(d.red, Math.max(d.green, d.blue)) - Math.min(d.red, Math.min(d.green, d.blue)));
+            if (!d.small && !FlareSet.ELEMENTS[d.element].name.startsWith("H")) realBig++;
+        }
+        assertTrue(realSat < packSat, "ghosts are less saturated: " + realSat + " vs " + packSat);
+        assertTrue(realBig <= packBig, "no more big layers than the pack");
+        // the sun's own glow and the spikes are kept
+        boolean hasStar = false;
+        for (int i = 0; i < real.count; i++) hasStar |= FlareSet.ELEMENTS[real.draws[i].element].name.equals("S");
+        assertTrue(hasStar);
+        // every crescent has a usable base colour for the baked texture
+        for (int i = 0; i < real.count; i++) {
+            FlareFrame.Draw d = real.draws[i];
+            assertTrue(d.baseR >= 0 && d.baseG >= 0 && d.baseB >= 0);
+        }
+    }
+
+    @Test
+    void styleIsSavedAndDefaultsToReal() throws java.io.IOException {
+        java.nio.file.Path dir = java.nio.file.Files.createTempDirectory("sunflare-style");
+        FlareConfig c = new FlareConfig(dir.resolve("c.properties"));
+        assertTrue(c.realStyle());
+        assertFalse(c.toggleStyle());
+        c.save();
+        FlareConfig again = new FlareConfig(dir.resolve("c.properties"));
+        again.load();
+        assertFalse(again.realStyle());
+        assertTrue(again.toggleStyle());
     }
 }

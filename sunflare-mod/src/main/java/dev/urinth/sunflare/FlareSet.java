@@ -72,9 +72,9 @@ final class FlareSet {
         // Added for realism (not in the pack). Both sit on the sun and keep their size when the sun is near the centre.
         // S: diffraction spikes of a six-bladed aperture, a warm white that fades with distance. Drawn with the big layers,
         // so it costs next to nothing; at 35% lens power its brightest part is about a third of full.
-        plain("S", FlareProfile.linear(0.5, 1.6, 3.6), Geo.sun(0.85, 0.85, false), 1.0, 0.92, 0.78, FlareElement.Shape.STAR),
+        plain("S", FlareProfile.linear(0.5, 1.6, 3.6), Geo.sun(0.85, 0.85, false), 1.0, 0.86, 0.66, FlareElement.Shape.STAR),
         // C: a tight hot core, so the sun itself blooms instead of staying a hard square.
-        plain("C", FlareProfile.linear(0.5, 2.2, 9.0), Geo.sun(4.0, 4.0, false), 1.0, 0.95, 0.85, FlareElement.Shape.ROUND),
+        plain("C", FlareProfile.linear(0.5, 2.2, 9.0), Geo.sun(4.0, 4.0, false), 1.0, 0.90, 0.74, FlareElement.Shape.ROUND),
         // H: a faint rainbow halo around the sun, like the dispersion ring of a real lens. Three rings of slightly different size
         // (red smallest, blue largest) overlap to give the colour fringe. They keep their size when the sun is near the centre.
         plain("HR", FlareProfile.sinPow(8.0, 1.4, 0.20, PI), Geo.sun(1.50, 1.50, false), 1.0, 0.0, 0.0, FlareElement.Shape.ROUND),
@@ -83,4 +83,35 @@ final class FlareSet {
     };
 
     static final int COUNT = ELEMENTS.length;
+
+    /**
+     * The "Real" style: how much of each element is kept. The pack's flare is deliberately colourful; a real lens shows a bright
+     * warm glare, a streak, and soft, faint ghosts. The sun's own glow and the streak stay, the big saturated discs fade.
+     */
+    private static final java.util.Map<String, Double> REAL_GAIN = new java.util.HashMap<>();
+
+    static {
+        String[] names = {"1", "1B", "2", "2B", "3", "3C", "4", "4B", "4C", "4D", "4E", "4F", "5", "5B", "6", "6B", "6C", "7", "7D", "7B",
+            "8", "9", "10", "10C", "11", "12", "13", "S", "C", "HR", "HG", "HB"};
+        double[] gain = {1.6, 1.4, 1.0, 0.8, 0.35, 0.30, 0.9, 0.7, 0.45, 0.4, 0.4, 0.5, 0.2, 0.15, 0.45, 0.45, 0.45, 0.35, 0.35, 0.25,
+            0.2, 0.2, 0.35, 0.35, 0.5, 0.4, 0.4, 1.2, 1.0, 1.3, 1.2, 1.0};
+        for (int i = 0; i < names.length; i++) REAL_GAIN.put(names[i], gain[i]);
+    }
+
+    /** Colour of an element as drawn in the given style (the pack's own, or the more photographic one). */
+    static void colour(FlareElement e, boolean real, double[] out) {
+        if (!real) {
+            out[0] = e.red;
+            out[1] = e.green;
+            out[2] = e.blue;
+            return;
+        }
+        double gain = REAL_GAIN.getOrDefault(e.name, 0.5);
+        double keep = e.name.startsWith("H") || e.name.equals("S") || e.name.equals("C") ? 1.0 : 0.45;
+        double mean = (e.red + e.green + e.blue) / 3.0;
+        // pull the colour towards warm white (sunlight), keeping its brightness
+        out[0] = gain * (keep * e.red + (1 - keep) * mean * 1.12);
+        out[1] = gain * (keep * e.green + (1 - keep) * mean * 0.96);
+        out[2] = gain * (keep * e.blue + (1 - keep) * mean * 0.80);
+    }
 }

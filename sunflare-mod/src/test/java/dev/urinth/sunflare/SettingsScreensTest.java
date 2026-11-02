@@ -59,4 +59,18 @@ class SettingsScreensTest {
         assertEquals("Sun Beams: Medium", SettingsScreens.label(SettingsScreens.BEAMS, FlareConfig.BEAMS_DEFAULT, 112));
         assertEquals("Beams: Off", SettingsScreens.label(SettingsScreens.BEAMS, FlareConfig.BEAMS_OFF, 86));
     }
+
+    @Test
+    void styleButtonSitsUnderTheBeamsButtonAndShowsTheStyle() {
+        for (int width : new int[] {320, 537}) {
+            int[] b = SettingsScreens.bounds(SettingsScreens.Kind.SODIUM, width, SettingsScreens.BEAMS);
+            int[] s = SettingsScreens.bounds(SettingsScreens.Kind.SODIUM, width, SettingsScreens.STYLE);
+            assertTrue(s[1] >= b[1] + b[3]);
+        }
+        int[] vb = SettingsScreens.bounds(SettingsScreens.Kind.VANILLA, 400, SettingsScreens.BEAMS);
+        int[] vs = SettingsScreens.bounds(SettingsScreens.Kind.VANILLA, 400, SettingsScreens.STYLE);
+        assertTrue(vs[1] >= vb[1] + vb[3]);
+        assertEquals("Flare Style: Real", SettingsScreens.label(SettingsScreens.STYLE, 0, 112));
+        assertEquals("Style: Pack", SettingsScreens.label(SettingsScreens.STYLE, 1, 86));
+    }
 }
