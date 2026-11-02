@@ -5,6 +5,16 @@ package dev.urinth.sunflare;
  * A few pieces are a glow minus a second, offset glow (a crescent); that second part is {@link #sub}.
  */
 final class FlareElement {
+    /** The outline of the element's texture. Only the texture changes, so a shape never costs extra pixels. */
+    enum Shape {
+        /** The pack's own round element. */
+        ROUND,
+        /** A six-bladed camera aperture: the glow's distance is measured to a hexagon instead of a circle. */
+        HEX,
+        /** Six soft diffraction spikes (three lines through the centre) fading out with distance. */
+        STAR
+    }
+
     /** Where an ellipse sits and how big it is. */
     static final class Geo {
         final double sx;
@@ -69,9 +79,15 @@ final class FlareElement {
     final double blue;
     /** Elements 8 and 9 only show when the sun is near the left or right screen edge. */
     final boolean edgeMaskX;
+    final Shape shape;
 
     FlareElement(String name, FlareProfile main, Geo mainGeo, FlareProfile sub, Geo subGeo, boolean smOutside,
                  double red, double green, double blue, boolean edgeMaskX) {
+        this(name, main, mainGeo, sub, subGeo, smOutside, red, green, blue, edgeMaskX, Shape.ROUND);
+    }
+
+    FlareElement(String name, FlareProfile main, Geo mainGeo, FlareProfile sub, Geo subGeo, boolean smOutside,
+                 double red, double green, double blue, boolean edgeMaskX, Shape shape) {
         this.name = name;
         this.main = main;
         this.mainGeo = mainGeo;
@@ -82,6 +98,11 @@ final class FlareElement {
         this.green = green;
         this.blue = blue;
         this.edgeMaskX = edgeMaskX;
+        this.shape = shape;
+    }
+
+    FlareElement withShape(Shape s) {
+        return new FlareElement(name, main, mainGeo, sub, subGeo, smOutside, red, green, blue, edgeMaskX, s);
     }
 
     boolean isPair() {

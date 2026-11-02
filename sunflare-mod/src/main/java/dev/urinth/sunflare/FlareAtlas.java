@@ -75,6 +75,36 @@ final class FlareAtlas {
         }
     }
 
+    private static final double HEX_K = Math.sqrt(3.0) / 2.0;
+
+    /** Brightness of one texel (dx, dy in -1..1) for an element's shape. */
+    static double shaped(FlareElement.Shape shape, FlareProfile p, double dx, double dy) {
+        switch (shape) {
+            case HEX: {
+                // Distance measured to a pointy-top hexagon whose six corners touch the unit circle: the corners are at
+                // (0, +-1) and (+-0.866, +-0.5), the flat sides are 0.866 from the centre. d = 1 exactly on its outline.
+                double ax = Math.abs(dx);
+                double ay = Math.abs(dy);
+                return FlareLut.lookup(p, Math.max(ax / HEX_K, ax * 0.5 / HEX_K + ay));
+            }
+            case STAR: {
+                double r = Math.sqrt(dx * dx + dy * dy);
+                double radial = FlareLut.lookup(p, r);
+                if (radial <= 0.0) return 0.0;
+                double width = 0.035 + 0.05 * r;
+                double sum = 0.0;
+                for (int k = 0; k < 3; k++) {
+                    double a = k * Math.PI / 3.0;
+                    double perp = Math.abs(-dx * Math.sin(a) + dy * Math.cos(a));
+                    sum += Math.exp(-(perp * perp) / (width * width));
+                }
+                return radial * Math.min(1.0, sum);
+            }
+            default:
+                return FlareLut.lookup(p, Math.sqrt(dx * dx + dy * dy));
+        }
+    }
+
     /** Grey bytes (WIDTH x HEIGHT, row 0 = top) of every single element's curve, each scaled by its own peak. */
     static byte[] buildSingles() {
         byte[] px = new byte[WIDTH * HEIGHT];
@@ -89,7 +119,7 @@ final class FlareAtlas {
                 for (int x = 0; x < CELL; x++) {
                     double dx = (x + 0.5) / CELL * 2.0 - 1.0;
                     double dy = (y + 0.5) / CELL * 2.0 - 1.0;
-                    double v = FlareLut.lookup(p, Math.sqrt(dx * dx + dy * dy)) / peak;
+                    double v = shaped(FlareSet.ELEMENTS[i].shape, p, dx, dy) / peak;
                     px[(oy + y) * WIDTH + ox + x] = (byte) Math.round(SunMath.clamp(v, 0.0, 1.0) * 255.0);
                 }
             }
