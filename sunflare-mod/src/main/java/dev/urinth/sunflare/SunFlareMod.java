@@ -2,6 +2,7 @@ package dev.urinth.sunflare;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import java.util.Map;
+import java.util.Locale;
 import java.util.WeakHashMap;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
@@ -9,6 +10,7 @@ import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallba
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
+import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
 import net.fabricmc.fabric.api.client.screen.v1.Screens;
 import net.fabricmc.loader.api.FabricLoader;
@@ -24,9 +26,9 @@ import org.slf4j.LoggerFactory;
  * Sun lens flare for Fabric. No shader loader is needed. The mode is kept in config/urinth-sunflare.properties (options.txt is
  * never touched) and can be changed in four ways, so it is always reachable:
  * <ul>
- *   <li>a "Sun Flare: ..." button on Sodium's video settings screen,</li>
+ *   <li>"Sun Flare: ..." and "Sun Beams: ..." buttons on Sodium's video settings screen,</li>
  *   <li>the same button on the vanilla Video Settings screen,</li>
- *   <li>the chat command /sunflare [off|subtle|full|strong],</li>
+ *   <li>the chat commands /sunflare [off|subtle|full|strong] and /sunflare beams [off|low|medium|high],</li>
  *   <li>a key binding in Controls (unbound by default).</li>
  * </ul>
  */
@@ -34,7 +36,7 @@ public final class SunFlareMod implements ClientModInitializer {
     static final Logger LOG = LoggerFactory.getLogger("urinth_sunflare");
 
     private FlareConfig config;
-    private final Map<Screen, Button> buttons = new WeakHashMap<>();
+    private final Map<Screen, Button[]> buttons = new WeakHashMap<>();
 
     @Override
     public void onInitializeClient() {
@@ -42,6 +44,9 @@ public final class SunFlareMod implements ClientModInitializer {
         config.load();
         FlareRenderer renderer = new FlareRenderer(config);
         HudRenderCallback.EVENT.register(renderer::render);
+        BeamRenderer beams = new BeamRenderer(config);
+        WorldRenderEvents.LAST.register(beams::render);
+        ClientTickEvents.END_CLIENT_TICK.register(beams::tick);
 
         registerScreenButton();
         registerCommand();
@@ -49,57 +54,68 @@ public final class SunFlareMod implements ClientModInitializer {
         LOG.info("[SunFlare] ready, mode={}", FlareConfig.NAMES[config.mode()]);
     }
 
-    // ---- the button on the video settings screen -------------------------------------------------------------------------
+    // ---- the buttons on the video settings screen ------------------------------------------------------------------------
 
     private void registerScreenButton() {
         ScreenEvents.AFTER_INIT.register((client, screen, width, height) -> {
             if (SettingsScreens.classify(screen.getClass().getName()) == SettingsScreens.Kind.NONE) return;
             try {
-                // A new screen layout (first open, or a resize): drop the old button and make one for this size.
-                Button old = buttons.remove(screen);
-                if (old != null) Screens.getButtons(screen).remove(old);
-                buttons.put(screen, makeButton(screen, width));
-                ensureButton(screen);
+                // A new screen layout (first open, or a resize): drop the old buttons and make new ones for this size.
+                Button[] old = buttons.remove(screen);
+                if (old != null) for (Button b : old) Screens.getButtons(screen).remove(b);
+                buttons.put(screen, makeButtons(screen, width));
+                ensureButtons(screen);
                 // Sodium wipes and rebuilds every widget each time a tab is picked. This runs right before each draw of
-                // this screen, so the button is put back before the frame that would have been missing it.
-                ScreenEvents.beforeRender(screen).register((s, graphics, mouseX, mouseY, delta) -> ensureButton(s));
+                // this screen, so the buttons are put back before the frame that would have been missing them.
+                ScreenEvents.beforeRender(screen).register((s, graphics, mouseX, mouseY, delta) -> ensureButtons(s));
             } catch (Throwable t) {
-                LOG.warn("[SunFlare] could not add the settings button to {}", screen.getClass().getName(), t);
+                LOG.warn("[SunFlare] could not add the settings buttons to {}", screen.getClass().getName(), t);
             }
         });
         // Backup for the frames the per-screen hook does not cover.
-        ClientTickEvents.END_CLIENT_TICK.register(client -> ensureButton(client.screen));
+        ClientTickEvents.END_CLIENT_TICK.register(client -> ensureButtons(client.screen));
     }
 
-    private Button makeButton(Screen screen, int width) {
+    private Button[] makeButtons(Screen screen, int width) {
         SettingsScreens.Kind kind = SettingsScreens.classify(screen.getClass().getName());
-        int[] r = SettingsScreens.bounds(kind, width);
-        return Button.builder(label(r[2]), b -> {
+        int[] f = SettingsScreens.bounds(kind, width, SettingsScreens.FLARE);
+        int[] b = SettingsScreens.bounds(kind, width, SettingsScreens.BEAMS);
+        Button flare = Button.builder(label(SettingsScreens.FLARE, f[2]), x -> {
             config.cycle();
             config.save();
-            b.setMessage(label(b.getWidth()));
-        }).bounds(r[0], r[1], r[2], r[3]).build();
+            x.setMessage(label(SettingsScreens.FLARE, x.getWidth()));
+        }).bounds(f[0], f[1], f[2], f[3]).build();
+        Button beams = Button.builder(label(SettingsScreens.BEAMS, b[2]), x -> {
+            config.cycleBeams();
+            config.save();
+            x.setMessage(label(SettingsScreens.BEAMS, x.getWidth()));
+        }).bounds(b[0], b[1], b[2], b[3]).build();
+        return new Button[] {flare, beams};
     }
 
-    /** Puts the button back on the screen if a rebuild removed it. Safe to call as often as wanted. */
-    private void ensureButton(Screen screen) {
+    /** Puts the buttons back on the screen if a rebuild removed them. Safe to call as often as wanted. */
+    private void ensureButtons(Screen screen) {
         if (screen == null) return;
-        Button button = buttons.get(screen);
-        if (button == null) return;
-        if (screen.children().contains(button)) return;
-        try {
-            var list = Screens.getButtons(screen);
-            list.remove(button);
-            list.add(button);
-            button.setMessage(label(button.getWidth()));
-        } catch (Throwable t) {
-            buttons.remove(screen);
-            LOG.warn("[SunFlare] could not restore the settings button", t);
+        Button[] pair = buttons.get(screen);
+        if (pair == null) return;
+        for (int slot = 0; slot < pair.length; slot++) {
+            Button button = pair[slot];
+            if (screen.children().contains(button)) continue;
+            try {
+                var list = Screens.getButtons(screen);
+                list.remove(button);
+                list.add(button);
+                button.setMessage(label(slot, button.getWidth()));
+            } catch (Throwable t) {
+                buttons.remove(screen);
+                LOG.warn("[SunFlare] could not restore the settings buttons", t);
+                return;
+            }
         }
     }
 
-    private Component label(int width) {
-        return Component.literal(SettingsScreens.label(config.mode(), width));
+    private Component label(int slot, int width) {
+        return Component.literal(SettingsScreens.label(slot, slot == SettingsScreens.FLARE ? config.mode() : config.beams(), width));
     }
 
     // ---- /sunflare ---------------------------------------------------------------------------------------------------
@@ -114,13 +130,29 @@ public final class SunFlareMod implements ClientModInitializer {
             });
             for (int i = 0; i < FlareConfig.NAMES.length; i++) {
                 final int mode = i;
-                root.then(ClientCommandManager.literal(FlareConfig.NAMES[i].toLowerCase(java.util.Locale.ROOT)).executes(ctx -> {
+                root.then(ClientCommandManager.literal(FlareConfig.NAMES[i].toLowerCase(Locale.ROOT)).executes(ctx -> {
                     config.setMode(mode);
                     config.save();
                     ctx.getSource().sendFeedback(status());
                     return 1;
                 }));
             }
+            var beamsNode = ClientCommandManager.literal("beams").executes(ctx -> {
+                config.cycleBeams();
+                config.save();
+                ctx.getSource().sendFeedback(beamStatus());
+                return 1;
+            });
+            for (int i = 0; i < FlareConfig.BEAM_NAMES.length; i++) {
+                final int level = i;
+                beamsNode.then(ClientCommandManager.literal(FlareConfig.BEAM_NAMES[i].toLowerCase(Locale.ROOT)).executes(ctx -> {
+                    config.setBeams(level);
+                    config.save();
+                    ctx.getSource().sendFeedback(beamStatus());
+                    return 1;
+                }));
+            }
+            root.then(beamsNode);
             dispatcher.register(root);
         });
     }
@@ -137,6 +169,10 @@ public final class SunFlareMod implements ClientModInitializer {
                 if (client.player != null) client.player.displayClientMessage(status(), true);
             }
         });
+    }
+
+    private Component beamStatus() {
+        return Component.literal("Sun Beams: " + FlareConfig.BEAM_NAMES[config.beams()]);
     }
 
     private Component status() {

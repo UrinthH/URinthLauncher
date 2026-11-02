@@ -21,8 +21,17 @@ public final class FlareConfig {
     /** The pack's LENS_POWER for each mode: 20%, 35% (the default) and 50% (the pack's maximum). */
     private static final double[] POWER = {0.0, 0.20, 0.35, 0.50};
 
+    /** Sun beams (light shafts through leaves). Each level has a peak brightness, a screen-area budget and a ray budget. */
+    public static final int BEAMS_OFF = 0;
+    public static final int BEAMS_DEFAULT = 2;
+    public static final String[] BEAM_NAMES = {"Off", "Low", "Medium", "High"};
+    private static final double[] BEAM_STRENGTH = {0.0, 0.18, 0.30, 0.42};
+    private static final double[] BEAM_AREA = {0.0, 0.20, 0.40, 0.65};
+    private static final int[] BEAM_RAYS = {0, 20, 28, 40};
+
     private final Path file;
     private int mode = FULL;
+    private int beams = BEAMS_DEFAULT;
 
     public FlareConfig(Path file) {
         this.file = file;
@@ -56,6 +65,41 @@ public final class FlareConfig {
         return -1;
     }
 
+    public int beams() {
+        return beams;
+    }
+
+    public double beamStrength() {
+        return BEAM_STRENGTH[beams];
+    }
+
+    public double beamArea() {
+        return BEAM_AREA[beams];
+    }
+
+    public int beamRays() {
+        return BEAM_RAYS[beams];
+    }
+
+    public int cycleBeams() {
+        beams = (beams + 1) % BEAM_NAMES.length;
+        return beams;
+    }
+
+    public int setBeams(int value) {
+        if (value >= 0 && value < BEAM_NAMES.length) beams = value;
+        return beams;
+    }
+
+    /** "off", "low", "medium" or "high" (any case) to a beams level, or -1. */
+    public static int beamsFromName(String name) {
+        if (name == null) return -1;
+        for (int i = 0; i < BEAM_NAMES.length; i++) {
+            if (BEAM_NAMES[i].equalsIgnoreCase(name.trim())) return i;
+        }
+        return -1;
+    }
+
     public static int parseMode(String raw, int fallback) {
         if (raw == null) return fallback;
         try {
@@ -75,16 +119,19 @@ public final class FlareConfig {
             return;
         }
         mode = parseMode(p.getProperty("mode"), mode);
+        int b = parseMode(p.getProperty("beams"), beams);
+        beams = Math.min(b, BEAM_NAMES.length - 1);
     }
 
     public void save() {
         Properties p = new Properties();
         p.setProperty("mode", Integer.toString(mode));
+        p.setProperty("beams", Integer.toString(beams));
         try {
             Path parent = file.getParent();
             if (parent != null) Files.createDirectories(parent);
             try (OutputStream out = Files.newOutputStream(file)) {
-                p.store(out, "URinth sun lens flare. mode: 0 = off, 1 = subtle, 2 = full, 3 = strong");
+                p.store(out, "URinth sun lens flare. mode: 0 = off, 1 = subtle, 2 = full, 3 = strong. beams (light shafts): 0 = off, 1 = low, 2 = medium, 3 = high");
             }
         } catch (IOException ignored) {
             // the toggle still works for this session

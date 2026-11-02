@@ -27,20 +27,26 @@ final class SettingsScreens {
         return n.contains("option") || n.contains("video") || n.contains("setting") ? Kind.SODIUM : Kind.NONE;
     }
 
-    /** {x, y, w, h} of the button. */
-    static int[] bounds(Kind kind, int screenWidth) {
-        boolean wide = screenWidth >= 320;
-        int w = wide ? 118 : 90;
+    /** Slot 0 is the lens flare button, slot 1 the sun beams button. */
+    static final int FLARE = 0;
+    static final int BEAMS = 1;
+
+    /** {x, y, w, h} of a button. */
+    static int[] bounds(Kind kind, int screenWidth, int slot) {
         if (kind == Kind.SODIUM) {
             // Sodium: tabs on the top row, the donate button at (width - 128, 6), options in a 240px column on the left and its
             // Undo/Apply/Done row along the bottom. The right-hand column just under the donate row is free.
-            w = screenWidth >= 380 ? 112 : 86;
-            return new int[] {screenWidth - w - 6, 30, w, 20};
+            int w = screenWidth >= 380 ? 112 : 86;
+            return new int[] {screenWidth - w - 6, 30 + 22 * slot, w, 20};
         }
-        return new int[] {screenWidth - w - 4, 6, w, 20};
+        // Vanilla: the flare button top right, the beams button top left, both in the header row
+        int w = screenWidth >= 320 ? 118 : 90;
+        return slot == FLARE ? new int[] {screenWidth - w - 4, 6, w, 20} : new int[] {4, 6, w, 20};
     }
 
-    static String label(int mode, int width) {
-        return (width < 100 ? "Flare: " : "Sun Flare: ") + FlareConfig.NAMES[mode];
+    static String label(int slot, int mode, int width) {
+        boolean narrow = width < 100;
+        if (slot == FLARE) return (narrow ? "Flare: " : "Sun Flare: ") + FlareConfig.NAMES[mode];
+        return (narrow ? "Beams: " : "Sun Beams: ") + FlareConfig.BEAM_NAMES[mode];
     }
 }
