@@ -1,0 +1,35 @@
+name: MC API dump
+on:
+  push:
+    branches: [claude/mc-api-dump]
+jobs:
+  dump:
+    runs-on: ubuntu-22.04
+    defaults:
+      run:
+        working-directory: sunflare-mod
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Decompile Minecraft
+        run: ./gradlew genSources --no-daemon
+      - name: Collect
+        run: |
+          set -x
+          SRC=$(find / -name "*minecraft*sources.jar" 2>/dev/null | head -1)
+          echo "sources: $SRC"
+          mkdir -p /tmp/dump/src /tmp/dump/assets
+          cd /tmp/dump/src && unzip -q "$SRC" 'net/minecraft/client/renderer/*' 'com/mojang/blaze3d/*' 'net/minecraft/client/Minecraft.java' 'net/minecraft/client/Camera.java' 'net/minecraft/server/packs/resources/*' || true
+          JAR=$(find / -name "*minecraft*merged*.jar" -not -name "*sources*" 2>/dev/null | head -1)
+          echo "jar: $JAR"
+          cd /tmp/dump/assets && unzip -q "$JAR" 'assets/minecraft/shaders/*' 'assets/minecraft/post_effect/*' || true
+          cd /tmp && tar czf mc-api.tgz dump
+          ls -la /tmp/mc-api.tgz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mc-api
+          path: /tmp/mc-api.tgz
