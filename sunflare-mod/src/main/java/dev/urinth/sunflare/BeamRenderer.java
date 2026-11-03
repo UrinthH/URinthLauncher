@@ -1,6 +1,7 @@
 package dev.urinth.sunflare;
 
 import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.BufferUploader;
@@ -13,6 +14,9 @@ import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.CoreShaders;
+import net.minecraft.core.Direction;
+import net.minecraft.client.renderer.texture.DynamicTexture;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
@@ -36,6 +40,10 @@ final class BeamRenderer {
     private final FlareConfig config;
     private final BeamField field = new BeamField();
     private final BeamGeometry geometry = new BeamGeometry();
+    private final BeamDust dust = new BeamDust();
+    private DynamicTexture atlas;
+    private ResourceLocation atlasId;
+    private double clock;
     private final BeamGeometry.Params params = new BeamGeometry.Params();
     private final double[] dir = new double[3];
     private final double[] sunScreen = new double[2];
@@ -47,19 +55,35 @@ final class BeamRenderer {
 
     private ClientLevel castLevel;
     private Entity castEntity;
-    private final BeamField.Occluder occluder = (sx, sy, sz, dx, dy, dz, maxLen) -> {
-        Vec3 from = new Vec3(sx, sy, sz);
-        Vec3 to = new Vec3(sx + dx * maxLen, sy + dy * maxLen, sz + dz * maxLen);
-        BlockHitResult hit = castLevel.clip(new ClipContext(from, to, ClipContext.Block.VISUAL, ClipContext.Fluid.NONE, castEntity));
-        return hit.getType() == HitResult.Type.MISS ? -1.0 : hit.getLocation().distanceTo(from);
+    private boolean lastUp;
+    private final BeamField.Occluder occluder = new BeamField.Occluder() {
+        @Override
+        public double firstHit(double sx, double sy, double sz, double dx, double dy, double dz, double maxLen) {
+            Vec3 from = new Vec3(sx, sy, sz);
+            Vec3 to = new Vec3(sx + dx * maxLen, sy + dy * maxLen, sz + dz * maxLen);
+            BlockHitResult hit = castLevel.clip(new ClipContext(from, to, ClipContext.Block.VISUAL, ClipContext.Fluid.NONE, castEntity));
+            if (hit.getType() == HitResult.Type.MISS) {
+                lastUp = false;
+                return -1.0;
+            }
+            lastUp = hit.getDirection() == Direction.UP;
+            return hit.getLocation().distanceTo(from);
+        }
+
+        @Override
+        public boolean lastHitUp() {
+            return lastUp;
+        }
     };
 
     /** 0..1 daylight/weather factor for the sun beams (0 at night, in rain, below the horizon). */
     private double target;
     private double presence;
-    private double warmth;
+    private double sunHeight;
     private int raysPerTick;
     private int tickNo;
+    private final double[] tint = new double[3];
+    private double rangeBlocks = 160.0;
     private long lastFrameNanos;
     private boolean failed;
     private boolean checked;
@@ -88,13 +112,17 @@ final class BeamRenderer {
             double night = SunMath.nightFactor(dayTime);
             double rain = SunMath.clamp(level.getRainLevel(1.0f), 0.0, 1.0);
             target = (1.0 - night) * (1.0 - rain) * SunMath.smoothstep(-0.02, 0.12, dir[1]);
-            warmth = 1.0 - SunMath.clamp(dir[1], 0.0, 1.0);
+            sunHeight = SunMath.clamp(dir[1], 0.0, 1.0);
             if (target <= 0.001) return;
 
             Vec3 eye = mc.player.getEyePosition();
             castLevel = level;
             castEntity = mc.player;
             field.setSun(dir);
+            // Beams reach as far as the beam setting says (up to 10 chunks), NOT as far as the render distance: with render
+            // distance 4 the far shafts are still there. Where the client has no chunks the rays find nothing and open-air
+            // dust shafts stand in for the missing terrain.
+            rangeBlocks = config.beamRangeChunks() * 16.0;
             if (raysPerTick <= 0 || raysPerTick > config.beamRays()) raysPerTick = config.beamRays();
             long t0 = System.nanoTime();
             field.step(occluder, eye.x, eye.y, eye.z, raysPerTick);
@@ -102,7 +130,7 @@ final class BeamRenderer {
             // keep the ray work between about 0.6 and 1.5 ms per tick, whatever the phone does
             if (ms > MAX_TICK_MILLIS && raysPerTick > 8) raysPerTick = Math.max(8, raysPerTick - 4);
             else if (ms < MIN_TICK_MILLIS && raysPerTick < config.beamRays()) raysPerTick++;
-            if ((++tickNo % 3) == 0) field.extract(eye.x, eye.y, eye.z);
+            if ((tickNo++ % 3) == 0 || field.count() == 0) field.extract(eye.x, eye.y, eye.z);
             wasActive = true;
         } catch (Throwable t) {
             failed = true;
@@ -144,19 +172,28 @@ final class BeamRenderer {
 
         params.screenW = mc.getWindow().getWidth();
         params.screenH = mc.getWindow().getHeight();
-        params.strength = config.beamStrength() * presence;
+        params.strength = config.beamStrength() * presence * SunTint.boost(sunHeight);
         params.areaFraction = config.beamArea();
-        // low sun: warm and orange; high sun: nearly white
-        params.red = 1.0;
-        params.green = 0.95 - 0.16 * warmth;
-        params.blue = 0.86 - 0.34 * warmth;
+        // the same colour as the sun and the lens flare: golden, deep orange at sunrise and sunset
+        SunTint.colour(sunHeight, tint);
+        params.red = tint[0];
+        params.green = tint[1];
+        params.blue = tint[2];
+        params.hazeScale = 0.45 + 0.55 * SunTint.warmth(sunHeight);
         params.sun[0] = dir[0];
         params.sun[1] = dir[1];
         params.sun[2] = dir[2];
-        int n = geometry.build(field, cam.x, cam.y, cam.z, view, proj, transform, params);
+        params.range = rangeBlocks;
+        params.dt = dt;
+        clock += dt;
+        params.time = clock;
+        dust.update(dt, cam.x, cam.y, cam.z, field, clock);
+        int n = geometry.build(field, dust, cam.x, cam.y, cam.z, view, proj, transform, params);
         if (n == 0) return;
 
-        RenderSystem.setShader(CoreShaders.POSITION_COLOR);
+        ensureTexture(mc);
+        RenderSystem.setShader(CoreShaders.POSITION_TEX_COLOR);
+        RenderSystem.setShaderTexture(0, atlasId);
         RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
         RenderSystem.enableBlend();
         RenderSystem.blendFunc(GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ONE);
@@ -164,11 +201,11 @@ final class BeamRenderer {
         RenderSystem.depthFunc(515); // GL_LEQUAL
         RenderSystem.depthMask(false);
         RenderSystem.disableCull();
-        BufferBuilder buf = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
+        BufferBuilder buf = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
         float[] v = geometry.vertices;
         for (int i = 0; i < n; i++) {
             int o = i * BeamGeometry.FLOATS_PER_VERTEX;
-            buf.addVertex(v[o], v[o + 1], v[o + 2]).setColor(v[o + 3], v[o + 4], v[o + 5], 1f);
+            buf.addVertex(v[o], v[o + 1], v[o + 2]).setUv(v[o + 3], v[o + 4]).setColor(v[o + 5], v[o + 6], v[o + 7], 1f);
         }
         MeshData mesh = buf.build();
         if (mesh != null) BufferUploader.drawWithShader(mesh);
@@ -176,6 +213,23 @@ final class BeamRenderer {
         RenderSystem.enableCull();
         RenderSystem.defaultBlendFunc();
         RenderSystem.disableBlend();
+    }
+
+    /** The soft shapes (grey, alpha always 255 so the GUI shader never throws pixels away; brightness is in the vertex colour). */
+    private void ensureTexture(Minecraft mc) {
+        if (atlas != null) return;
+        byte[] px = BeamAtlas.build();
+        NativeImage image = new NativeImage(NativeImage.Format.RGBA, BeamAtlas.WIDTH, BeamAtlas.HEIGHT, false);
+        for (int y = 0; y < BeamAtlas.HEIGHT; y++) {
+            for (int x = 0; x < BeamAtlas.WIDTH; x++) {
+                int g = px[y * BeamAtlas.WIDTH + x] & 0xFF;
+                image.setPixel(x, y, 0xFF000000 | (g << 16) | (g << 8) | g);
+            }
+        }
+        atlas = new DynamicTexture(image);
+        atlas.setFilter(true, false);
+        atlasId = ResourceLocation.fromNamespaceAndPath("urinth_sunflare", "beams");
+        mc.getTextureManager().register(atlasId, atlas);
     }
 
     /**

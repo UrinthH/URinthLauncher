@@ -120,14 +120,19 @@ final class FlareRenderer {
         if (w <= 0 || h <= 0) return;
         double aspect = (double) w / h;
         double fov = mc.options.fov().get();
-        if (!SunMath.project(dir, camera.getYRot(), camera.getXRot(), fov, aspect, sun)) return;
-        double mask = vis * SunMath.edgeFade(sun[0], sun[1]);
-        if (mask <= 0.0) return;
+        boolean real = config.realStyle();
+        double forward = SunMath.projectWide(dir, camera.getYRot(), camera.getXRot(), fov, aspect, sun);
+        boolean ahead = forward >= 0.05;
+        double edge = ahead ? SunMath.edgeFade(sun[0], sun[1]) : 0.0;
+        double reach = ahead ? SunMath.glowReach(sun[0], sun[1]) : 0.0;
+        if (!real && edge * vis <= 0.0) return; // the pack's flare needs the sun on the screen
+        // The Real style does not need the sun in view: its glow carries on just past the screen edge and a faint warm veil
+        // takes over when a low sun is out of view (even behind the player). Only the reflections need the sun on screen.
 
         double night = SunMath.nightFactor(dayTime);
         double rain = level.getRainLevel(tracker.getGameTimeDeltaPartialTick(false));
-        frame.real = config.realStyle();
-        frame.compute(sun[0], sun[1], aspect, config.power(), mask, night, rain);
+        frame.real = real;
+        frame.compute(sun[0], sun[1], aspect, config.power(), vis, edge, reach, night, rain, dir[1]);
         if (frame.count == 0) return;
 
         ensureTextures(mc);

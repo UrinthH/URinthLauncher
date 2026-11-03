@@ -55,4 +55,34 @@ class SunMathTest {
         double near = SunMath.edgeFade(0.05, 0.5);
         assertTrue(near > 0.0 && near < 1.0);
     }
+
+    @Test
+    void wideProjectionWorksOffScreenAndSaysWhenTheSunIsBehind() {
+        double[] a = new double[2];
+        double[] d = {0.0, 0.0, 1.0};
+        // looking straight at it: centre of the screen
+        assertTrue(SunMath.projectWide(d, 0, 0, 70, 16.0 / 9, a) > 0.99);
+        assertEquals(0.5, a[0], 1e-9);
+        assertEquals(0.5, a[1], 1e-9);
+        // 60 degrees to the side: well outside the screen, but still given
+        double fwd = SunMath.projectWide(d, 60, 0, 70, 16.0 / 9, a);
+        assertTrue(fwd > 0.05 && (a[0] < 0 || a[0] > 1));
+        assertTrue(SunMath.glowReach(a[0], a[1]) < 1.0);
+        // behind: negative, no position
+        assertTrue(SunMath.projectWide(d, 180, 0, 70, 16.0 / 9, a) < 0.05);
+        assertEquals(0.0, SunMath.glowReach(5.0, 0.5), 1e-12);
+    }
+
+    @Test
+    void glowReachIsOneOnScreenAndFadesSmoothlyOutside() {
+        assertEquals(1.0, SunMath.glowReach(0.3, 0.8), 1e-12);
+        assertEquals(1.0, SunMath.glowReach(0.0, 1.0), 1e-12);
+        double last = 1.0;
+        for (double u = 1.0; u < 1.8; u += 0.05) {
+            double r = SunMath.glowReach(u, 0.5);
+            assertTrue(r <= last + 1e-12);
+            last = r;
+        }
+        assertEquals(0.0, SunMath.glowReach(1.8, 0.5), 1e-12);
+    }
 }

@@ -9,7 +9,7 @@ final class FlareAtlas {
 
     static final int CELL = 64;
     static final int COLS = 8;
-    static final int ROWS = 4;
+    static final int ROWS = 5;
     static final int WIDTH = CELL * COLS;
     static final int HEIGHT = CELL * ROWS;
     static final int PAIR_COLS = 2;
@@ -86,19 +86,6 @@ final class FlareAtlas {
                 double ax = Math.abs(dx);
                 double ay = Math.abs(dy);
                 return FlareLut.lookup(p, Math.max(ax / HEX_K, ax * 0.5 / HEX_K + ay));
-            }
-            case STAR: {
-                double r = Math.sqrt(dx * dx + dy * dy);
-                double radial = FlareLut.lookup(p, r);
-                if (radial <= 0.0) return 0.0;
-                double width = 0.035 + 0.05 * r;
-                double sum = 0.0;
-                for (int k = 0; k < 3; k++) {
-                    double a = k * Math.PI / 3.0;
-                    double perp = Math.abs(-dx * Math.sin(a) + dy * Math.cos(a));
-                    sum += Math.exp(-(perp * perp) / (width * width));
-                }
-                return radial * Math.min(1.0, sum);
             }
             default:
                 return FlareLut.lookup(p, Math.sqrt(dx * dx + dy * dy));

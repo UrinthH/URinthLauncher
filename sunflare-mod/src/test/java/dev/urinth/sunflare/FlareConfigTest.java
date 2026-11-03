@@ -45,4 +45,18 @@ class FlareConfigTest {
         assertEquals(FlareConfig.SUBTLE, c.setMode(9));
         assertEquals(FlareConfig.SUBTLE, c.mode());
     }
+
+    @Test
+    void beamRangeDefaultsToTenChunksIsClampedAndSaved() throws java.io.IOException {
+        java.nio.file.Path dir = java.nio.file.Files.createTempDirectory("sunflare-range");
+        FlareConfig c = new FlareConfig(dir.resolve("c.properties"));
+        assertEquals(10, c.beamRangeChunks());
+        assertEquals(10, c.setBeamRange(99));
+        assertEquals(2, c.setBeamRange(-5));
+        c.setBeamRange(6);
+        c.save();
+        FlareConfig again = new FlareConfig(dir.resolve("c.properties"));
+        again.load();
+        assertEquals(6, again.beamRangeChunks());
+    }
 }

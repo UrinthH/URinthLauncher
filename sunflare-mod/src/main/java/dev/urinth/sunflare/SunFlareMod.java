@@ -159,6 +159,14 @@ public final class SunFlareMod implements ClientModInitializer {
                     return 1;
                 }));
             }
+            beamsNode.then(ClientCommandManager.literal("range").then(
+                ClientCommandManager.argument("chunks", com.mojang.brigadier.arguments.IntegerArgumentType.integer(2, FlareConfig.BEAM_RANGE_MAX))
+                    .executes(ctx -> {
+                        config.setBeamRange(com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(ctx, "chunks"));
+                        config.save();
+                        ctx.getSource().sendFeedback(Component.literal("Sun Beams range: " + config.beamRangeChunks() + " chunks"));
+                        return 1;
+                    })));
             root.then(beamsNode);
             var styleNode = ClientCommandManager.literal("style").executes(ctx -> {
                 config.toggleStyle();

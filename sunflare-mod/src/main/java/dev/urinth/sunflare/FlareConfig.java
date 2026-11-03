@@ -25,13 +25,16 @@ public final class FlareConfig {
     public static final int BEAMS_OFF = 0;
     public static final int BEAMS_DEFAULT = 2;
     public static final String[] BEAM_NAMES = {"Off", "Low", "Medium", "High"};
-    private static final double[] BEAM_STRENGTH = {0.0, 0.18, 0.30, 0.42};
-    private static final double[] BEAM_AREA = {0.0, 0.20, 0.40, 0.65};
-    private static final int[] BEAM_RAYS = {0, 20, 28, 40};
+    private static final double[] BEAM_STRENGTH = {0.0, 0.26, 0.42, 0.60};
+    private static final double[] BEAM_AREA = {0.0, 0.25, 0.45, 0.70};
+    private static final int[] BEAM_RAYS = {0, 28, 40, 56};
 
     private final Path file;
     private int mode = FULL;
     private int beams = BEAMS_DEFAULT;
+    /** How far beams reach, in chunks (2..10). Capped by what the client has loaded. */
+    public static final int BEAM_RANGE_MAX = 10;
+    private int beamRange = BEAM_RANGE_MAX;
     /** The photographic "Real" look (default) or the pack's own colourful flare. */
     private boolean real = true;
 
@@ -97,6 +100,15 @@ public final class FlareConfig {
         return BEAM_RAYS[beams];
     }
 
+    public int beamRangeChunks() {
+        return beamRange;
+    }
+
+    public int setBeamRange(int chunks) {
+        beamRange = Math.max(2, Math.min(BEAM_RANGE_MAX, chunks));
+        return beamRange;
+    }
+
     public int cycleBeams() {
         beams = (beams + 1) % BEAM_NAMES.length;
         return beams;
@@ -114,6 +126,15 @@ public final class FlareConfig {
             if (BEAM_NAMES[i].equalsIgnoreCase(name.trim())) return i;
         }
         return -1;
+    }
+
+    private static int parseInt(String raw, int fallback) {
+        if (raw == null) return fallback;
+        try {
+            return Integer.parseInt(raw.trim());
+        } catch (NumberFormatException e) {
+            return fallback;
+        }
     }
 
     public static int parseMode(String raw, int fallback) {
@@ -137,6 +158,7 @@ public final class FlareConfig {
         mode = parseMode(p.getProperty("mode"), mode);
         int b = parseMode(p.getProperty("beams"), beams);
         beams = Math.min(b, BEAM_NAMES.length - 1);
+        beamRange = Math.max(2, Math.min(BEAM_RANGE_MAX, parseInt(p.getProperty("beamRange"), BEAM_RANGE_MAX)));
         real = !"pack".equalsIgnoreCase(p.getProperty("style", "real").trim());
     }
 
@@ -145,6 +167,7 @@ public final class FlareConfig {
         p.setProperty("mode", Integer.toString(mode));
         p.setProperty("beams", Integer.toString(beams));
         p.setProperty("style", real ? "real" : "pack");
+        p.setProperty("beamRange", Integer.toString(beamRange));
         try {
             Path parent = file.getParent();
             if (parent != null) Files.createDirectories(parent);

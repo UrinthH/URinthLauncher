@@ -10,9 +10,18 @@ final class FlareElement {
         /** The pack's own round element. */
         ROUND,
         /** A six-bladed camera aperture: the glow's distance is measured to a hexagon instead of a circle. */
-        HEX,
-        /** Six soft diffraction spikes (three lines through the centre) fading out with distance. */
-        STAR
+        HEX
+    }
+
+    /** Which part of the picture an element belongs to. PACK elements are the shader pack's; the others make up the Real style. */
+    enum Role {
+        PACK,
+        /** A soft glow around the sun. It keeps going when the sun is just off the screen. */
+        GLOW,
+        /** A faint round reflection on the line through the sun and the screen centre. */
+        GHOST,
+        /** A very faint warm wash over the whole screen, for when the low sun is out of view. */
+        VEIL
     }
 
     /** Where an ellipse sits and how big it is. */
@@ -80,6 +89,9 @@ final class FlareElement {
     /** Elements 8 and 9 only show when the sun is near the left or right screen edge. */
     final boolean edgeMaskX;
     final Shape shape;
+    final Role role;
+    /** 0..1: how far the colour is pulled to the colour of the sun (see {@link SunTint}). Real style only. */
+    final double tintAmount;
 
     FlareElement(String name, FlareProfile main, Geo mainGeo, FlareProfile sub, Geo subGeo, boolean smOutside,
                  double red, double green, double blue, boolean edgeMaskX) {
@@ -88,6 +100,11 @@ final class FlareElement {
 
     FlareElement(String name, FlareProfile main, Geo mainGeo, FlareProfile sub, Geo subGeo, boolean smOutside,
                  double red, double green, double blue, boolean edgeMaskX, Shape shape) {
+        this(name, main, mainGeo, sub, subGeo, smOutside, red, green, blue, edgeMaskX, shape, Role.PACK, 0.0);
+    }
+
+    FlareElement(String name, FlareProfile main, Geo mainGeo, FlareProfile sub, Geo subGeo, boolean smOutside,
+                 double red, double green, double blue, boolean edgeMaskX, Shape shape, Role role, double tintAmount) {
         this.name = name;
         this.main = main;
         this.mainGeo = mainGeo;
@@ -99,10 +116,12 @@ final class FlareElement {
         this.blue = blue;
         this.edgeMaskX = edgeMaskX;
         this.shape = shape;
+        this.role = role;
+        this.tintAmount = tintAmount;
     }
 
     FlareElement withShape(Shape s) {
-        return new FlareElement(name, main, mainGeo, sub, subGeo, smOutside, red, green, blue, edgeMaskX, s);
+        return new FlareElement(name, main, mainGeo, sub, subGeo, smOutside, red, green, blue, edgeMaskX, s, role, tintAmount);
     }
 
     boolean isPair() {

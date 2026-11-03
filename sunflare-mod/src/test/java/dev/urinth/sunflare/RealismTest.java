@@ -6,8 +6,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
-/** The extras that go beyond the pack: aperture-shaped ghosts, diffraction spikes, a hot core and the rainbow halo. */
+/** The Real style: a camera-like sun made of glows and faint round reflections, tinted by the colour of the sun. */
 class RealismTest {
+    private static final double ASPECT = 1612 / 720.0;
+
     private static int index(String name) {
         for (int i = 0; i < FlareSet.COUNT; i++) if (FlareSet.ELEMENTS[i].name.equals(name)) return i;
         throw new AssertionError("no element " + name);
@@ -20,100 +22,161 @@ class RealismTest {
         return atlas[y * FlareAtlas.WIDTH + x] & 0xFF;
     }
 
-    @Test
-    void everyExtraIsInTheSetAndFitsTheAtlas() {
-        for (String n : new String[] {"S", "C", "HR", "HG", "HB"}) assertTrue(index(n) >= 0);
-        assertEquals(FlareSet.COUNT, FlareAtlas.SINGLE_COUNT + FlareAtlas.PAIR_COUNT);
-        assertTrue(FlareAtlas.SINGLE_COUNT <= FlareAtlas.COLS * FlareAtlas.ROWS);
+    private static boolean has(FlareFrame f, String name) {
+        for (int i = 0; i < f.count; i++) if (FlareSet.ELEMENTS[f.draws[i].element].name.equals(name)) return true;
+        return false;
+    }
+
+    private static FlareFrame real(double lx, double ly, double power, double vis, double edge, double reach, double night, double rain, double height) {
+        FlareFrame f = new FlareFrame();
+        f.real = true;
+        f.compute(lx, ly, ASPECT, power, vis, edge, reach, night, rain, height);
+        return f;
     }
 
     @Test
-    void hexGhostsHaveCornersNotARoundOutline() {
+    void theAtlasHoldsEveryElement() {
+        assertEquals(FlareSet.COUNT, FlareAtlas.SINGLE_COUNT + FlareAtlas.PAIR_COUNT);
+        assertTrue(FlareAtlas.SINGLE_COUNT <= FlareAtlas.COLS * FlareAtlas.ROWS);
+        assertTrue(FlareSet.COUNT > FlareSet.PACK_COUNT);
+    }
+
+    @Test
+    void hexGhostsOfThePackHaveCornersNotARoundOutline() {
         byte[] atlas = FlareAtlas.buildSingles();
         int e = index("4");
-        // Along a corner direction (straight up) the hexagon reaches further than along a flat side direction (to the right).
         double r = 0.88;
         assertTrue(texel(atlas, e, 0, -r) > texel(atlas, e, r, 0), "corner brighter than flat side at the same distance");
-        // and the outline is a hexagon: the hexagon's own corner (0.866, 0.5) and its edge midpoint (1, 0)*0.866 are both on it
         assertEquals(texel(atlas, e, 0.866 * r, 0.5 * r), texel(atlas, e, 0, r), 3, "corners match");
     }
 
     @Test
-    void spikesAreBrighterAlongTheirAxesThanBetweenThem() {
+    void realElementsHaveNoStarNoRingAndNoHexagon() {
         byte[] atlas = FlareAtlas.buildSingles();
-        int e = index("S");
-        double r = 0.35;
-        int onAxis = texel(atlas, e, r, 0);                                    // 0 degrees
-        int between = texel(atlas, e, r * Math.cos(Math.PI / 6), r * Math.sin(Math.PI / 6)); // 30 degrees, midway between spikes
-        assertTrue(onAxis > 2 * between, "spike " + onAxis + " vs gap " + between);
-    }
-
-    @Test
-    void haloRingsAreRedInsideBlueOutsideAndStayTheSameSizeAtScreenCentre() {
-        FlareElement red = FlareSet.ELEMENTS[index("HR")];
-        FlareElement blue = FlareSet.ELEMENTS[index("HB")];
-        double aspect = 16 / 9.0;
-        for (double scale : new double[] {1.0, 0.0, 0.5}) {
-            assertTrue(red.mainGeo.radiusV(red.main.radius, scale) < blue.mainGeo.radiusV(blue.main.radius, scale));
-            assertEquals(red.mainGeo.radiusV(red.main.radius, 1.0), red.mainGeo.radiusV(red.main.radius, scale), 1e-12);
-            assertEquals(red.mainGeo.radiusU(red.main.radius, aspect, 1.0), red.mainGeo.radiusU(red.main.radius, aspect, scale), 1e-12);
-        }
-        // a ring: dark in the middle, bright near the edge
-        assertEquals(0.0, FlareLut.lookup(red.main, 0.1), 1e-3);
-        assertTrue(FlareLut.lookup(red.main, 0.85) > 0.0);
-    }
-
-    @Test
-    void extrasAreFaintAndFollowTheStrengthSetting() {
-        FlareFrame f = new FlareFrame();
-        double aspect = 1612 / 720.0;
-        f.compute(0.3, 0.7, aspect, 0.35, 1.0, 0.0, 0.0);
-        double ring = 0.0;
-        for (int i = 0; i < f.count; i++) {
-            if (FlareSet.ELEMENTS[f.draws[i].element].name.startsWith("H")) {
-                FlareFrame.Draw d = f.draws[i];
-                ring = Math.max(ring, Math.max(d.red, Math.max(d.green, d.blue)));
+        for (int i = FlareSet.PACK_COUNT; i < FlareSet.COUNT; i++) {
+            FlareElement e = FlareSet.ELEMENTS[i];
+            assertEquals(FlareElement.Shape.ROUND, e.shape, e.name);
+            assertFalse(e.isPair(), e.name);
+            assertTrue(e.role != FlareElement.Role.PACK, e.name);
+            // brightest in the middle and never rising again towards the rim: a ring would break this
+            double last = Double.MAX_VALUE;
+            for (int k = 0; k <= 40; k++) {
+                double v = FlareLut.lookup(e.main, k / 40.0);
+                assertTrue(v <= last + 1e-9, e.name + " must not get brighter outwards at " + k);
+                last = v;
             }
+            // the same brightness all the way round: no spikes
+            int a = texel(atlas, i, 0.3, 0.0), b = texel(atlas, i, 0.0, 0.3), c = texel(atlas, i, 0.212, 0.212);
+            assertEquals(a, b, 6, e.name);
+            assertEquals(a, c, 6, e.name);
         }
-        assertTrue(ring > 0.0 && ring < 0.10, "halo peak at 35% strength should be faint, was " + ring);
-        f.compute(0.3, 0.7, aspect, 0.0, 1.0, 0.0, 0.0);
-        assertEquals(0, f.count, "off draws nothing");
-        f.compute(0.3, 0.7, aspect, 0.35, 1.0, 1.0, 0.0);
-        assertEquals(0, f.count, "night draws nothing");
     }
 
     @Test
-    void realStyleIsSofterAndWarmerThanThePacksOwnColours() {
+    void theColourIsTheSunsOrangeNotARainbow() {
+        FlareFrame f = real(0.7, 0.62, 0.35, 1.0, 1.0, 1.0, 0.0, 0.0, 0.15);
+        assertTrue(f.count > 5);
+        for (int i = 0; i < f.count; i++) {
+            FlareFrame.Draw d = f.draws[i];
+            String name = FlareSet.ELEMENTS[d.element].name;
+            if (name.equals("GP4")) continue; // the one faint cool reflection
+            assertTrue(d.red >= d.green - 1e-9 && d.green >= d.blue - 1e-9, name + " is warm: " + d.red + "," + d.green + "," + d.blue);
+        }
+    }
+
+    @Test
+    void theFlareColourFollowsTheSunLikeTheBeamsDo() {
+        FlareFrame low = real(0.7, 0.62, 0.35, 1.0, 1.0, 1.0, 0.0, 0.0, 0.08);
+        FlareFrame high = real(0.7, 0.62, 0.35, 1.0, 1.0, 1.0, 0.0, 0.0, 0.9);
+        int g3 = index("G3");
+        double lowRatio = 0, highRatio = 0;
+        for (int i = 0; i < low.count; i++) if (low.draws[i].element == g3) lowRatio = low.draws[i].blue / low.draws[i].red;
+        for (int i = 0; i < high.count; i++) if (high.draws[i].element == g3) highRatio = high.draws[i].blue / high.draws[i].red;
+        assertTrue(lowRatio > 0 && highRatio > 0);
+        assertTrue(lowRatio < highRatio, "a low sun is more orange: " + lowRatio + " vs " + highRatio);
+    }
+
+    @Test
+    void theGlowKeepsGoingWhenTheSunIsJustOffTheScreenButTheReflectionsDoNot() {
+        FlareFrame f = real(1.15, 0.6, 0.35, 1.0, 0.0, SunMath.glowReach(1.15, 0.6), 0.0, 0.0, 0.4);
+        assertTrue(has(f, "G3"), "the halo still reaches into the picture");
+        assertTrue(has(f, "G2"));
+        for (int i = 0; i < f.count; i++) {
+            assertFalse(FlareSet.ELEMENTS[f.draws[i].element].name.startsWith("GP"), "no reflections without the sun on screen");
+        }
+        FlareFrame on = real(0.6, 0.6, 0.35, 1.0, 1.0, 1.0, 0.0, 0.0, 0.4);
+        assertTrue(has(on, "GP1") && has(on, "GP3"));
+    }
+
+    @Test
+    void aLowSunBehindThePlayerStillWarmsThePictureButANoonSunDoesNot() {
+        FlareFrame sunset = real(0.5, 0.5, 0.35, 1.0, 0.0, 0.0, 0.0, 0.0, 0.05);
+        assertTrue(has(sunset, "GV"), "the sunset veil");
+        assertEquals(1, sunset.count, "and nothing else when the sun is out of view");
+        FlareFrame noon = real(0.5, 0.5, 0.35, 1.0, 0.0, 0.0, 0.0, 0.0, 0.95);
+        assertEquals(0, noon.count);
+        // behind a hill nothing is seen at all
+        assertEquals(0, real(0.5, 0.5, 0.35, 0.0, 0.0, 0.0, 0.0, 0.0, 0.05).count);
+    }
+
+    @Test
+    void theVeilIsFaint() {
+        FlareFrame f = real(0.5, 0.5, 0.35, 1.0, 0.0, 0.0, 0.0, 0.0, 0.02);
+        for (int i = 0; i < f.count; i++) {
+            FlareFrame.Draw d = f.draws[i];
+            assertTrue(Math.max(d.red, Math.max(d.green, d.blue)) < 0.10, "veil peak " + d.red);
+        }
+    }
+
+    @Test
+    void realStyleFollowsStrengthNightAndRain() {
+        assertEquals(0, real(0.3, 0.7, 0.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.3).count, "off draws nothing");
+        assertEquals(0, real(0.3, 0.7, 0.35, 1.0, 1.0, 1.0, 1.0, 0.0, 0.3).count, "night draws nothing");
+        assertEquals(0, real(0.3, 0.7, 0.35, 1.0, 1.0, 1.0, 0.0, 1.0, 0.3).count, "rain draws nothing");
+        double strong = peak(real(0.3, 0.7, 0.5, 1.0, 1.0, 1.0, 0.0, 0.0, 0.3));
+        double subtle = peak(real(0.3, 0.7, 0.2, 1.0, 1.0, 1.0, 0.0, 0.0, 0.3));
+        assertTrue(strong > subtle);
+    }
+
+    private static double peak(FlareFrame f) {
+        double p = 0;
+        for (int i = 0; i < f.count; i++) {
+            FlareFrame.Draw d = f.draws[i];
+            p = Math.max(p, Math.max(d.red, Math.max(d.green, d.blue)));
+        }
+        return p;
+    }
+
+    @Test
+    void reflectionsAreFaintAndTheCoreIsTheBrightestPart() {
+        FlareFrame f = real(0.3, 0.7, 0.35, 1.0, 1.0, 1.0, 0.0, 0.0, 0.3);
+        double core = 0, ghost = 0;
+        for (int i = 0; i < f.count; i++) {
+            FlareFrame.Draw d = f.draws[i];
+            FlareElement e = FlareSet.ELEMENTS[d.element];
+            double top = Math.max(d.red, Math.max(d.green, d.blue));
+            if (e.name.equals("G1")) core = top;
+            if (e.role == FlareElement.Role.GHOST) ghost = Math.max(ghost, top);
+        }
+        assertTrue(core > 0.5, "the core is hot: " + core);
+        assertTrue(ghost > 0.04 && ghost < 0.35, "the reflections are faint but there: " + ghost);
+    }
+
+    @Test
+    void realStyleDrawsFewerPixelsThanThePackAtTheSameStrength() {
         FlareFrame pack = new FlareFrame();
-        FlareFrame real = new FlareFrame();
-        real.real = true;
-        double aspect = 1612 / 720.0;
-        pack.compute(0.7, 0.62, aspect, 0.35, 1.0, 0.0, 0.0);
-        real.compute(0.7, 0.62, aspect, 0.35, 1.0, 0.0, 0.0);
-        double packSat = 0.0, realSat = 0.0;
-        int packBig = 0, realBig = 0;
-        for (int i = 0; i < pack.count; i++) {
-            FlareFrame.Draw d = pack.draws[i];
-            packSat = Math.max(packSat, Math.max(d.red, Math.max(d.green, d.blue)) - Math.min(d.red, Math.min(d.green, d.blue)));
-            if (!d.small && !FlareSet.ELEMENTS[d.element].name.startsWith("H")) packBig++;
+        pack.compute(0.7, 0.62, ASPECT, 0.35, 1.0, 0.0, 0.0);
+        FlareFrame real = real(0.7, 0.62, 0.35, 1.0, 1.0, 1.0, 0.0, 0.0, 0.3);
+        assertTrue(area(real) <= area(pack) * 1.1, "real " + area(real) + " vs pack " + area(pack));
+    }
+
+    private static double area(FlareFrame f) {
+        double a = 0;
+        for (int i = 0; i < f.count; i++) {
+            FlareFrame.Draw d = f.draws[i];
+            a += 4 * d.rx * d.ry * d.support * d.support;
         }
-        for (int i = 0; i < real.count; i++) {
-            FlareFrame.Draw d = real.draws[i];
-            if (FlareSet.ELEMENTS[d.element].name.matches("1|1B|S|C|H.|2|2B")) continue; // the sun's own glow keeps its colour
-            realSat = Math.max(realSat, Math.max(d.red, Math.max(d.green, d.blue)) - Math.min(d.red, Math.min(d.green, d.blue)));
-            if (!d.small && !FlareSet.ELEMENTS[d.element].name.startsWith("H")) realBig++;
-        }
-        assertTrue(realSat < packSat, "ghosts are less saturated: " + realSat + " vs " + packSat);
-        assertTrue(realBig <= packBig, "no more big layers than the pack");
-        // the sun's own glow and the spikes are kept
-        boolean hasStar = false;
-        for (int i = 0; i < real.count; i++) hasStar |= FlareSet.ELEMENTS[real.draws[i].element].name.equals("S");
-        assertTrue(hasStar);
-        // every crescent has a usable base colour for the baked texture
-        for (int i = 0; i < real.count; i++) {
-            FlareFrame.Draw d = real.draws[i];
-            assertTrue(d.baseR >= 0 && d.baseG >= 0 && d.baseB >= 0);
-        }
+        return a;
     }
 
     @Test

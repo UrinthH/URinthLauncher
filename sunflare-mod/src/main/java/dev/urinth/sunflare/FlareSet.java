@@ -37,7 +37,7 @@ final class FlareSet {
         return new FlareElement(name, p, g, s, sg, smOutside, r * MR, gr * MG, b * MB, false);
     }
 
-    static final FlareElement[] ELEMENTS = {
+    private static final FlareElement[] PACK = {
         single("1", FlareProfile.linear(0.5, 1.8, 12.0), Geo.sun(1.7, 1.7, true), 0.7, 0.4, 0.2),
         single("1B", FlareProfile.linear(0.5, 1.8, 6.0), Geo.sun(0.5, 0.5, true), 0.7, 0.2, 0.0),
         single("2", FlareProfile.linear(0.3, 1.8, 1.0), Geo.sun(0.2, 1.0, false), 1.8, 0.6, 0.0),
@@ -69,49 +69,49 @@ final class FlareSet {
         single("11", FlareProfile.fillPow(2.0, 2.9, 1.1), Geo.ghost(1.5, -0.523), 1.0, 0.2, 0.0),
         single("12", FlareProfile.fillPow(2.0, 2.9, 0.5), Geo.ghost(2.5, -0.323), 0.8, 0.2, 1.0),
         single("13", FlareProfile.fillPow(2.0, 2.9, 0.5), Geo.ghost(1.0, 0.138), 0.0, 0.2, 1.0),
-        // Added for realism (not in the pack). Both sit on the sun and keep their size when the sun is near the centre.
-        // S: diffraction spikes of a six-bladed aperture, a warm white that fades with distance. Drawn with the big layers,
-        // so it costs next to nothing; at 35% lens power its brightest part is about a third of full.
-        plain("S", FlareProfile.linear(0.5, 1.6, 3.6), Geo.sun(0.85, 0.85, false), 1.0, 0.86, 0.66, FlareElement.Shape.STAR),
-        // C: a tight hot core, so the sun itself blooms instead of staying a hard square.
-        plain("C", FlareProfile.linear(0.5, 2.2, 9.0), Geo.sun(4.0, 4.0, false), 1.0, 0.90, 0.74, FlareElement.Shape.ROUND),
-        // H: a faint rainbow halo around the sun, like the dispersion ring of a real lens. Three rings of slightly different size
-        // (red smallest, blue largest) overlap to give the colour fringe. They keep their size when the sun is near the centre.
-        plain("HR", FlareProfile.sinPow(8.0, 1.4, 0.20, PI), Geo.sun(1.50, 1.50, false), 1.0, 0.0, 0.0, FlareElement.Shape.ROUND),
-        plain("HG", FlareProfile.sinPow(8.0, 1.4, 0.20, PI), Geo.sun(1.42, 1.42, false), 0.0, 1.0, 0.0, FlareElement.Shape.ROUND),
-        plain("HB", FlareProfile.sinPow(8.0, 1.4, 0.20, PI), Geo.sun(1.34, 1.34, false), 0.0, 0.0, 1.0, FlareElement.Shape.ROUND),
     };
+
+    /** The Real style's own pieces. Colours are relative; the sun's colour is mixed in by tintAmount. */
+    private static FlareElement real(String name, FlareElement.Role role, FlareProfile p, Geo g, double r, double gr, double b, double tint) {
+        return new FlareElement(name, p, g, null, null, false, r, gr, b, false, FlareElement.Shape.ROUND, role, tint);
+    }
+
+    /** How many of the elements are the pack's. The Real style's come after them. */
+    static final int PACK_COUNT = PACK.length;
+
+    /**
+     * The Real style, built the way a camera sees the sun instead of copying the pack: a white-hot core, a soft golden glow, a
+     * wide orange halo, and a few faint round reflections along the line through the screen centre. No star, no rings, no
+     * rainbow. The glows stay when the sun is just off the screen; the veil takes over when it is out of view at sunset.
+     * Sizes are in screen heights (radius = 0.5 / s), the brightness numbers are for sm = 1.
+     */
+    private static final FlareElement[] REAL = {
+        real("G1", FlareElement.Role.GLOW, FlareProfile.fillPow(2.0, 2.4, 3.4), Geo.sun(5.0, 5.0, false), 1.0, 0.95, 0.85, 0.45),
+        real("G2", FlareElement.Role.GLOW, FlareProfile.fillPow(2.0, 2.0, 1.4), Geo.sun(1.9, 1.9, false), 1.0, 0.90, 0.72, 0.85),
+        real("G3", FlareElement.Role.GLOW, FlareProfile.fillPow(2.0, 1.7, 0.50), Geo.sun(0.62, 0.62, false), 1.0, 0.85, 0.62, 1.0),
+        real("GP1", FlareElement.Role.GHOST, FlareProfile.fillPow(6.0, 1.0, 0.55), Geo.ghost(4.2, -0.30), 1.0, 0.72, 0.38, 0.9),
+        real("GP2", FlareElement.Role.GHOST, FlareProfile.fillPow(6.0, 1.2, 0.30), Geo.ghost(2.4, -0.62), 1.0, 0.85, 0.55, 0.9),
+        real("GP3", FlareElement.Role.GHOST, FlareProfile.fillPow(6.0, 1.0, 0.70), Geo.ghost(6.5, 0.12), 1.0, 0.62, 0.36, 0.9),
+        real("GP4", FlareElement.Role.GHOST, FlareProfile.fillPow(6.0, 1.4, 0.26), Geo.ghost(3.0, 0.45), 0.75, 0.90, 1.0, 0.3),
+        real("GP5", FlareElement.Role.GHOST, FlareProfile.fillPow(6.0, 1.0, 0.70), Geo.ghost(9.0, -1.35), 1.0, 0.80, 0.50, 0.9),
+        real("GV", FlareElement.Role.VEIL, FlareProfile.fillPow(2.0, 0.4, 0.30), Geo.ghost(0.22, -1.0), 1.0, 0.72, 0.42, 1.0),
+    };
+
+    /** Pack elements first, then the Real style's. */
+    static final FlareElement[] ELEMENTS = new FlareElement[PACK.length + REAL.length];
+
+    static {
+        System.arraycopy(PACK, 0, ELEMENTS, 0, PACK.length);
+        System.arraycopy(REAL, 0, ELEMENTS, PACK.length, REAL.length);
+    }
 
     static final int COUNT = ELEMENTS.length;
 
-    /**
-     * The "Real" style: how much of each element is kept. The pack's flare is deliberately colourful; a real lens shows a bright
-     * warm glare, a streak, and soft, faint ghosts. The sun's own glow and the streak stay, the big saturated discs fade.
-     */
-    private static final java.util.Map<String, Double> REAL_GAIN = new java.util.HashMap<>();
-
-    static {
-        String[] names = {"1", "1B", "2", "2B", "3", "3C", "4", "4B", "4C", "4D", "4E", "4F", "5", "5B", "6", "6B", "6C", "7", "7D", "7B",
-            "8", "9", "10", "10C", "11", "12", "13", "S", "C", "HR", "HG", "HB"};
-        double[] gain = {1.6, 1.4, 1.0, 0.8, 0.35, 0.30, 0.9, 0.7, 0.45, 0.4, 0.4, 0.5, 0.2, 0.15, 0.45, 0.45, 0.45, 0.35, 0.35, 0.25,
-            0.2, 0.2, 0.35, 0.35, 0.5, 0.4, 0.4, 1.2, 1.0, 1.3, 1.2, 1.0};
-        for (int i = 0; i < names.length; i++) REAL_GAIN.put(names[i], gain[i]);
-    }
-
-    /** Colour of an element as drawn in the given style (the pack's own, or the more photographic one). */
-    static void colour(FlareElement e, boolean real, double[] out) {
-        if (!real) {
-            out[0] = e.red;
-            out[1] = e.green;
-            out[2] = e.blue;
-            return;
-        }
-        double gain = REAL_GAIN.getOrDefault(e.name, 0.5);
-        double keep = e.name.startsWith("H") || e.name.equals("S") || e.name.equals("C") ? 1.0 : 0.45;
-        double mean = (e.red + e.green + e.blue) / 3.0;
-        // pull the colour towards warm white (sunlight), keeping its brightness
-        out[0] = gain * (keep * e.red + (1 - keep) * mean * 1.12);
-        out[1] = gain * (keep * e.green + (1 - keep) * mean * 0.96);
-        out[2] = gain * (keep * e.blue + (1 - keep) * mean * 0.80);
+    /** Colour of a Real-style element: its own colour mixed with the colour of the sun ({@link SunTint}), by its tintAmount. */
+    static void colour(FlareElement e, double[] sun, double[] out) {
+        double a = e.tintAmount;
+        out[0] = e.red * (1.0 - a + a * sun[0]);
+        out[1] = e.green * (1.0 - a + a * sun[1]);
+        out[2] = e.blue * (1.0 - a + a * sun[2]);
     }
 }

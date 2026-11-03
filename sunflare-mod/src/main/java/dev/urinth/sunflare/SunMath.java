@@ -31,6 +31,16 @@ public final class SunMath {
      * @return false when the direction is behind the camera
      */
     public static boolean project(double[] dir, double yawDeg, double pitchDeg, double fovDeg, double aspect, double[] out) {
+        return projectWide(dir, yawDeg, pitchDeg, fovDeg, aspect, out) >= 0.05;
+    }
+
+    /**
+     * Like {@link #project}, but the answer is also given for directions well outside the screen (u or v below 0 or above 1).
+     *
+     * @return how much the direction points along the view direction (1 = straight ahead, 0 = to the side, negative = behind).
+     *         u and v are only meaningful when this is at least 0.05; otherwise they are set to the screen centre.
+     */
+    public static double projectWide(double[] dir, double yawDeg, double pitchDeg, double fovDeg, double aspect, double[] out) {
         double yaw = Math.toRadians(yawDeg);
         double pitch = Math.toRadians(pitchDeg);
         double fx = -Math.sin(yaw) * Math.cos(pitch);
@@ -44,7 +54,11 @@ public final class SunMath {
         double uz = -fy * lx;
 
         double forward = dir[0] * fx + dir[1] * fy + dir[2] * fz;
-        if (forward < 0.05) return false;
+        if (forward < 0.05) {
+            out[0] = 0.5;
+            out[1] = 0.5;
+            return forward;
+        }
         double left = dir[0] * lx + dir[2] * lz;
         double up = dir[0] * ux + dir[1] * uy + dir[2] * uz;
 
@@ -53,7 +67,17 @@ public final class SunMath {
         double ndcY = up / (forward * t);
         out[0] = ndcX * 0.5 + 0.5;
         out[1] = ndcY * 0.5 + 0.5;
-        return true;
+        return forward;
+    }
+
+    /**
+     * How strongly a glow around the sun still shows when the sun is at (u, v): 1 anywhere on the screen, then fading to 0 as the
+     * sun gets further outside it (0.7 of a screen away). Bright light just out of frame still washes into the picture.
+     */
+    public static double glowReach(double u, double v) {
+        double ox = Math.max(0.0, Math.max(-u, u - 1.0));
+        double oy = Math.max(0.0, Math.max(-v, v - 1.0));
+        return 1.0 - smoothstep(0.0, 0.7, Math.hypot(ox, oy));
     }
 
     /** The pack's "night" (0 = day, 1 = night) for a world day time, as in its shaders.properties. */
