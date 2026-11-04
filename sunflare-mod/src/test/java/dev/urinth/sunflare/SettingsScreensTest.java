@@ -56,7 +56,9 @@ class SettingsScreensTest {
         }
         int[] vb = SettingsScreens.bounds(SettingsScreens.Kind.VANILLA, 400, SettingsScreens.BEAMS);
         assertEquals(4, vb[0]);
-        assertEquals("Sun Beams: Medium", SettingsScreens.label(SettingsScreens.BEAMS, FlareConfig.BEAMS_DEFAULT, 112));
+        assertEquals("Sun Beams: Extreme", SettingsScreens.label(SettingsScreens.BEAMS, FlareConfig.BEAMS_DEFAULT, 112));
+        assertEquals("Sun Beams: Medium", SettingsScreens.label(SettingsScreens.BEAMS, 2, 112));
+        assertEquals("Beams: Extreme", SettingsScreens.label(SettingsScreens.BEAMS, FlareConfig.BEAMS_EXTREME, 86));
         assertEquals("Beams: Off", SettingsScreens.label(SettingsScreens.BEAMS, FlareConfig.BEAMS_OFF, 86));
     }
 
