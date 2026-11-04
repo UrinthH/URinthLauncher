@@ -51,7 +51,9 @@ class FlareConfigTest {
     void godRaysFollowTheBeamLevelAndTheFrameGuardIsSaved() throws java.io.IOException {
         java.nio.file.Path dir = java.nio.file.Files.createTempDirectory("sunflare-guard");
         FlareConfig c = new FlareConfig(dir.resolve("c.properties"));
-        assertEquals(90, c.targetFps());
+        assertEquals(80, c.targetFps(), "the effects may cost a 90 FPS phone at most down to 80");
+        assertEquals(FlareConfig.BEAMS_EXTREME, c.beams(), "extreme is the default");
+        assertEquals("Extreme", FlareConfig.BEAM_NAMES[c.beams()]);
         c.setBeams(FlareConfig.BEAMS_OFF);
         assertEquals(0.0, c.godRayDensity(), 0.0);
         assertEquals(0, c.godRayLayers());
@@ -70,5 +72,43 @@ class FlareConfigTest {
         FlareConfig again = new FlareConfig(dir.resolve("c.properties"));
         again.load();
         assertEquals(75, again.targetFps());
+        assertEquals(c.beams(), again.beams());
+    }
+
+    @Test
+    void higherBeamLevelsMakeTheSmallPictureBiggerAndNeverSmaller() {
+        FlareConfig c = new FlareConfig(java.nio.file.Path.of("unused"));
+        int last = Integer.MAX_VALUE;
+        for (int level = 1; level < FlareConfig.BEAM_NAMES.length; level++) {
+            c.setBeams(level);
+            assertTrue(c.godRayDivisor() <= last, "level " + level);
+            assertTrue(c.godRayDivisor() >= 3 && c.godRayDivisor() <= 6);
+            last = c.godRayDivisor();
+        }
+        c.setBeams(FlareConfig.BEAMS_EXTREME);
+        assertEquals(12, c.godRayLayers());
+        assertEquals(4, c.godRayDivisor());
+        assertEquals(FlareConfig.BEAMS_EXTREME, FlareConfig.beamsFromName("EXTREME"));
+    }
+
+    @Test
+    void aFileSavedByAnOlderBuildGetsTheNewBeamAndFrameGuardDefaultsOnce() throws java.io.IOException {
+        java.nio.file.Path dir = java.nio.file.Files.createTempDirectory("sunflare-migrate");
+        java.nio.file.Path file = dir.resolve("c.properties");
+        java.nio.file.Files.writeString(file, "mode=3\nbeams=2\nstyle=pack\ntargetFps=90\n");
+        FlareConfig c = new FlareConfig(file);
+        c.load();
+        assertEquals(FlareConfig.STRONG, c.mode(), "the flare setting is kept");
+        assertEquals(false, c.realStyle(), "so is the style");
+        assertEquals(FlareConfig.BEAMS_EXTREME, c.beams());
+        assertEquals(80, c.targetFps());
+        // after saving, the new values are the person's own and are kept
+        c.setBeams(FlareConfig.BEAMS_OFF);
+        c.setTargetFps(60);
+        c.save();
+        FlareConfig again = new FlareConfig(file);
+        again.load();
+        assertEquals(FlareConfig.BEAMS_OFF, again.beams());
+        assertEquals(60, again.targetFps());
     }
 }

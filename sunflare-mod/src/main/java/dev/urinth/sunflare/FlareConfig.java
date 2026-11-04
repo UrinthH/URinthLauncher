@@ -21,14 +21,24 @@ public final class FlareConfig {
     /** The pack's LENS_POWER for each mode: 20%, 35% (the default) and 50% (the pack's maximum). */
     private static final double[] POWER = {0.0, 0.20, 0.35, 0.50};
 
-    /** Sun beams: screen-space god rays. Each level has a brightness and a number of layers (more layers = smoother, costs more). */
+    /**
+     * Sun beams: screen-space god rays. Each level has a brightness, a number of layers per pass (more layers = smoother, costs
+     * more) and a divisor for the size of the small picture the rays are made in (smaller = sharper rays, costs more).
+     */
     public static final int BEAMS_OFF = 0;
-    public static final int BEAMS_DEFAULT = 2;
-    public static final String[] BEAM_NAMES = {"Off", "Low", "Medium", "High"};
-    private static final double[] GOD_DENSITY = {0.0, 0.55, 0.85, 1.20};
-    private static final int[] GOD_LAYERS = {0, 10, 16, 22};
-    /** The frame rate the effects try to keep (0 = no limit on what they may cost). */
-    public static final int DEFAULT_TARGET_FPS = 90;
+    public static final int BEAMS_EXTREME = 4;
+    public static final int BEAMS_DEFAULT = BEAMS_EXTREME;
+    public static final String[] BEAM_NAMES = {"Off", "Low", "Medium", "High", "Extreme"};
+    private static final double[] GOD_DENSITY = {0.0, 0.55, 0.85, 1.10, 1.30};
+    private static final int[] GOD_LAYERS = {0, 5, 7, 9, 12};
+    private static final int[] GOD_DIVISOR = {6, 6, 6, 5, 4};
+    /**
+     * The frame rate the effects try to keep (0 = no limit on what they may cost). 80 is the lowest frame rate the effects may
+     * cause on a phone that runs 90 without them.
+     */
+    public static final int DEFAULT_TARGET_FPS = 80;
+    /** Version of the settings file. Files of an older version get the new beam level and frame guard defaults once. */
+    private static final int FILE_VERSION = 2;
 
     private final Path file;
     private int mode = FULL;
@@ -95,6 +105,11 @@ public final class FlareConfig {
         return GOD_LAYERS[beams];
     }
 
+    /** The small picture the rays are made in is the window size divided by this. */
+    public int godRayDivisor() {
+        return GOD_DIVISOR[beams];
+    }
+
     public int targetFps() {
         return targetFps;
     }
@@ -152,14 +167,21 @@ public final class FlareConfig {
             return;
         }
         mode = parseMode(p.getProperty("mode"), mode);
-        int b = parseMode(p.getProperty("beams"), beams);
-        beams = Math.min(b, BEAM_NAMES.length - 1);
         real = !"pack".equalsIgnoreCase(p.getProperty("style", "real").trim());
+        if (parseInt(p.getProperty("version"), 1) < FILE_VERSION) {
+            // saved by an older build: the beams are different now (Extreme level, frame guard at 80), so start from the new defaults
+            beams = BEAMS_DEFAULT;
+            targetFps = DEFAULT_TARGET_FPS;
+            return;
+        }
+        int b = parseInt(p.getProperty("beams"), beams);
+        beams = Math.max(0, Math.min(b, BEAM_NAMES.length - 1));
         targetFps = setTargetFps(parseInt(p.getProperty("targetFps"), DEFAULT_TARGET_FPS));
     }
 
     public void save() {
         Properties p = new Properties();
+        p.setProperty("version", Integer.toString(FILE_VERSION));
         p.setProperty("mode", Integer.toString(mode));
         p.setProperty("beams", Integer.toString(beams));
         p.setProperty("style", real ? "real" : "pack");
@@ -168,7 +190,7 @@ public final class FlareConfig {
             Path parent = file.getParent();
             if (parent != null) Files.createDirectories(parent);
             try (OutputStream out = Files.newOutputStream(file)) {
-                p.store(out, "URinth sun lens flare. mode: 0 = off, 1 = subtle, 2 = full, 3 = strong. beams (light shafts): 0 = off, 1 = low, 2 = medium, 3 = high. style: real or pack");
+                p.store(out, "URinth sun lens flare. mode: 0 = off, 1 = subtle, 2 = full, 3 = strong. beams (light shafts): 0 = off, 1 = low, 2 = medium, 3 = high, 4 = extreme. style: real or pack. targetFps: frame rate the effects try to keep (0 = no limit)");
             }
         } catch (IOException ignored) {
             // the toggle still works for this session
