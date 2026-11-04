@@ -21,20 +21,19 @@ public final class FlareConfig {
     /** The pack's LENS_POWER for each mode: 20%, 35% (the default) and 50% (the pack's maximum). */
     private static final double[] POWER = {0.0, 0.20, 0.35, 0.50};
 
-    /** Sun beams (light shafts through leaves). Each level has a peak brightness, a screen-area budget and a ray budget. */
+    /** Sun beams: screen-space god rays. Each level has a brightness and a number of layers (more layers = smoother, costs more). */
     public static final int BEAMS_OFF = 0;
     public static final int BEAMS_DEFAULT = 2;
     public static final String[] BEAM_NAMES = {"Off", "Low", "Medium", "High"};
-    private static final double[] BEAM_STRENGTH = {0.0, 0.26, 0.42, 0.60};
-    private static final double[] BEAM_AREA = {0.0, 0.25, 0.45, 0.70};
-    private static final int[] BEAM_RAYS = {0, 28, 40, 56};
+    private static final double[] GOD_DENSITY = {0.0, 0.55, 0.85, 1.20};
+    private static final int[] GOD_LAYERS = {0, 10, 16, 22};
+    /** The frame rate the effects try to keep (0 = no limit on what they may cost). */
+    public static final int DEFAULT_TARGET_FPS = 90;
 
     private final Path file;
     private int mode = FULL;
     private int beams = BEAMS_DEFAULT;
-    /** How far beams reach, in chunks (2..10). Capped by what the client has loaded. */
-    public static final int BEAM_RANGE_MAX = 10;
-    private int beamRange = BEAM_RANGE_MAX;
+    private int targetFps = DEFAULT_TARGET_FPS;
     /** The photographic "Real" look (default) or the pack's own colourful flare. */
     private boolean real = true;
 
@@ -88,25 +87,22 @@ public final class FlareConfig {
         return beams;
     }
 
-    public double beamStrength() {
-        return BEAM_STRENGTH[beams];
+    public double godRayDensity() {
+        return GOD_DENSITY[beams];
     }
 
-    public double beamArea() {
-        return BEAM_AREA[beams];
+    public int godRayLayers() {
+        return GOD_LAYERS[beams];
     }
 
-    public int beamRays() {
-        return BEAM_RAYS[beams];
+    public int targetFps() {
+        return targetFps;
     }
 
-    public int beamRangeChunks() {
-        return beamRange;
-    }
-
-    public int setBeamRange(int chunks) {
-        beamRange = Math.max(2, Math.min(BEAM_RANGE_MAX, chunks));
-        return beamRange;
+    /** 0 turns the frame-rate guard off; otherwise 30..240. */
+    public int setTargetFps(int fps) {
+        targetFps = fps <= 0 ? 0 : Math.max(30, Math.min(240, fps));
+        return targetFps;
     }
 
     public int cycleBeams() {
@@ -158,8 +154,8 @@ public final class FlareConfig {
         mode = parseMode(p.getProperty("mode"), mode);
         int b = parseMode(p.getProperty("beams"), beams);
         beams = Math.min(b, BEAM_NAMES.length - 1);
-        beamRange = Math.max(2, Math.min(BEAM_RANGE_MAX, parseInt(p.getProperty("beamRange"), BEAM_RANGE_MAX)));
         real = !"pack".equalsIgnoreCase(p.getProperty("style", "real").trim());
+        targetFps = setTargetFps(parseInt(p.getProperty("targetFps"), DEFAULT_TARGET_FPS));
     }
 
     public void save() {
@@ -167,7 +163,7 @@ public final class FlareConfig {
         p.setProperty("mode", Integer.toString(mode));
         p.setProperty("beams", Integer.toString(beams));
         p.setProperty("style", real ? "real" : "pack");
-        p.setProperty("beamRange", Integer.toString(beamRange));
+        p.setProperty("targetFps", Integer.toString(targetFps));
         try {
             Path parent = file.getParent();
             if (parent != null) Files.createDirectories(parent);

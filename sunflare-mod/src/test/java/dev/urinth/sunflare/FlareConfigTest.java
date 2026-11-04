@@ -1,6 +1,7 @@
 package dev.urinth.sunflare;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -47,16 +48,27 @@ class FlareConfigTest {
     }
 
     @Test
-    void beamRangeDefaultsToTenChunksIsClampedAndSaved() throws java.io.IOException {
-        java.nio.file.Path dir = java.nio.file.Files.createTempDirectory("sunflare-range");
+    void godRaysFollowTheBeamLevelAndTheFrameGuardIsSaved() throws java.io.IOException {
+        java.nio.file.Path dir = java.nio.file.Files.createTempDirectory("sunflare-guard");
         FlareConfig c = new FlareConfig(dir.resolve("c.properties"));
-        assertEquals(10, c.beamRangeChunks());
-        assertEquals(10, c.setBeamRange(99));
-        assertEquals(2, c.setBeamRange(-5));
-        c.setBeamRange(6);
+        assertEquals(90, c.targetFps());
+        c.setBeams(FlareConfig.BEAMS_OFF);
+        assertEquals(0.0, c.godRayDensity(), 0.0);
+        assertEquals(0, c.godRayLayers());
+        double last = 0;
+        for (int level = 1; level < FlareConfig.BEAM_NAMES.length; level++) {
+            c.setBeams(level);
+            assertTrue(c.godRayDensity() > last);
+            assertTrue(c.godRayLayers() >= GodRayMath.MIN_LAYERS && c.godRayLayers() <= GodRayMath.MAX_LAYERS);
+            last = c.godRayDensity();
+        }
+        assertEquals(30, c.setTargetFps(5));
+        assertEquals(240, c.setTargetFps(999));
+        assertEquals(0, c.setTargetFps(0));
+        c.setTargetFps(75);
         c.save();
         FlareConfig again = new FlareConfig(dir.resolve("c.properties"));
         again.load();
-        assertEquals(6, again.beamRangeChunks());
+        assertEquals(75, again.targetFps());
     }
 }

@@ -44,9 +44,8 @@ public final class SunFlareMod implements ClientModInitializer {
         config.load();
         FlareRenderer renderer = new FlareRenderer(config);
         HudRenderCallback.EVENT.register(renderer::render);
-        BeamRenderer beams = new BeamRenderer(config);
-        WorldRenderEvents.LAST.register(beams::render);
-        ClientTickEvents.END_CLIENT_TICK.register(beams::tick);
+        GodRays godRays = new GodRays(config);
+        WorldRenderEvents.LAST.register(godRays::render);
 
         registerScreenButton();
         registerCommand();
@@ -159,12 +158,12 @@ public final class SunFlareMod implements ClientModInitializer {
                     return 1;
                 }));
             }
-            beamsNode.then(ClientCommandManager.literal("range").then(
-                ClientCommandManager.argument("chunks", com.mojang.brigadier.arguments.IntegerArgumentType.integer(2, FlareConfig.BEAM_RANGE_MAX))
+            root.then(ClientCommandManager.literal("fps").then(
+                ClientCommandManager.argument("target", com.mojang.brigadier.arguments.IntegerArgumentType.integer(0, 240))
                     .executes(ctx -> {
-                        config.setBeamRange(com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(ctx, "chunks"));
+                        int fps = config.setTargetFps(com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(ctx, "target"));
                         config.save();
-                        ctx.getSource().sendFeedback(Component.literal("Sun Beams range: " + config.beamRangeChunks() + " chunks"));
+                        ctx.getSource().sendFeedback(Component.literal(fps == 0 ? "Frame guard: off" : "Frame guard: keep about " + fps + " FPS"));
                         return 1;
                     })));
             root.then(beamsNode);

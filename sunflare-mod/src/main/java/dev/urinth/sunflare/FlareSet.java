@@ -89,11 +89,10 @@ final class FlareSet {
         real("G1", FlareElement.Role.GLOW, FlareProfile.fillPow(2.0, 2.4, 3.4), Geo.sun(5.0, 5.0, false), 1.0, 0.95, 0.85, 0.45),
         real("G2", FlareElement.Role.GLOW, FlareProfile.fillPow(2.0, 2.0, 1.4), Geo.sun(1.9, 1.9, false), 1.0, 0.90, 0.72, 0.85),
         real("G3", FlareElement.Role.GLOW, FlareProfile.fillPow(2.0, 1.7, 0.50), Geo.sun(0.62, 0.62, false), 1.0, 0.85, 0.62, 1.0),
-        real("GP1", FlareElement.Role.GHOST, FlareProfile.fillPow(6.0, 1.0, 0.55), Geo.ghost(4.2, -0.30), 1.0, 0.72, 0.38, 0.9),
+        real("GP1", FlareElement.Role.GHOST, FlareProfile.fillPow(6.0, 1.0, 0.45), Geo.ghost(4.2, -0.30), 1.0, 0.78, 0.45, 0.9),
         real("GP2", FlareElement.Role.GHOST, FlareProfile.fillPow(6.0, 1.2, 0.30), Geo.ghost(2.4, -0.62), 1.0, 0.85, 0.55, 0.9),
-        real("GP3", FlareElement.Role.GHOST, FlareProfile.fillPow(6.0, 1.0, 0.70), Geo.ghost(6.5, 0.12), 1.0, 0.62, 0.36, 0.9),
-        real("GP4", FlareElement.Role.GHOST, FlareProfile.fillPow(6.0, 1.4, 0.26), Geo.ghost(3.0, 0.45), 0.75, 0.90, 1.0, 0.3),
-        real("GP5", FlareElement.Role.GHOST, FlareProfile.fillPow(6.0, 1.0, 0.70), Geo.ghost(9.0, -1.35), 1.0, 0.80, 0.50, 0.9),
+        real("GP3", FlareElement.Role.GHOST, FlareProfile.fillPow(6.0, 1.0, 0.55), Geo.ghost(6.5, 0.12), 1.0, 0.72, 0.42, 0.9),
+        real("GP5", FlareElement.Role.GHOST, FlareProfile.fillPow(6.0, 1.0, 0.55), Geo.ghost(9.0, -1.35), 1.0, 0.82, 0.55, 0.9),
         real("GV", FlareElement.Role.VEIL, FlareProfile.fillPow(2.0, 0.4, 0.30), Geo.ghost(0.22, -1.0), 1.0, 0.72, 0.42, 1.0),
     };
 
