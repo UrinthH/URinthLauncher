@@ -89,7 +89,7 @@ public final class LaunchTransitionLayout extends FrameLayout implements Choreog
 
         content = new LaunchLoadingView(context);
         content.setInfo(version, performanceMode);
-        content.setRain(performanceMode);
+        content.setRain(false); // no falling binary digits
         content.setTimeOriginWallMs(originWallMs);
         content.setOutlineProvider(new ViewOutlineProvider() {
             @Override

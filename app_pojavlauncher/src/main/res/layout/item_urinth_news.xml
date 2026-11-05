@@ -12,7 +12,7 @@
         android:id="@+id/urinth_news_image"
         android:layout_width="match_parent"
         android:layout_height="48dp"
-        android:background="#FF142631"
+        android:background="#FFE9EEF3"
         android:contentDescription="@null"
         android:scaleType="centerCrop" />
 
@@ -23,7 +23,7 @@
         android:layout_marginTop="3dp"
         android:ellipsize="end"
         android:singleLine="true"
-        android:textColor="#F2F8FA"
+        android:textColor="#1B2733"
         android:textSize="10sp"
         android:textStyle="bold" />
 
@@ -33,7 +33,7 @@
         android:layout_height="wrap_content"
         android:ellipsize="end"
         android:maxLines="2"
-        android:textColor="#ABC0CB"
+        android:textColor="#6B7A87"
         android:textSize="8sp" />
 
     <LinearLayout
@@ -48,7 +48,7 @@
             android:layout_height="9dp"
             android:contentDescription="@null"
             android:src="@drawable/ic_urinth_calendar"
-            android:tint="#ABC0CB" />
+            android:tint="#6B7A87" />
 
         <TextView
             android:id="@+id/urinth_news_date"
@@ -58,7 +58,7 @@
             android:layout_weight="1"
             android:ellipsize="end"
             android:singleLine="true"
-            android:textColor="#ABC0CB"
+            android:textColor="#6B7A87"
             android:textSize="7.5sp" />
 
         <ImageView
