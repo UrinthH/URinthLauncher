@@ -296,7 +296,7 @@ public class GameActivity extends BaseActivity implements ControlButtonMenuListe
         if(mLoadingScreen == null) return;
         if(mLoadingView != null) {
             mLoadingView.setInfo(mLoadingVersion, PREF_PERFORMANCE_MODE);
-            mLoadingView.setRain(PREF_PERFORMANCE_MODE);
+            mLoadingView.setRain(false); // no falling binary digits
         }
         // Show the first stage right away: the screen must not open on its placeholder text.
         showLoadingStage(LaunchStage.PREPARING, System.currentTimeMillis() - mLoadingStartMs);
