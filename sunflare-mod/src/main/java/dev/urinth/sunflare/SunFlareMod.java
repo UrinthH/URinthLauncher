@@ -13,11 +13,14 @@ import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
 import net.fabricmc.fabric.api.client.screen.v1.Screens;
+import net.fabricmc.fabric.api.resource.ResourceManagerHelper;
+import net.fabricmc.fabric.api.resource.ResourcePackActivationType;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import org.lwjgl.glfw.GLFW;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,6 +46,7 @@ public final class SunFlareMod implements ClientModInitializer {
         config = new FlareConfig(FabricLoader.getInstance().getConfigDir().resolve("urinth-sunflare.properties"));
         config.load();
         applyLeaves(false);
+        registerLightingPack();
         FlareRenderer renderer = new FlareRenderer(config);
         HudRenderCallback.EVENT.register(renderer::render);
         GodRays godRays = new GodRays(config);
@@ -74,6 +78,20 @@ public final class SunFlareMod implements ClientModInitializer {
         });
         // Backup for the frames the per-screen hook does not cover.
         ClientTickEvents.END_CLIENT_TICK.register(client -> ensureButtons(client.screen));
+    }
+
+    /**
+     * "URinth Lighting": a small resource pack inside the mod (on by default; switch it off in Resource Packs). It replaces the game's
+     * 16 x 16 light colour picture, which is made once per tick, so warm sunlight and darker, cooler shadows cost nothing per frame.
+     */
+    private void registerLightingPack() {
+        try {
+            FabricLoader.getInstance().getModContainer("urinth_sunflare").ifPresent(mod ->
+                ResourceManagerHelper.registerBuiltinResourcePack(ResourceLocation.fromNamespaceAndPath("urinth_sunflare", "lighting"),
+                    mod, Component.literal("URinth Lighting"), ResourcePackActivationType.DEFAULT_ENABLED));
+        } catch (Throwable t) {
+            LOG.warn("[SunFlare] could not register the lighting pack", t);
+        }
     }
 
     private Button[] makeButtons(Screen screen, int width) {

@@ -28,7 +28,7 @@ final class GodRayMath {
     static final int BANDS = 7;
     static final int BANDS_LOW = 5;
     /** Largest area the rays are drawn in, as a radius around the point they come from, in screen heights. */
-    static final double MAX_RADIUS = 0.72;
+    static final double MAX_RADIUS = 0.80;
 
     /** How many samples per band for a quality between 0 and 1, given how many the setting allows. */
     static int layerCount(int configured, double quality) {
@@ -107,7 +107,7 @@ final class GodRayMath {
      * high above the player is far outside the picture, but the rays should still be there when the player looks at the
      * horizon, so the point is held just outside the edge and the rays keep pointing the right way.
      */
-    static final double ORIGIN_LIMIT = 1.45;
+    static final double ORIGIN_LIMIT = 1.12;
 
     /**
      * Where the rays come from and how strongly they show. {@code vx, vy, vz} is the direction of the sun in view space (the
@@ -148,13 +148,13 @@ final class GodRayMath {
         out[0] = nx * 0.5 + 0.5;
         out[1] = ny * 0.5 + 0.5;
         double far = SunMath.smoothstep(1.0, 2.5, raw);
-        out[2] = gain * (1.0 - 0.35 * far);
+        out[2] = gain * (1.0 - 0.15 * far);
     }
 
     /** With the sun this far behind the player (cosine of the angle), the rays switch to the opposite point of the sky. */
     static final double BEHIND_FROM = 0.1;
     /** Strength of the rays from the opposite point, compared with the sun in front. */
-    static final double OPPOSITE_GAIN = 0.6;
+    static final double OPPOSITE_GAIN = 0.85;
 
     /** Daylight factor: 1 with the sun up, easing to 0 as it sets, and 0 at night or in rain. */
     static double daylight(double sunHeight, double night, double rain) {
