@@ -45,6 +45,14 @@ public final class FlareConfig {
     public static final int LEAVES_DEFAULT = 2;
     public static final String[] LEAVES_NAMES = {"Off", "Light", "Balanced", "Safe"};
 
+    /** The frame rates the Perf Guard button cycles through (0 = the guard is off). */
+    public static final int[] FPS_CHOICES = {0, 60, 72, 80, 90};
+
+    /** "Off" or "80 FPS", for the button and the commands. */
+    public static String fpsName(int fps) {
+        return fps <= 0 ? "Off" : fps + " FPS";
+    }
+
     /** Version of the settings file. Files of an older version get the new beam level and frame guard defaults once. */
     private static final int FILE_VERSION = 2;
 
@@ -53,6 +61,8 @@ public final class FlareConfig {
     private int beams = BEAMS_DEFAULT;
     private int targetFps = DEFAULT_TARGET_FPS;
     private int leaves = LEAVES_DEFAULT;
+    /** Write the stutter log (logs/urinth-perf.log) when the game hitches or freezes. */
+    private boolean perfLog = true;
     /** The photographic "Real" look (default) or the pack's own colourful flare. */
     private boolean real = true;
 
@@ -129,6 +139,27 @@ public final class FlareConfig {
         return targetFps;
     }
 
+    /** The next frame rate in {@link #FPS_CHOICES} after the current one (the first one after the last). Returns the new target. */
+    public int cycleTargetFps() {
+        int next = FPS_CHOICES[0];
+        for (int i = 0; i < FPS_CHOICES.length; i++) {
+            if (FPS_CHOICES[i] > targetFps) {
+                next = FPS_CHOICES[i];
+                break;
+            }
+        }
+        return setTargetFps(next);
+    }
+
+    public boolean perfLog() {
+        return perfLog;
+    }
+
+    public boolean setPerfLog(boolean on) {
+        perfLog = on;
+        return perfLog;
+    }
+
     public int leaves() {
         return leaves;
     }
@@ -192,6 +223,7 @@ public final class FlareConfig {
         mode = parseMode(p.getProperty("mode"), mode);
         real = !"pack".equalsIgnoreCase(p.getProperty("style", "real").trim());
         leaves = Math.max(0, Math.min(LEAVES_MAX, parseInt(p.getProperty("leaves"), LEAVES_DEFAULT)));
+        perfLog = !"off".equalsIgnoreCase(p.getProperty("perfLog", "on").trim());
         if (parseInt(p.getProperty("version"), 1) < FILE_VERSION) {
             // saved by an older build: the beams are different now (Extreme level, frame guard at 80), so start from the new defaults
             beams = BEAMS_DEFAULT;
@@ -211,11 +243,12 @@ public final class FlareConfig {
         p.setProperty("style", real ? "real" : "pack");
         p.setProperty("targetFps", Integer.toString(targetFps));
         p.setProperty("leaves", Integer.toString(leaves));
+        p.setProperty("perfLog", perfLog ? "on" : "off");
         try {
             Path parent = file.getParent();
             if (parent != null) Files.createDirectories(parent);
             try (OutputStream out = Files.newOutputStream(file)) {
-                p.store(out, "URinth sun lens flare. mode: 0 = off, 1 = subtle, 2 = full, 3 = strong. beams (light shafts): 0 = off, 1 = low, 2 = medium, 3 = high, 4 = extreme. style: real or pack. targetFps: frame rate the effects try to keep (0 = no limit). leaves: cheaper Fancy leaves, 0 = off, 1 = light, 2 = balanced, 3 = safe");
+                p.store(out, "URinth sun lens flare. mode: 0 = off, 1 = subtle, 2 = full, 3 = strong. beams (light shafts): 0 = off, 1 = low, 2 = medium, 3 = high, 4 = extreme. style: real or pack. targetFps: frame rate the effects try to keep (0 = no limit). leaves: cheaper Fancy leaves, 0 = off, 1 = light, 2 = balanced, 3 = safe. perfLog: on/off, writes logs/urinth-perf.log when the game hitches");
             }
         } catch (IOException ignored) {
             // the toggle still works for this session
