@@ -34,6 +34,8 @@ final class SettingsScreens {
     static final int STYLE = 2;
     /** Slot 3 is the cheaper Fancy leaves level. */
     static final int LEAVES = 3;
+    /** Slot 4 is the Perf Guard (the frame rate the effects may not push the game below). Only on Sodium's screen. */
+    static final int PERF = 4;
 
     /** {x, y, w, h} of a button. */
     static int[] bounds(Kind kind, int screenWidth, int slot) {
@@ -53,6 +55,7 @@ final class SettingsScreens {
 
     static String label(int slot, int mode, int width) {
         boolean narrow = width < 100;
+        if (slot == PERF) return (narrow ? "Guard: " : "Perf Guard: ") + FlareConfig.fpsName(mode);
         if (slot == STYLE) return (narrow ? "Style: " : "Flare Style: ") + (mode == 0 ? "Real" : "Pack");
         if (slot == LEAVES) return (narrow ? "Leaves: " : "Fancy Leaves: ") + FlareConfig.LEAVES_NAMES[mode];
         if (slot == FLARE) return (narrow ? "Flare: " : "Sun Flare: ") + FlareConfig.NAMES[mode];
