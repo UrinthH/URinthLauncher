@@ -66,17 +66,23 @@ void main() {
 
     // URinth Lighting (overworld only): this picture is 16 x 16 pixels and is made once per tick, so it costs nothing per frame.
     // Light that comes from the sky gets warm where the sun reaches and cool and darker in shadow; torch light is left alone.
+    // Under leaves and roofs the sky light is low, so the shade zone grows and the colour shifts cool/blue.
     if (UseBrightLightmap == 0) {
         float sunlit = smoothstep(0.55, 1.0, sky_brightness);
-        float shade = 1.0 - smoothstep(0.0, 0.75, sky_brightness);
+        // shade is strong when sky_brightness is low (under leaves, roofs, indoors); 0.6 threshold makes it kick in earlier
+        float shade = 1.0 - smoothstep(0.0, 0.60, sky_brightness);
+        // how much of this pixel's light comes from the sky vs a torch (block light)
         float skyShare = 1.0 - clamp(block_brightness * 1.5, 0.0, 1.0);
         vec3 warm = vec3(1.05, 1.0, 0.92);
-        vec3 cool = vec3(0.86, 0.94, 1.10);
-        vec3 tintColor = mix(vec3(1.0), warm, sunlit * 0.85) * mix(vec3(1.0), cool, shade * 0.9);
+        // cooler / bluer in deep shade: noticeable contrast between sunlit and covered areas
+        vec3 cool = vec3(0.80, 0.90, 1.14);
+        vec3 tintColor = mix(vec3(1.0), warm, sunlit * 0.85) * mix(vec3(1.0), cool, shade * 0.95);
         color *= mix(vec3(1.0), tintColor, skyShare);
-        // a steeper curve: the middle of the range gets darker, so shadows have depth; full light stays full
-        vec3 steep = pow(clamp(color, 0.0, 1.0), vec3(1.22));
-        color = mix(color, steep, 0.7 * skyShare + 0.3 * (1.0 - skyShare));
+        // steeper brightness curve in shaded sky-lit areas so covered spots look noticeably darker
+        // exponent 1.35 is stronger than the old 1.22; full-sun pixels are at 1.0 so they stay bright
+        vec3 steep = pow(clamp(color, 0.0, 1.0), vec3(1.35));
+        // apply the steep curve more in shade (0.80 * skyShare) so torchlight indoors stays warm and readable
+        color = mix(color, steep, 0.80 * skyShare + 0.25 * (1.0 - skyShare));
         color = clamp(color, 0.0, 1.0);
     }
 

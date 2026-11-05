@@ -51,6 +51,8 @@ public final class SunFlareMod implements ClientModInitializer {
         HudRenderCallback.EVENT.register(renderer::render);
         GodRays godRays = new GodRays(config);
         WorldRenderEvents.LAST.register(godRays::render);
+        BlobShadow blobShadow = new BlobShadow();
+        WorldRenderEvents.AFTER_ENTITIES.register(blobShadow::render);
 
         registerScreenButton();
         registerCommand();
