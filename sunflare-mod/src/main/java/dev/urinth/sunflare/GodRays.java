@@ -45,8 +45,9 @@ import org.joml.Vector4f;
  *       draw puts the alpha channel back to 1.</li>
  * </ol>
  * When the sun is high above the picture, the rays come from a point just outside the screen edge in its direction, so they stay
- * while the player looks at the horizon. Nothing is drawn when the sun is behind the player, at night, in rain, in water or in
- * other dimensions, so then it costs nothing.
+ * while the player looks at the horizon. With the sun behind the player the rays come from the opposite point of the sky
+ * (weaker), so they show whichever way the player looks. Nothing is drawn at night, in rain, in water or in other dimensions,
+ * so then it costs nothing.
  * The size of the box and the number of passes follow the frame-rate guard ({@link QualityGovernor}).
  */
 final class GodRays {
@@ -144,7 +145,7 @@ final class GodRays {
         double su = origin[0];
         double sv = origin[1];
         double vis = origin[2];
-        if (vis < 0.01) return false; // the sun is behind the player: nothing to smear the sky towards
+        if (vis < 0.01) return false; // exactly at the side of a far-off point, or too faint to see
 
         double quality = governor.quality();
         int passes = GodRayMath.passes(config.godRayLayers());

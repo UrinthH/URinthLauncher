@@ -133,16 +133,30 @@ class GodRayTest {
     }
 
     @Test
-    void raysEaseOutAtTheSideAndAreGoneWhenTheSunIsBehindThePlayer() {
+    void raysEaseOutAtTheSideAndComeFromTheOppositePointWhenTheSunIsBehindThePlayer() {
         double[] o = new double[3];
         GodRayMath.origin(1.0, 0.0, 0.0, 1.43, 1.43, o); // exactly at the side
         assertTrue(o[2] > 0.0 && o[2] < 1.0, "easing out: " + o[2]);
-        GodRayMath.origin(0.0, 0.5, 0.87, 1.43, 1.43, o); // behind and above
-        assertEquals(0.0, o[2], 1e-9);
-        GodRayMath.origin(0.0, 0.0, 1.0, 1.43, 1.43, o); // exactly behind
-        assertEquals(0.0, o[2], 1e-9);
-        // continuous: no jump when the sun passes the side
+        // behind and above: the opposite point is below the middle of the screen, and the rays are there
+        GodRayMath.origin(0.0, 0.5, 0.87, 1.43, 1.43, o);
+        assertTrue(o[2] > 0.3 && o[2] <= GodRayMath.OPPOSITE_GAIN + 1e-9, "weaker than in front: " + o[2]);
+        assertTrue(o[1] < 0.5, "opposite of a high sun is low: " + o[1]);
+        // exactly behind at the horizon: the opposite point is the middle of the screen
+        GodRayMath.origin(0.0, 0.0, 1.0, 1.43, 1.43, o);
+        assertEquals(0.5, o[0], 1e-9);
+        assertEquals(0.5, o[1], 1e-9);
+        assertEquals(GodRayMath.OPPOSITE_GAIN, o[2], 1e-9);
+        // behind and to the right: the opposite point is to the left
+        GodRayMath.origin(0.5, 0.0, 0.87, 1.43, 1.43, o);
+        assertTrue(o[0] < 0.5);
+        // no jump in strength anywhere as the sun goes round the player
         double[] a = new double[3], b = new double[3];
+        double last = -1;
+        for (double ang = 0; ang <= Math.PI; ang += 0.01) { // sun swinging from straight ahead round to behind, at 30 degrees up
+            GodRayMath.origin(Math.sin(ang) * 0.87, 0.5, -Math.cos(ang) * 0.87, 1.43, 1.43, a);
+            if (last >= 0) assertTrue(Math.abs(a[2] - last) < 0.08, "strength steps at " + ang + ": " + last + " -> " + a[2]);
+            last = a[2];
+        }
         GodRayMath.origin(0.8, 0.3, -0.0201, 1.43, 1.43, a);
         GodRayMath.origin(0.8, 0.3, -0.0199, 1.43, 1.43, b);
         assertEquals(a[0], b[0], 1e-3);

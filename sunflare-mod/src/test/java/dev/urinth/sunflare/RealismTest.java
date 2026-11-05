@@ -109,12 +109,16 @@ class RealismTest {
     }
 
     @Test
-    void aLowSunBehindThePlayerStillWarmsThePictureButANoonSunDoesNot() {
+    void aSunBehindThePlayerStillWarmsThePictureAtSunsetMoreThanAtNoon() {
         FlareFrame sunset = real(0.5, 0.5, 0.35, 1.0, 0.0, 0.0, 0.0, 0.0, 0.05);
         assertTrue(has(sunset, "GV"), "the sunset veil");
         assertEquals(1, sunset.count, "and nothing else when the sun is out of view");
         FlareFrame noon = real(0.5, 0.5, 0.35, 1.0, 0.0, 0.0, 0.0, 0.0, 0.95);
-        assertEquals(0, noon.count);
+        assertTrue(has(noon, "GV"), "even at noon a gentle wash stays when the sun is out of view");
+        assertEquals(1, noon.count);
+        double sunsetPeak = Math.max(sunset.draws[0].red, Math.max(sunset.draws[0].green, sunset.draws[0].blue));
+        double noonPeak = Math.max(noon.draws[0].red, Math.max(noon.draws[0].green, noon.draws[0].blue));
+        assertTrue(noonPeak > 0.0 && noonPeak < sunsetPeak, "fainter than the sunset's: " + noonPeak + " vs " + sunsetPeak);
         // behind a hill nothing is seen at all
         assertEquals(0, real(0.5, 0.5, 0.35, 0.0, 0.0, 0.0, 0.0, 0.0, 0.05).count);
     }

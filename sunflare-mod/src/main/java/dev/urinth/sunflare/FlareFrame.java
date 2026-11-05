@@ -32,6 +32,9 @@ final class FlareFrame {
     /** Quads smaller than this share of the screen are drawn at full resolution. */
     static final double SMALL_AREA = 0.05;
 
+    /** Least strength of the veil (compared with a sunset's) while the sun is out of view in daytime. */
+    static final double VEIL_FLOOR = 0.45;
+
     /** True: the photographic style (the Real elements); false: the pack's own. Set before {@link #compute}. */
     boolean real;
     private final double[] tint = new double[3];
@@ -69,7 +72,8 @@ final class FlareFrame {
         flareScale = 1.0;
         double smGlow = base * vis * reach;
         // out of view, a low sun still warms the picture a little: the veil takes over from the glow
-        double smVeil = real ? base * vis * (1.0 - reach) * Math.pow(SunTint.warmth(sunHeight), 1.2) * 0.5 : 0.0;
+        // (and whenever the sun is out of view, even behind the player, a gentle warm wash stays: the sun is still there)
+        double smVeil = real ? base * vis * (1.0 - reach) * Math.max(VEIL_FLOOR, Math.pow(SunTint.warmth(sunHeight), 1.2)) * 0.5 : 0.0;
         if (real) {
             if (smGlow <= 0.0 && sm <= 0.0 && smVeil <= 0.0) return;
         } else if (sm <= 0.0) {

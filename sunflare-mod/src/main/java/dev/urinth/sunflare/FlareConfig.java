@@ -29,7 +29,7 @@ public final class FlareConfig {
     public static final int BEAMS_EXTREME = 4;
     public static final int BEAMS_DEFAULT = BEAMS_EXTREME;
     public static final String[] BEAM_NAMES = {"Off", "Low", "Medium", "High", "Extreme"};
-    private static final double[] GOD_DENSITY = {0.0, 0.50, 0.75, 0.95, 1.10};
+    private static final double[] GOD_DENSITY = {0.0, 0.60, 0.90, 1.15, 1.35};
     private static final int[] GOD_LAYERS = {0, 16, 32, 32, 64};
     private static final int[] GOD_DIVISOR = {12, 10, 8, 7, 6};
     /**

@@ -113,20 +113,31 @@ final class GodRayMath {
      * Where the rays come from and how strongly they show. {@code vx, vy, vz} is the direction of the sun in view space (the
      * player looks along -z), {@code projX, projY} the first two diagonal entries of the projection matrix.
      * out[0], out[1] = the point in 0..1 screen coordinates (kept near the screen, see {@link #ORIGIN_LIMIT}),
-     * out[2] = 0..1: 1 when the sun is in front of the player, easing out when it is at the side and gone when it is behind
-     * (nothing can be smeared towards a sun behind the camera), a little lower when it is far outside the picture.
+     * out[2] = 0..1: 1 when the sun is in front of the player, easing out when it is at the side, and {@link #OPPOSITE_GAIN} at
+     * most when it is behind (then the point is the opposite point of the sky), a little lower when far outside the picture.
      */
     static void origin(double vx, double vy, double vz, double projX, double projY, double[] out) {
         double facing = -vz;
         double nx;
         double ny;
-        if (facing > 0.02) {
-            nx = projX * vx / facing;
-            ny = projY * vy / facing;
+        double gain;
+        if (facing <= -BEHIND_FROM) {
+            // behind the player: the rays come from the opposite point of the sky (the faint rays that point away from the sun
+            // in real life), so they are there whichever way the player looks; they are weaker than with the sun in front
+            double back = -facing;
+            nx = projX * -vx / back;
+            ny = projY * -vy / back;
+            gain = OPPOSITE_GAIN * SunMath.smoothstep(BEHIND_FROM, BEHIND_FROM + 0.25, back);
         } else {
-            // at the side or behind: only the direction on the screen is known, so put the point far out in that direction
-            nx = projX * vx * 50.0;
-            ny = projY * vy * 50.0;
+            if (facing > 0.02) {
+                nx = projX * vx / facing;
+                ny = projY * vy / facing;
+            } else {
+                // at the side: only the direction on the screen is known, so put the point far out in that direction
+                nx = projX * vx * 50.0;
+                ny = projY * vy * 50.0;
+            }
+            gain = SunMath.smoothstep(-BEHIND_FROM, 0.15, facing);
         }
         double raw = Math.max(Math.abs(nx), Math.abs(ny));
         if (raw > ORIGIN_LIMIT) {
@@ -136,10 +147,14 @@ final class GodRayMath {
         }
         out[0] = nx * 0.5 + 0.5;
         out[1] = ny * 0.5 + 0.5;
-        double front = SunMath.smoothstep(-0.20, 0.15, facing);
         double far = SunMath.smoothstep(1.0, 2.5, raw);
-        out[2] = front * (1.0 - 0.35 * far);
+        out[2] = gain * (1.0 - 0.35 * far);
     }
+
+    /** With the sun this far behind the player (cosine of the angle), the rays switch to the opposite point of the sky. */
+    static final double BEHIND_FROM = 0.1;
+    /** Strength of the rays from the opposite point, compared with the sun in front. */
+    static final double OPPOSITE_GAIN = 0.6;
 
     /** Daylight factor: 1 with the sun up, easing to 0 as it sets, and 0 at night or in rain. */
     static double daylight(double sunHeight, double night, double rain) {
