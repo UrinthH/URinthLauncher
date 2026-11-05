@@ -1,15 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Create Profile screen, rebuilt as real Modrinth-style list cards: a dark rounded card per
-     loader (urinth_profile_card_bg, the same panel chrome as the rest of the launcher) with a
-     colored initial badge, a title, a one-line description and a trailing chevron — instead of
-     the previous full-width tinted stone-button bars, which flattened the Minecraft button
-     texture into plain solid-color stripes and read as ugly/generic rather than Modrinth-like.
+     loader (urinth_profile_card_bg: white, rounded, hairline edge) with an icon tile, a title,
+     a one-line description and a trailing chevron, on the light launcher page.
      Every id is unchanged, so ProfileTypeSelectFragment's click bindings still work untouched. -->
 <com.kdt.DefocusableScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/background_app">
+    android:background="#FFF3F6FB"
+    android:clipToPadding="false"
+    android:overScrollMode="ifContentScrolls"
+    android:scrollbarThumbVertical="@drawable/urinth_scroll_thumb"
+    android:scrollbarSize="4dp">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -23,7 +25,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/padding_large"
-            android:background="@drawable/bg_preference_category_modrinth"
+            android:background="@drawable/urinth_section_header_bg"
             android:fontFamily="sans-serif-medium"
             android:gravity="center_vertical"
             android:minHeight="42dp"
@@ -32,7 +34,7 @@
             android:paddingEnd="14dp"
             android:paddingBottom="8dp"
             android:text="@string/create_profile_vanilla_like_versions"
-            android:textColor="#1FC77A"
+            android:textColor="#0F8A52"
             android:textSize="13sp"
             android:letterSpacing="0.04" />
 
@@ -41,10 +43,7 @@
             android:id="@+id/vanilla_profile"
             style="@style/UrinthProfileCard">
             <ImageView
-                android:layout_width="38dp"
-                android:layout_height="38dp"
-                android:contentDescription="@null"
-                android:scaleType="fitCenter"
+                style="@style/UrinthProfileIcon"
                 android:src="@drawable/ic_minecraft_grass_block" />
             <LinearLayout style="@style/UrinthProfileCardText">
                 <TextView style="@style/UrinthProfileCardTitle" android:text="@string/urinth_loader_vanilla" />
@@ -58,10 +57,7 @@
             android:id="@+id/optifine_profile"
             style="@style/UrinthProfileCard">
             <ImageView
-                android:layout_width="38dp"
-                android:layout_height="38dp"
-                android:contentDescription="@null"
-                android:scaleType="fitCenter"
+                style="@style/UrinthProfileIcon"
                 android:src="@drawable/ic_optifine" />
             <LinearLayout style="@style/UrinthProfileCardText">
                 <TextView style="@style/UrinthProfileCardTitle" android:text="@string/urinth_loader_optifine" />
@@ -75,7 +71,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/padding_extra_extra_large"
-            android:background="@drawable/bg_preference_category_modrinth"
+            android:background="@drawable/urinth_section_header_bg"
             android:fontFamily="sans-serif-medium"
             android:gravity="center_vertical"
             android:minHeight="42dp"
@@ -84,7 +80,7 @@
             android:paddingEnd="14dp"
             android:paddingBottom="8dp"
             android:text="@string/create_profile_modded_versions"
-            android:textColor="#1FC77A"
+            android:textColor="#0F8A52"
             android:textSize="13sp"
             android:letterSpacing="0.04" />
 
@@ -93,10 +89,7 @@
             android:id="@+id/modded_profile_fabric"
             style="@style/UrinthProfileCard">
             <ImageView
-                android:layout_width="38dp"
-                android:layout_height="38dp"
-                android:contentDescription="@null"
-                android:scaleType="fitCenter"
+                style="@style/UrinthProfileIcon"
                 android:src="@drawable/ic_fabric" />
             <LinearLayout style="@style/UrinthProfileCardText">
                 <TextView style="@style/UrinthProfileCardTitle" android:text="@string/urinth_loader_fabric" />
@@ -110,10 +103,7 @@
             android:id="@+id/modded_profile_quilt"
             style="@style/UrinthProfileCard">
             <ImageView
-                android:layout_width="38dp"
-                android:layout_height="38dp"
-                android:contentDescription="@null"
-                android:scaleType="fitCenter"
+                style="@style/UrinthProfileIcon"
                 android:src="@drawable/ic_quilt" />
             <LinearLayout style="@style/UrinthProfileCardText">
                 <TextView style="@style/UrinthProfileCardTitle" android:text="@string/urinth_loader_quilt" />
@@ -127,10 +117,7 @@
             android:id="@+id/modded_profile_legacy_fabric"
             style="@style/UrinthProfileCard">
             <ImageView
-                android:layout_width="38dp"
-                android:layout_height="38dp"
-                android:contentDescription="@null"
-                android:scaleType="fitCenter"
+                style="@style/UrinthProfileIcon"
                 android:src="@drawable/ic_fabric" />
             <LinearLayout style="@style/UrinthProfileCardText">
                 <TextView style="@style/UrinthProfileCardTitle" android:text="@string/urinth_loader_legacy_fabric" />
@@ -144,10 +131,7 @@
             android:id="@+id/modded_profile_forge"
             style="@style/UrinthProfileCard">
             <ImageView
-                android:layout_width="38dp"
-                android:layout_height="38dp"
-                android:contentDescription="@null"
-                android:scaleType="fitCenter"
+                style="@style/UrinthProfileIcon"
                 android:src="@drawable/ic_forge" />
             <LinearLayout style="@style/UrinthProfileCardText">
                 <TextView style="@style/UrinthProfileCardTitle" android:text="@string/urinth_loader_forge" />
@@ -161,10 +145,7 @@
             android:id="@+id/modded_profile_neoforge"
             style="@style/UrinthProfileCard">
             <ImageView
-                android:layout_width="38dp"
-                android:layout_height="38dp"
-                android:contentDescription="@null"
-                android:scaleType="fitCenter"
+                style="@style/UrinthProfileIcon"
                 android:src="@drawable/ic_neoforge" />
             <LinearLayout style="@style/UrinthProfileCardText">
                 <TextView style="@style/UrinthProfileCardTitle" android:text="@string/urinth_loader_neoforge" />
@@ -178,10 +159,7 @@
             android:id="@+id/modded_profile_modpack"
             style="@style/UrinthProfileCard">
             <ImageView
-                android:layout_width="38dp"
-                android:layout_height="38dp"
-                android:contentDescription="@null"
-                android:scaleType="fitCenter"
+                style="@style/UrinthProfileIcon"
                 android:src="@drawable/ic_curseforge" />
             <LinearLayout style="@style/UrinthProfileCardText">
                 <TextView style="@style/UrinthProfileCardTitle" android:text="@string/urinth_loader_modpack" />
@@ -195,10 +173,7 @@
             android:id="@+id/modded_profile_bta"
             style="@style/UrinthProfileCard">
             <ImageView
-                android:layout_width="38dp"
-                android:layout_height="38dp"
-                android:contentDescription="@null"
-                android:scaleType="fitCenter"
+                style="@style/UrinthProfileIcon"
                 android:src="@drawable/ic_minecraft_grass_block" />
             <LinearLayout style="@style/UrinthProfileCardText">
                 <TextView style="@style/UrinthProfileCardTitle" android:text="@string/urinth_loader_bta" />

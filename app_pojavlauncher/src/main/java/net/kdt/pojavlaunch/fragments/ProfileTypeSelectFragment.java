@@ -24,7 +24,7 @@ public class ProfileTypeSelectFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        // Staggered, lightweight entrance motion for the loader cards.
+        // Staggered pop-in for the loader cards (fade, grow from 96%, rise 16dp).
         int[] cardIds = {
                 R.id.vanilla_profile, R.id.optifine_profile, R.id.modded_profile_fabric,
                 R.id.modded_profile_quilt, R.id.modded_profile_legacy_fabric,
@@ -35,10 +35,13 @@ public class ProfileTypeSelectFragment extends Fragment {
             View card = view.findViewById(cardIds[i]);
             if (card == null) continue;
             card.setAlpha(0f);
-            card.setTranslationY(10f);
-            card.animate().alpha(1f).translationY(0f)
-                    .setStartDelay(i * 28L)
-                    .setDuration(220L)
+            card.setScaleX(0.96f);
+            card.setScaleY(0.96f);
+            card.setTranslationY(card.getResources().getDisplayMetrics().density * 16f);
+            card.animate().alpha(1f).scaleX(1f).scaleY(1f).translationY(0f)
+                    .setStartDelay(60L + i * 40L)
+                    .setDuration(320L)
+                    .setInterpolator(new android.view.animation.PathInterpolator(0.16f, 1f, 0.3f, 1f))
                     .start();
         }
 

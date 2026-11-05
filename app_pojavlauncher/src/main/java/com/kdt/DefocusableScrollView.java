@@ -18,18 +18,34 @@ public class DefocusableScrollView extends ScrollView {
 
     public DefocusableScrollView(Context context) {
         super(context);
+        init();
     }
 
     public DefocusableScrollView(Context context, AttributeSet attrs) {
         super(context, attrs);
+        init();
     }
 
     public DefocusableScrollView(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
+        init();
     }
 
     public DefocusableScrollView(Context context, AttributeSet attrs, int defStyleAttr, int defStyleRes) {
         super(context, attrs, defStyleAttr, defStyleRes);
+        init();
+    }
+
+    /** Smooth scrolling: a softer fling (a bit lower speed cap, so it glides instead of racing) and no edge fade. */
+    private void init() {
+        setSmoothScrollingEnabled(true);
+        setVerticalFadingEdgeEnabled(false);
+    }
+
+    @Override
+    public void fling(int velocityY) {
+        // Cap and soften the fling so long lists glide to a stop instead of overshooting.
+        super.fling((int) (Math.signum(velocityY) * Math.min(Math.abs(velocityY) * 0.85f, 6500f)));
     }
 
     public void setKeepFocusing(boolean shouldKeepFocusing){

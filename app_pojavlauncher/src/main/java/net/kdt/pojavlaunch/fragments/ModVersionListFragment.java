@@ -50,6 +50,8 @@ public abstract class ModVersionListFragment<T> extends Fragment implements Runn
         mProgressBar = view.findViewById(R.id.mod_dl_list_progress);
         mExpandableListView = view.findViewById(R.id.mod_dl_expandable_version_list);
         mExpandableListView.setOnChildClickListener(this);
+        // A longer, softer glide after a fling.
+        mExpandableListView.setFriction(android.view.ViewConfiguration.getScrollFriction() * 0.6f);
         mRetryView = view.findViewById(R.id.mod_dl_retry_layout);
         view.findViewById(R.id.forge_installer_retry_button).setOnClickListener(this);
         ModloaderListenerProxy taskProxy = getTaskProxy();
