@@ -82,12 +82,12 @@ class FlareConfigTest {
         for (int level = 1; level < FlareConfig.BEAM_NAMES.length; level++) {
             c.setBeams(level);
             assertTrue(c.godRayDivisor() <= last, "level " + level);
-            assertTrue(c.godRayDivisor() >= 3 && c.godRayDivisor() <= 6);
+            assertTrue(c.godRayDivisor() >= 6 && c.godRayDivisor() <= 12);
             last = c.godRayDivisor();
         }
         c.setBeams(FlareConfig.BEAMS_EXTREME);
-        assertEquals(12, c.godRayLayers());
-        assertEquals(4, c.godRayDivisor());
+        assertEquals(64, c.godRayLayers());
+        assertEquals(6, c.godRayDivisor());
         assertEquals(FlareConfig.BEAMS_EXTREME, FlareConfig.beamsFromName("EXTREME"));
     }
 
@@ -110,5 +110,26 @@ class FlareConfigTest {
         again.load();
         assertEquals(FlareConfig.BEAMS_OFF, again.beams());
         assertEquals(60, again.targetFps());
+    }
+
+    @Test
+    void cheaperLeavesAreOnByDefaultCycleAndAreSaved() throws java.io.IOException {
+        java.nio.file.Path file = java.nio.file.Files.createTempDirectory("sunflare-leaves").resolve("c.properties");
+        FlareConfig c = new FlareConfig(file);
+        assertEquals(FlareConfig.LEAVES_DEFAULT, c.leaves());
+        assertEquals(2, FlareConfig.LEAVES_DEFAULT, "balanced");
+        assertEquals(FlareConfig.LEAVES_MAX + 1, FlareConfig.LEAVES_NAMES.length);
+        c.setLeaves(99);
+        assertEquals(FlareConfig.LEAVES_DEFAULT, c.leaves(), "out of range is ignored");
+        c.setLeaves(FlareConfig.LEAVES_MAX);
+        assertEquals(0, c.cycleLeaves(), "wraps round to off");
+        assertEquals(1, c.cycleLeaves());
+        c.save();
+        FlareConfig again = new FlareConfig(file);
+        again.load();
+        assertEquals(1, again.leaves());
+        java.nio.file.Files.writeString(file, "version=2\nleaves=17\n");
+        again.load();
+        assertEquals(FlareConfig.LEAVES_MAX, again.leaves(), "a bad value is clamped");
     }
 }

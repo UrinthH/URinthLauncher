@@ -32,6 +32,8 @@ final class SettingsScreens {
     static final int BEAMS = 1;
     /** Slot 2 is the flare style (Real / Pack). */
     static final int STYLE = 2;
+    /** Slot 3 is the cheaper Fancy leaves level. */
+    static final int LEAVES = 3;
 
     /** {x, y, w, h} of a button. */
     static int[] bounds(Kind kind, int screenWidth, int slot) {
@@ -45,12 +47,14 @@ final class SettingsScreens {
         int w = screenWidth >= 320 ? 118 : 90;
         if (slot == FLARE) return new int[] {screenWidth - w - 4, 6, w, 20};
         // top left: beams at the corner; the style button next to it when there is room, else under it
+        if (slot == LEAVES) return new int[] {screenWidth - w - 4, 28, w, 20};
         return slot == BEAMS ? new int[] {4, 6, w, 20} : new int[] {4, 28, w, 20};
     }
 
     static String label(int slot, int mode, int width) {
         boolean narrow = width < 100;
         if (slot == STYLE) return (narrow ? "Style: " : "Flare Style: ") + (mode == 0 ? "Real" : "Pack");
+        if (slot == LEAVES) return (narrow ? "Leaves: " : "Fancy Leaves: ") + FlareConfig.LEAVES_NAMES[mode];
         if (slot == FLARE) return (narrow ? "Flare: " : "Sun Flare: ") + FlareConfig.NAMES[mode];
         return (narrow ? "Beams: " : "Sun Beams: ") + FlareConfig.BEAM_NAMES[mode];
     }

@@ -37,7 +37,7 @@ import org.joml.Matrix4f;
  * back from the GPU.
  */
 final class FlareRenderer {
-    private static final long RAY_INTERVAL_NANOS = 60_000_000L;
+    private static final long RAY_INTERVAL_NANOS = 120_000_000L;
     private static final double RAY_LENGTH = 128.0;
     private static final double SPREAD = 0.04;
     /** The small picture is this many times smaller than the window in each direction. */
@@ -302,10 +302,10 @@ final class FlareRenderer {
         if (mesh != null) BufferUploader.drawWithShader(mesh);
     }
 
-    /** Fraction (0..1) of five rays towards the sun that reach the sky. Leaves and stone block, glass does not. */
+    /** Fraction (0..1) of three rays towards the sun that reach the sky. Leaves and stone block, glass does not. */
     private double sunVisible(ClientLevel level, Minecraft mc, Camera camera) {
         Vec3 from = camera.getPosition();
-        double[][] offsets = {{0, 0, 0}, {SPREAD, 0, 0}, {-SPREAD, 0, 0}, {0, SPREAD, 0}, {0, -SPREAD, 0}};
+        double[][] offsets = {{0, 0, 0}, {SPREAD, SPREAD, 0}, {-SPREAD, -SPREAD, 0}};
         int clear = 0;
         for (double[] o : offsets) {
             Vec3 to = from.add((dir[0] + o[0]) * RAY_LENGTH, (dir[1] + o[1]) * RAY_LENGTH, (dir[2] + o[2]) * RAY_LENGTH);

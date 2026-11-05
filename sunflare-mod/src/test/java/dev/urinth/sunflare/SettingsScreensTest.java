@@ -75,4 +75,19 @@ class SettingsScreensTest {
         assertEquals("Flare Style: Real", SettingsScreens.label(SettingsScreens.STYLE, 0, 112));
         assertEquals("Style: Pack", SettingsScreens.label(SettingsScreens.STYLE, 1, 86));
     }
+
+    @Test
+    void leavesButtonHasItsOwnSpotAndLabel() {
+        for (int width : new int[] {320, 537}) {
+            int[] st = SettingsScreens.bounds(SettingsScreens.Kind.SODIUM, width, SettingsScreens.STYLE);
+            int[] lv = SettingsScreens.bounds(SettingsScreens.Kind.SODIUM, width, SettingsScreens.LEAVES);
+            assertTrue(lv[1] >= st[1] + st[3], "under the style button");
+            assertTrue(lv[0] + lv[2] <= width);
+        }
+        int[] vf = SettingsScreens.bounds(SettingsScreens.Kind.VANILLA, 400, SettingsScreens.FLARE);
+        int[] vl = SettingsScreens.bounds(SettingsScreens.Kind.VANILLA, 400, SettingsScreens.LEAVES);
+        assertTrue(vl[1] >= vf[1] + vf[3] && vl[0] + vl[2] <= 400);
+        assertEquals("Fancy Leaves: Balanced", SettingsScreens.label(SettingsScreens.LEAVES, 2, 112));
+        assertEquals("Leaves: Off", SettingsScreens.label(SettingsScreens.LEAVES, 0, 86));
+    }
 }

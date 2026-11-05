@@ -26,9 +26,9 @@ import org.slf4j.LoggerFactory;
  * Sun lens flare for Fabric. No shader loader is needed. The mode is kept in config/urinth-sunflare.properties (options.txt is
  * never touched) and can be changed in four ways, so it is always reachable:
  * <ul>
- *   <li>"Sun Flare: ..." and "Sun Beams: ..." buttons on Sodium's video settings screen,</li>
+ *   <li>"Sun Flare: ..." and "Sun Beams: ..." buttons (and a "Fancy Leaves" one) on Sodium's video settings screen,</li>
  *   <li>the same button on the vanilla Video Settings screen,</li>
- *   <li>the chat commands /sunflare [off|subtle|full|strong] /sunflare beams [off|low|medium|high] and /sunflare style [real|pack],</li>
+ *   <li>the chat commands /sunflare [off|subtle|full|strong] /sunflare beams [off|low|medium|high|extreme], /sunflare leaves [off|light|balanced|safe] and /sunflare style [real|pack],</li>
  *   <li>a key binding in Controls (unbound by default).</li>
  * </ul>
  */
@@ -42,6 +42,7 @@ public final class SunFlareMod implements ClientModInitializer {
     public void onInitializeClient() {
         config = new FlareConfig(FabricLoader.getInstance().getConfigDir().resolve("urinth-sunflare.properties"));
         config.load();
+        applyLeaves(false);
         FlareRenderer renderer = new FlareRenderer(config);
         HudRenderCallback.EVENT.register(renderer::render);
         GodRays godRays = new GodRays(config);
@@ -95,7 +96,14 @@ public final class SunFlareMod implements ClientModInitializer {
             config.save();
             x.setMessage(label(SettingsScreens.STYLE, x.getWidth()));
         }).bounds(st[0], st[1], st[2], st[3]).build();
-        return new Button[] {flare, beams, style};
+        int[] lv = SettingsScreens.bounds(kind, width, SettingsScreens.LEAVES);
+        Button leaves = Button.builder(label(SettingsScreens.LEAVES, lv[2]), x -> {
+            config.cycleLeaves();
+            config.save();
+            applyLeaves(true);
+            x.setMessage(label(SettingsScreens.LEAVES, x.getWidth()));
+        }).bounds(lv[0], lv[1], lv[2], lv[3]).build();
+        return new Button[] {flare, beams, style, leaves};
     }
 
     /** Puts the buttons back on the screen if a rebuild removed them. Safe to call as often as wanted. */
@@ -120,7 +128,8 @@ public final class SunFlareMod implements ClientModInitializer {
     }
 
     private Component label(int slot, int width) {
-        int value = slot == SettingsScreens.FLARE ? config.mode() : slot == SettingsScreens.BEAMS ? config.beams() : (config.realStyle() ? 0 : 1);
+        int value = slot == SettingsScreens.FLARE ? config.mode() : slot == SettingsScreens.BEAMS ? config.beams()
+            : slot == SettingsScreens.LEAVES ? config.leaves() : (config.realStyle() ? 0 : 1);
         return Component.literal(SettingsScreens.label(slot, value, width));
     }
 
@@ -167,6 +176,24 @@ public final class SunFlareMod implements ClientModInitializer {
                         return 1;
                     })));
             root.then(beamsNode);
+            var leavesNode = ClientCommandManager.literal("leaves").executes(ctx -> {
+                config.cycleLeaves();
+                config.save();
+                applyLeaves(true);
+                ctx.getSource().sendFeedback(leavesStatus());
+                return 1;
+            });
+            for (int i = 0; i < FlareConfig.LEAVES_NAMES.length; i++) {
+                final int level = i;
+                leavesNode.then(ClientCommandManager.literal(FlareConfig.LEAVES_NAMES[i].toLowerCase(Locale.ROOT)).executes(ctx -> {
+                    config.setLeaves(level);
+                    config.save();
+                    applyLeaves(true);
+                    ctx.getSource().sendFeedback(leavesStatus());
+                    return 1;
+                }));
+            }
+            root.then(leavesNode);
             var styleNode = ClientCommandManager.literal("style").executes(ctx -> {
                 config.toggleStyle();
                 config.save();
@@ -202,6 +229,23 @@ public final class SunFlareMod implements ClientModInitializer {
 
     private Component styleStatus() {
         return Component.literal("Flare Style: " + (config.realStyle() ? "Real" : "Pack"));
+    }
+
+    private Component leavesStatus() {
+        return Component.literal("Fancy Leaves: " + FlareConfig.LEAVES_NAMES[config.leaves()]
+            + (config.leaves() == 0 ? "" : " (hidden inner leaf faces are skipped)"));
+    }
+
+    /** Hands the setting to the chunk builder; the chunks are rebuilt (once) when the level changes. */
+    private void applyLeaves(boolean rebuild) {
+        LeafCull.setDepth(config.leaves());
+        if (!rebuild) return;
+        try {
+            var mc = net.minecraft.client.Minecraft.getInstance();
+            if (mc.levelRenderer != null && mc.level != null) mc.levelRenderer.allChanged();
+        } catch (Throwable t) {
+            LOG.warn("[SunFlare] could not rebuild the chunks after changing the leaves", t);
+        }
     }
 
     private Component beamStatus() {

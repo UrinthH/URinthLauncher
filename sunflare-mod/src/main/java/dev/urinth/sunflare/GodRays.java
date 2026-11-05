@@ -24,30 +24,34 @@ import org.joml.Vector4f;
 
 /**
  * Screen-space god rays, in the way of the "Godrays" of Sildur's Vibrant shaders. The sky is the light source: wherever the
- * depth buffer says "nothing here, just sky", light comes through. That sky picture is made small, then drawn several times,
- * each time shrunk a bit more towards the sun, and the layers are added up. A pixel therefore collects the sky along the line
- * from itself to the sun, so every gap between leaves and trunks becomes a soft ray pointing at the sun and every tree throws a
- * shadow ray away from it.
+ * depth buffer says "nothing here, just sky", light comes through. That sky picture is made small and smeared towards the sun,
+ * so every gap between leaves and trunks becomes a soft ray pointing at the sun and every tree throws a shadow ray away from it.
+ *
+ * A phone GPU pays for every pixel it touches, so the work is arranged to touch few of them:
+ * only a box around the sun is handled at full window size (the rays fade to nothing at its edge anyway, and it shrinks a
+ * little when the frame-rate guard asks for it), and the smearing is done on a tiny picture with a few passes that each double
+ * the number of samples ({@link GodRayMath}), instead of dozens of blended layers.
  *
  * It needs no shader of its own, only blending, so it cannot break the game's shader loading:
  * <ol>
- *   <li>the alpha channel of the main picture is cleared, then a quad at the far plane is drawn with the depth test and only the
- *       alpha channel writable: alpha becomes 1 exactly where the depth buffer still holds sky (colours are untouched),</li>
- *   <li>that alpha is copied into a small picture (about 1/6 of the window), averaging a few taps,</li>
- *   <li>the small picture is drawn into a second small one once per layer, shrunk towards the sun, tinted with the colour of the
- *       sun, and added (the blend uses the sky alpha as the amount),</li>
- *   <li>that result is smeared once more towards the sun into a third small picture, which multiplies the number of sample
- *       distances and so removes the steps between layers,</li>
- *   <li>a soft falloff around the sun is multiplied in, and the result is added to the screen in one full-window quad, except
- *       over open sky (so the sky does not get brighter, only the trees and the ground show rays).</li>
+ *   <li>inside the box, the alpha channel of the main picture is cleared, then a quad at the far plane is drawn with the depth test
+ *       and only the alpha channel writable: alpha becomes 1 exactly where the depth buffer still holds sky (colours are untouched),</li>
+ *   <li>that alpha is copied into a small picture (1/6 of the window), then into a smaller one (the sky as a grey value),</li>
+ *   <li>the smaller picture is smeared towards the sun: 4 to 6 fine passes, each adding the picture to a copy of itself shrunk
+ *       towards the sun (every pass doubles the samples along each ray), then one pass that adds it to copies of itself one
+ *       band further out each, so the samples tile the whole way to the sun with steps finer than the blur,</li>
+ *   <li>a soft falloff around the sun is multiplied in, and the result, tinted with the colour of the sun, is added to the screen
+ *       inside the box, except over open sky (so the sky does not get brighter, only trees and ground show rays). That same
+ *       draw puts the alpha channel back to 1.</li>
  * </ol>
  * When the sun is high above the picture, the rays come from a point just outside the screen edge in its direction, so they stay
  * while the player looks at the horizon. Nothing is drawn when the sun is behind the player, at night, in rain, in water or in
  * other dimensions, so then it costs nothing.
- * The number of layers follows the frame-rate guard ({@link QualityGovernor}), so the picture stays near the target frame rate.
+ * The size of the box and the number of passes follow the frame-rate guard ({@link QualityGovernor}).
  */
 final class GodRays {
     private static final int FALLOFF_SIZE = 128;
+    private static final int DIVISOR_A = 6;
     private static final double SKY_DEPTH = 0.99999;
 
     private final FlareConfig config;
@@ -55,24 +59,30 @@ final class GodRays {
     private final double[] dir = new double[3];
     private final double[] tint = new double[3];
     private final double[] origin = new double[3];
-    private final double[] scale = new double[GodRayMath.MAX_LAYERS];
-    private final double[] weight = new double[GodRayMath.MAX_LAYERS];
-    private final double[] bandScale = new double[GodRayMath.BAND_LAYERS];
-    private final double[] bandWeight = new double[GodRayMath.BAND_LAYERS];
+    private final double[] shrink = new double[GodRayMath.MAX_PASSES];
+    private final double[] mix = new double[GodRayMath.MAX_PASSES];
+    private final double[] bandScale = new double[GodRayMath.BANDS];
+    private final double[] bandWeight = new double[GodRayMath.BANDS];
     private final float[] view = new float[16];
     private final float[] proj = new float[16];
     private final Matrix4f projection = new Matrix4f();
     private final Matrix4f inverse = new Matrix4f();
     private final Vector4f corner = new Vector4f();
 
+    /** The sky as alpha, 1/6 of the window. */
     private TextureTarget small;
-    private TextureTarget rays;
-    private TextureTarget rays2;
+    /** The sky as a grey value, then the two pictures the smear passes swap between. */
+    private TextureTarget work;
+    private TextureTarget ping;
+    private TextureTarget pong;
     private int smallWidth;
     private int smallHeight;
+    private int workWidth;
+    private int workHeight;
     private DynamicTexture falloff;
     private ResourceLocation falloffId;
     private long lastFrame;
+    private boolean lastDrawn;
     private double presence;
     private boolean failed;
 
@@ -81,7 +91,7 @@ final class GodRays {
         this.governor = new QualityGovernor(config.targetFps());
     }
 
-    /** Quality of the effects now (0.3..1), shared with the other effects so one guard looks after the whole frame. */
+    /** Quality of the effects now (0.1..1), shared with the other effects so one guard looks after the whole frame. */
     double quality() {
         return governor.quality();
     }
@@ -93,30 +103,34 @@ final class GodRays {
         double dt = Math.min(0.1, ms / 1000.0);
         lastFrame = now;
         governor.setTargetFps(config.targetFps());
-        if (ms > 0.0) governor.frame(ms);
+        if (ms > 0.0) governor.frame(ms, lastDrawn);
+        lastDrawn = false;
         if (failed || config.beams() == FlareConfig.BEAMS_OFF) return;
         try {
-            draw(ctx, dt);
+            lastDrawn = draw(ctx, dt);
         } catch (Throwable t) {
             failed = true;
+            RenderSystem.disableScissor();
             RenderSystem.colorMask(true, true, true, true);
             RenderSystem.depthMask(true);
+            RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
             Minecraft.getInstance().getMainRenderTarget().bindWrite(true);
             SunFlareMod.LOG.error("[SunFlare] god rays turned themselves off after an error", t);
         }
     }
 
-    private void draw(WorldRenderContext ctx, double dt) {
+    /** @return true when the rays were drawn this frame */
+    private boolean draw(WorldRenderContext ctx, double dt) {
         Minecraft mc = Minecraft.getInstance();
         ClientLevel level = mc.level;
-        if (level == null || mc.player == null) return;
+        if (level == null || mc.player == null) return false;
         boolean usable = level.dimension() == Level.OVERWORLD && !ctx.advancedTranslucency()
                 && ctx.camera().getFluidInCamera() == FogType.NONE;
         long dayTime = level.getDayTime();
         SunMath.sunDirection(dayTime, dir);
         double target = usable ? GodRayMath.daylight(dir[1], SunMath.nightFactor(dayTime), level.getRainLevel(1.0f)) : 0.0;
         presence += (target - presence) * (1.0 - Math.exp(-dt * 2.0));
-        if (presence < 0.01) return;
+        if (presence < 0.01) return false;
 
         ctx.positionMatrix().get(view);
         projection.set(RenderSystem.getProjectionMatrix());
@@ -130,22 +144,40 @@ final class GodRays {
         double su = origin[0];
         double sv = origin[1];
         double vis = origin[2];
-        if (vis < 0.01) return; // the sun is behind the player: nothing to smear the sky towards
+        if (vis < 0.01) return false; // the sun is behind the player: nothing to smear the sky towards
 
         double quality = governor.quality();
-        int layers = GodRayMath.layerCount(config.godRayLayers(), quality);
-        GodRayMath.layers(layers, scale, weight);
-        GodRayMath.bands(bandScale, bandWeight);
+        int passes = GodRayMath.passes(config.godRayLayers());
+        int bands = GodRayMath.bandCount(quality);
+        GodRayMath.smear(passes, shrink, mix);
+        GodRayMath.bands(passes, bands, bandScale, bandWeight);
         SunTint.colour(dir[1], tint);
         double density = config.godRayDensity();
         double amount = presence * vis * (0.7 + 0.3 * quality);
 
-        // what the GPU will do to a vertex is ProjMat * ModelViewMat; undo that to place quads straight in screen space
-        inverse.set(projection).mul(RenderSystem.getModelViewMatrix()).invert();
-
         RenderTarget main = mc.getMainRenderTarget();
         int windowW = mc.getWindow().getWidth();
         int windowH = mc.getWindow().getHeight();
+        double aspect = (double) windowW / windowH;
+        // the box around the point the rays come from that is worth drawing (rays are zero beyond it), cut to the screen and
+        // rounded out to whole pixels so the clear, the sky mask and the final add all cover exactly the same pixels
+        double radius = GodRayMath.regionRadius(quality);
+        int px0 = (int) Math.max(0, Math.floor((su - radius / aspect) * windowW));
+        int px1 = (int) Math.min(windowW, Math.ceil((su + radius / aspect) * windowW));
+        int py0 = (int) Math.max(0, Math.floor((sv - radius) * windowH));
+        int py1 = (int) Math.min(windowH, Math.ceil((sv + radius) * windowH));
+        if (px1 - px0 < 8 || py1 - py0 < 8) return false;
+        float mx0 = px0 * 2f / windowW - 1f;
+        float mx1 = px1 * 2f / windowW - 1f;
+        float my0 = py0 * 2f / windowH - 1f;
+        float my1 = py1 * 2f / windowH - 1f;
+        float tu0 = (float) px0 / windowW;
+        float tu1 = (float) px1 / windowW;
+        float tv0 = (float) py0 / windowH;
+        float tv1 = (float) py1 / windowH;
+
+        // what the GPU will do to a vertex is ProjMat * ModelViewMat; undo that to place quads straight in screen space
+        inverse.set(projection).mul(RenderSystem.getModelViewMatrix()).invert();
         ensureTargets(windowW, windowH, config.godRayDivisor());
         ensureFalloff(mc);
 
@@ -153,23 +185,25 @@ final class GodRays {
         RenderSystem.disableCull();
         RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
 
-        // 1. alpha of the main picture = 1 where the depth buffer holds sky
+        // 1. alpha of the main picture inside the box = 1 where the depth buffer holds sky
+        RenderSystem.enableScissor(px0, py0, px1 - px0, py1 - py0);
         RenderSystem.colorMask(false, false, false, true);
         GlStateManager._clearColor(0f, 0f, 0f, 0f);
         GlStateManager._clear(16384);
+        RenderSystem.disableScissor();
         RenderSystem.disableBlend();
         RenderSystem.enableDepthTest();
         RenderSystem.depthFunc(515); // GL_LEQUAL
         RenderSystem.depthMask(false);
         RenderSystem.setShader(CoreShaders.POSITION_COLOR);
         BufferBuilder buf = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
-        quad(buf, -1f, -1f, 1f, 1f, SKY_DEPTH);
+        quad(buf, mx0, my0, mx1, my1, SKY_DEPTH);
         MeshData mesh = buf.build();
         if (mesh != null) BufferUploader.drawWithShader(mesh);
         RenderSystem.depthMask(true);
         RenderSystem.disableDepthTest();
 
-        // 2. that alpha, made small (four taps, each a quarter)
+        // 2. that alpha, made small (four taps, each a quarter): the box of the screen into the whole small picture
         RenderSystem.colorMask(true, true, true, true); // a clear obeys the colour mask, and this one must clear everything
         main.setFilterMode(9729);
         small.clear();
@@ -179,96 +213,118 @@ final class GodRays {
         RenderSystem.blendFunc(GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ONE);
         RenderSystem.setShader(CoreShaders.POSITION_TEX_COLOR);
         RenderSystem.setShaderTexture(0, main.getColorTextureId());
+        // the quarter goes in the shader colour: the game's shader throws away pixels whose own alpha is small
+        RenderSystem.setShaderColor(1f, 1f, 1f, 0.25f);
         buf = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
         float tx = 1.5f / windowW;
         float ty = 1.5f / windowH;
         for (int i = 0; i < 4; i++) {
             float ox = (i & 1) == 0 ? -tx : tx;
             float oy = (i & 2) == 0 ? -ty : ty;
-            quadUv(buf, 0f + ox, 0f + oy, 1f + ox, 1f + oy, 1f, 1f, 1f, 0.25f);
+            quadUv(buf, -1f, -1f, 1f, 1f, tu0 + ox, tv0 + oy, tu1 + ox, tv1 + oy, 1f, 1f, 1f, 1f);
         }
         mesh = buf.build();
         if (mesh != null) BufferUploader.drawWithShader(mesh);
-        RenderSystem.colorMask(true, true, true, true);
         main.setFilterMode(9728);
 
-        // 3. the layers, shrunk towards the sun, tinted, added by the amount of sky in them. Done in two passes, the second on the
-        // result of the first: pass A has fine layers for one band of distances, pass B one layer per band, so the scales multiply
-        // into evenly spaced sample distances along the whole reach and no steps show.
-        rays.clear();
-        rays.bindWrite(true);
-        RenderSystem.enableBlend();
+        // 2b. smaller still, and the sky becomes a grey value (the alpha, as the blend factor, times white); alpha stays 1
+        RenderSystem.colorMask(true, true, true, true);
+        work.clear();
+        work.bindWrite(true);
         RenderSystem.blendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE,
-            GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ONE);
+            GlStateManager.SourceFactor.ZERO, GlStateManager.DestFactor.ONE);
         RenderSystem.setShaderTexture(0, small.getColorTextureId());
         buf = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
-        float fu = (float) su;
-        float fv = (float) sv;
-        for (int k = 0; k < layers; k++) {
-            float s = (float) scale[k];
-            float w = (float) (weight[k] * density);
-            float r = Math.min(1f, (float) (tint[0] * w));
-            float g = Math.min(1f, (float) (tint[1] * w));
-            float b = Math.min(1f, (float) (tint[2] * w));
-            float u0 = fu + (0f - fu) * s, u1 = fu + (1f - fu) * s;
-            float v0 = fv + (0f - fv) * s, v1 = fv + (1f - fv) * s;
-            quadUv(buf, u0, v0, u1, v1, r, g, b, 1f);
+        float sx = 0.5f / smallWidth;
+        float sy = 0.5f / smallHeight;
+        for (int i = 0; i < 4; i++) {
+            float ox = (i & 1) == 0 ? -sx : sx;
+            float oy = (i & 2) == 0 ? -sy : sy;
+            quadUv(buf, -1f, -1f, 1f, 1f, ox, oy, 1f + ox, 1f + oy, 1f, 1f, 1f, 1f);
         }
         mesh = buf.build();
         if (mesh != null) BufferUploader.drawWithShader(mesh);
+        RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
 
-        // 3b. pass B: the first result, once per band further out (the colours are already tinted)
-        rays2.clear();
-        rays2.bindWrite(true);
-        RenderSystem.blendFunc(GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ONE);
-        RenderSystem.setShaderTexture(0, rays.getColorTextureId());
+        // 3. the smear passes. The point the rays come from, in the box's picture coordinates:
+        float fu = (float) ((su * windowW - px0) / (px1 - px0));
+        float fv = (float) ((sv * windowH - py0) / (py1 - py0));
+        RenderSystem.blendFuncSeparate(GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ONE,
+            GlStateManager.SourceFactor.ZERO, GlStateManager.DestFactor.ONE);
+        TextureTarget from = work;
+        TextureTarget to = ping;
+        for (int k = 0; k < passes; k++) {
+            to.clear();
+            to.bindWrite(true);
+            RenderSystem.setShaderTexture(0, from.getColorTextureId());
+            float m = (float) mix[k];
+            float keep = 1f - m;
+            float s = (float) (1.0 - shrink[k]);
+            float u0 = fu + (0f - fu) * s, u1 = fu + (1f - fu) * s;
+            float v0 = fv + (0f - fv) * s, v1 = fv + (1f - fv) * s;
+            buf = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
+            quadUv(buf, -1f, -1f, 1f, 1f, 0f, 0f, 1f, 1f, keep, keep, keep, 1f);
+            quadUv(buf, -1f, -1f, 1f, 1f, u0, v0, u1, v1, m, m, m, 1f);
+            mesh = buf.build();
+            if (mesh != null) BufferUploader.drawWithShader(mesh);
+            from = to;
+            to = (to == ping) ? pong : ping;
+        }
+
+        // 3b. the band pass: the result, once per band further out, so the bands tile the whole way to the sun
+        to.clear();
+        to.bindWrite(true);
+        RenderSystem.setShaderTexture(0, from.getColorTextureId());
         buf = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
-        for (int j = 0; j < GodRayMath.BAND_LAYERS; j++) {
+        for (int j = 0; j < bands; j++) {
             float s = (float) bandScale[j];
             float w = (float) bandWeight[j];
             float u0 = fu + (0f - fu) * s, u1 = fu + (1f - fu) * s;
             float v0 = fv + (0f - fv) * s, v1 = fv + (1f - fv) * s;
-            quadUv(buf, u0, v0, u1, v1, w, w, w, 1f);
+            quadUv(buf, -1f, -1f, 1f, 1f, u0, v0, u1, v1, w, w, w, 1f);
         }
         mesh = buf.build();
         if (mesh != null) BufferUploader.drawWithShader(mesh);
+        from = to;
 
-        // brightest near the sun, fading with distance from it
-        // (colour only: the alpha stays, because the game's shader throws away pixels whose alpha is small)
+        // 3c. brightest near the sun, fading to nothing at the edge of the box (colour only: the alpha stays 1, because the
+        // game's shader throws away pixels whose alpha is small)
         RenderSystem.blendFuncSeparate(GlStateManager.SourceFactor.ZERO, GlStateManager.DestFactor.SRC_COLOR,
             GlStateManager.SourceFactor.ZERO, GlStateManager.DestFactor.ONE);
         RenderSystem.setShaderTexture(0, falloffId);
-        double aspect = (double) windowW / windowH;
-        float cx = (float) (su * 2.0 - 1.0);
-        float cy = (float) (sv * 2.0 - 1.0);
-        float hy = (float) (GodRayMath.FALLOFF_RADIUS * 2.0);
-        float hx = (float) (GodRayMath.FALLOFF_RADIUS * 2.0 / aspect);
+        float cx = fu * 2f - 1f;
+        float cy = fv * 2f - 1f;
+        // the falloff texture spans the area of radius R around the point; in this picture that is 2R/(box size) of it
+        float hx = (float) (radius * 2.0 * windowH / (px1 - px0));
+        float hy = (float) (radius * 2.0 * windowH / (py1 - py0));
         buf = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
         quadUv(buf, cx - hx, cy - hy, cx + hx, cy + hy, 0f, 0f, 1f, 1f, 1f, 1f, 1f, 1f);
         mesh = buf.build();
         if (mesh != null) BufferUploader.drawWithShader(mesh);
 
-        // 4. add to the screen, but not over open sky: the alpha of the main picture still says where the sky is, so the sky itself
-        // does not get brighter (that was the glare around the sun) and the rays show on trees, hills and the ground
+        // 4. add to the screen inside the box, but not over open sky: the alpha of the main picture still says where the sky is,
+        // so the sky itself does not get brighter (that was the glare around the sun) and the rays show on trees, hills and
+        // the ground. The picture's own alpha is 1, and the alpha blend factors write it, so the main picture leaves this
+        // draw with alpha 1 again, as the game expects.
         main.bindWrite(true);
         RenderSystem.blendFuncSeparate(GlStateManager.SourceFactor.ONE_MINUS_DST_ALPHA, GlStateManager.DestFactor.ONE,
-            GlStateManager.SourceFactor.ZERO, GlStateManager.DestFactor.ONE);
-        RenderSystem.setShaderTexture(0, rays2.getColorTextureId());
+            GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ZERO);
+        RenderSystem.setShaderTexture(0, from.getColorTextureId());
         float a = (float) Math.min(1.0, amount);
+        float gain = (float) density; // may be above 1: the shader multiplies in float before the blend
+        RenderSystem.setShaderColor(gain, gain, gain, 1f);
         buf = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
-        quadUv(buf, -1f, -1f, 1f, 1f, 0f, 0f, 1f, 1f, a, a, a, 1f);
+        quadUv(buf, mx0, my0, mx1, my1, 0f, 0f, 1f, 1f, (float) (tint[0] * a), (float) (tint[1] * a), (float) (tint[2] * a), 1f);
         mesh = buf.build();
         if (mesh != null) BufferUploader.drawWithShader(mesh);
 
-        // leave the main picture the way the game expects: alpha 1 everywhere, normal blending, depth test on
-        RenderSystem.colorMask(false, false, false, true);
-        GlStateManager._clearColor(0f, 0f, 0f, 1f);
-        GlStateManager._clear(16384);
+        RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
         RenderSystem.colorMask(true, true, true, true);
         RenderSystem.defaultBlendFunc();
         RenderSystem.disableBlend();
         RenderSystem.enableDepthTest();
         RenderSystem.enableCull();
+        return true;
     }
 
     /** A full-target quad in clip space (x0..x1, y0..y1), placed through the inverse of the GPU's matrices at depth z. */
@@ -308,23 +364,31 @@ final class GodRays {
     }
 
     private void ensureTargets(int windowW, int windowH, int divisor) {
-        int w = Math.max(64, windowW / divisor);
-        int h = Math.max(36, windowH / divisor);
-        if (small != null && smallWidth == w && smallHeight == h) return;
+        int w = Math.max(64, windowW / DIVISOR_A);
+        int h = Math.max(36, windowH / DIVISOR_A);
+        int w2 = Math.max(32, windowW / Math.max(DIVISOR_A, divisor));
+        int h2 = Math.max(18, windowH / Math.max(DIVISOR_A, divisor));
+        if (small != null && smallWidth == w && smallHeight == h && workWidth == w2 && workHeight == h2) return;
         if (small != null) small.destroyBuffers();
-        if (rays != null) rays.destroyBuffers();
-        if (rays2 != null) rays2.destroyBuffers();
+        if (work != null) work.destroyBuffers();
+        if (ping != null) ping.destroyBuffers();
+        if (pong != null) pong.destroyBuffers();
         small = new TextureTarget(w, h, false);
-        small.setClearColor(1f, 1f, 1f, 0f); // white, so the layers can take their colour from the vertices; alpha is the sky
+        small.setClearColor(1f, 1f, 1f, 0f); // white, so the next step can take the colour from it; alpha is the sky
         small.setFilterMode(9729);
-        rays = new TextureTarget(w, h, false);
-        rays.setClearColor(0f, 0f, 0f, 0f);
-        rays.setFilterMode(9729);
-        rays2 = new TextureTarget(w, h, false);
-        rays2.setClearColor(0f, 0f, 0f, 0f);
-        rays2.setFilterMode(9729);
+        work = new TextureTarget(w2, h2, false);
+        work.setClearColor(0f, 0f, 0f, 1f); // black with alpha 1: the passes only add grey, and the picture's alpha stays 1
+        work.setFilterMode(9729);
+        ping = new TextureTarget(w2, h2, false);
+        ping.setClearColor(0f, 0f, 0f, 1f);
+        ping.setFilterMode(9729);
+        pong = new TextureTarget(w2, h2, false);
+        pong.setClearColor(0f, 0f, 0f, 1f);
+        pong.setFilterMode(9729);
         smallWidth = w;
         smallHeight = h;
+        workWidth = w2;
+        workHeight = h2;
     }
 
     private void ensureFalloff(Minecraft mc) {

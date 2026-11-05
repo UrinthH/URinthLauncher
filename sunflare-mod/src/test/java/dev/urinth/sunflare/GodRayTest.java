@@ -8,78 +8,93 @@ import org.junit.jupiter.api.Test;
 /** The numbers behind the screen-space god rays, and the guard that keeps the frame rate. No Minecraft classes. */
 class GodRayTest {
     @Test
-    void passALayersFillOneBandAndTheirWeightsAddUpToOne() {
-        for (int n : new int[] {4, 5, 7, 9, 12, 14}) {
-            double[] scale = new double[n], weight = new double[n];
-            GodRayMath.layers(n, scale, weight);
-            double sum = 0;
-            for (int k = 0; k < n; k++) {
-                assertTrue(scale[k] > GodRayMath.BAND && scale[k] <= 1.0, "scale " + scale[k]);
-                if (k > 0) {
-                    assertTrue(scale[k] < scale[k - 1], "each layer reaches further");
-                    assertTrue(weight[k] < weight[k - 1], "nearer samples count more");
-                }
-                sum += weight[k];
-            }
-            assertEquals(1.0, sum, 1e-9);
-            assertEquals(1.0, scale[0], 1e-12, "the first layer is the picture itself");
-            assertEquals(1.0 - (1.0 - GodRayMath.BAND) * (n - 1) / n, scale[n - 1], 1e-9);
-        }
-    }
-
-    @Test
-    void passBLayersAreOneBandFurtherOutEachAndTheirWeightsAddUpToOne() {
-        double[] scale = new double[GodRayMath.BAND_LAYERS], weight = new double[GodRayMath.BAND_LAYERS];
-        GodRayMath.bands(scale, weight);
-        double sum = 0;
-        for (int j = 0; j < GodRayMath.BAND_LAYERS; j++) {
-            assertEquals(Math.pow(GodRayMath.BAND, j), scale[j], 1e-12);
-            if (j > 0) assertTrue(weight[j] < weight[j - 1]);
-            sum += weight[j];
-        }
-        assertEquals(1.0, sum, 1e-9);
-        assertEquals(1.0, scale[0], 1e-12);
+    void passCountFollowsTheSettingWithinLimits() {
+        assertEquals(6, GodRayMath.passes(64));
+        assertEquals(5, GodRayMath.passes(32));
+        assertEquals(GodRayMath.MIN_PASSES, GodRayMath.passes(16));
+        assertEquals(GodRayMath.MIN_PASSES, GodRayMath.passes(2), "never fewer than the minimum");
+        assertEquals(GodRayMath.MAX_PASSES, GodRayMath.passes(500), "never more than the maximum");
+        assertEquals(GodRayMath.BANDS, GodRayMath.bandCount(1.0));
+        assertTrue(GodRayMath.bandCount(0.2) < GodRayMath.bandCount(1.0), "low quality: fewer bands");
     }
 
     @Test
     void layerCountFollowsQualityWithinTheSettingsLimits() {
-        assertEquals(12, GodRayMath.layerCount(12, 1.0));
-        assertEquals(GodRayMath.MIN_LAYERS, GodRayMath.layerCount(12, 0.0));
-        int last = 0;
-        for (double q = 0.0; q <= 1.0; q += 0.1) {
-            int n = GodRayMath.layerCount(12, q);
-            assertTrue(n >= last && n >= GodRayMath.MIN_LAYERS && n <= 12);
-            last = n;
-        }
-        assertEquals(GodRayMath.MIN_LAYERS, GodRayMath.layerCount(2, 1.0), "never fewer than the minimum");
-        assertEquals(GodRayMath.MAX_LAYERS, GodRayMath.layerCount(40, 1.0), "never more than the maximum");
+        assertEquals(48, GodRayMath.layerCount(48, 1.0));
+        assertEquals(GodRayMath.MIN_LAYERS, GodRayMath.layerCount(48, 0.0));
+        assertEquals(GodRayMath.MIN_LAYERS, GodRayMath.layerCount(2, 1.0));
+        assertEquals(GodRayMath.MAX_LAYERS, GodRayMath.layerCount(500, 1.0));
     }
 
     @Test
-    void theTwoPassesTogetherSampleEvenlyAlongTheWholeReach() {
-        assertEquals(0.92, GodRayMath.totalReach(), 0.01);
-        for (int n : new int[] {5, 7, 9, 12}) {
-            double[] a = new double[n], aw = new double[n];
-            double[] b = new double[GodRayMath.BAND_LAYERS], bw = new double[GodRayMath.BAND_LAYERS];
-            GodRayMath.layers(n, a, aw);
-            GodRayMath.bands(b, bw);
+    void finePassesDoubleTheShrinkAndStayInsideTheBand() {
+        for (int n : new int[] {4, 5, 6}) {
+            double[] shrink = new double[n], mix = new double[n];
+            GodRayMath.smear(n, shrink, mix);
+            double total = 0;
+            for (int k = 0; k < n; k++) {
+                if (k > 0) assertEquals(2.0, shrink[k] / shrink[k - 1], 1e-9, "each pass shrinks twice as far");
+                total += shrink[k];
+                assertTrue(mix[k] > 0.2 && mix[k] <= 0.51);
+                assertEquals(mix[k] * 255.0, Math.rint(mix[k] * 255.0), 1e-9, "a whole byte, so it can be a vertex colour");
+            }
+            assertEquals(GodRayMath.FINE_REACH * (1.0 - Math.pow(2.0, -n)), total, 1e-9);
+            double scale = GodRayMath.bandScale(n);
+            assertTrue(scale < 1.0 - 0.9 * total && scale > 1.0 - total, "the smallest copy: " + scale);
+        }
+    }
+
+    @Test
+    void bandWeightsAreWholeBytesAddUpToOneAndFavourTheNearBands() {
+        for (int n : new int[] {4, 5, 6}) {
+            for (int count : new int[] {GodRayMath.BANDS_LOW, GodRayMath.BANDS}) {
+                double[] scale = new double[count], weight = new double[count];
+                GodRayMath.bands(n, count, scale, weight);
+                double sum = 0;
+                for (int j = 0; j < count; j++) {
+                    assertEquals(Math.pow(GodRayMath.bandScale(n), j), scale[j], 1e-12);
+                    assertEquals(weight[j] * 255.0, Math.rint(weight[j] * 255.0), 1e-9);
+                    if (j > 1) assertTrue(weight[j] <= weight[j - 1] + 1e-9, "n=" + n + " band " + j);
+                    sum += weight[j];
+                }
+                assertEquals(1.0, sum, 1e-9);
+                assertEquals(1.0, scale[0], 1e-12, "band 0 is the picture itself");
+            }
+        }
+    }
+
+    @Test
+    void fineAndBandPassesTogetherSampleEvenlyAlongTheWholeReach() {
+        for (int n : new int[] {4, 5, 6}) {
+            double[] shrink = new double[n], mix = new double[n];
+            GodRayMath.smear(n, shrink, mix);
+            double[] scale = new double[GodRayMath.BANDS], weight = new double[GodRayMath.BANDS];
+            GodRayMath.bands(n, GodRayMath.BANDS, scale, weight);
             java.util.TreeSet<Double> all = new java.util.TreeSet<>();
-            for (double x : a) for (double y : b) all.add(x * y);
-            assertEquals(n * GodRayMath.BAND_LAYERS, all.size(), "every pair gives its own distance");
-            assertTrue(1.0 - all.first() > 0.88, "the combined reach is long: " + (1.0 - all.first()));
-            assertEquals(1.0, all.last(), 1e-12, "the pixel itself is sampled");
+            for (int bits = 0; bits < (1 << n); bits++) {
+                double s = 1.0;
+                for (int k = 0; k < n; k++) if ((bits >> k & 1) != 0) s *= 1.0 - shrink[k];
+                for (double band : scale) all.add(1.0 - s * band);
+            }
+            assertEquals(0.0, all.first(), 1e-12, "the pixel itself is sampled");
+            assertTrue(all.last() > 0.85, "the reach is long: " + all.last());
             double biggest = 0.0;
             Double prev = null;
             for (double d : all) {
                 if (prev != null) biggest = Math.max(biggest, d - prev);
                 prev = d;
             }
-            // no step is wider than pass A's own step (the bands tile with no holes) ...
-            assertTrue(biggest <= (1.0 - GodRayMath.BAND) / n + 1e-9, "n=" + n + " biggest step " + biggest);
-            // ... and that is finer than a single pass of the same number of draws could do
-            double onePass = GodRayMath.totalReach() / (n + GodRayMath.BAND_LAYERS);
-            assertTrue(biggest < onePass, "n=" + n + ": " + biggest + " vs single pass " + onePass);
+            // the steps between samples: at most the finest pass's own width, whatever the band (the bands tile, no holes)
+            assertTrue(biggest <= 1.3 * GodRayMath.FINE_REACH / (1 << (n - 1)) / 2.0 + 0.012, "n=" + n + " biggest step " + biggest);
+            assertTrue(biggest < 0.05, "n=" + n + " biggest step " + biggest);
         }
+    }
+
+    @Test
+    void regionShrinksWithQualityButStaysBig() {
+        assertEquals(GodRayMath.MAX_RADIUS, GodRayMath.regionRadius(1.0), 1e-12);
+        assertTrue(GodRayMath.regionRadius(0.3) < GodRayMath.regionRadius(1.0));
+        assertTrue(GodRayMath.regionRadius(0.0) >= 0.39 * GodRayMath.MAX_RADIUS);
     }
 
     @Test
@@ -144,14 +159,18 @@ class GodRayTest {
     }
 
     @Test
-    void falloffIsBrightestAtTheSunAndZeroOnTheTextureBorder() {
-        assertEquals(1.0, GodRayMath.falloff(0.0), 1e-12);
+    void falloffIsBrightestAtTheSunSmoothAndZeroOnTheTextureBorder() {
+        assertEquals(1.0, GodRayMath.areaFalloff(0.0), 1e-12);
         double last = 1.0;
-        for (double r = 0.1; r < 3.0; r += 0.1) {
-            double f = GodRayMath.falloff(r);
-            assertTrue(f < last);
+        for (double rho = 0.05; rho < 1.0; rho += 0.05) {
+            double f = GodRayMath.areaFalloff(rho);
+            assertTrue(f < last, "falls steadily");
             last = f;
         }
+        assertEquals(0.0, GodRayMath.areaFalloff(1.0), 1e-12);
+        assertEquals(0.0, GodRayMath.areaFalloff(3.0), 1e-12);
+        // near the sun it is the same look as the plain falloff
+        assertEquals(GodRayMath.falloff(0.2), GodRayMath.areaFalloff(0.2 / GodRayMath.MAX_RADIUS), 1e-12);
         int n = 64;
         byte[] px = GodRayMath.falloffTexture(n);
         assertTrue((px[(n / 2) * n + n / 2] & 0xFF) > 240);
@@ -164,24 +183,51 @@ class GodRayTest {
     }
 
     @Test
-    void governorTurnsQualityDownWhenFramesAreTooLongAndBackUpWhenThereIsRoom() {
-        QualityGovernor g = new QualityGovernor(90);
-        for (int i = 0; i < 400; i++) g.frame(11.1);
-        assertEquals(1.0, g.quality(), 1e-9, "on target: untouched");
-        for (int i = 0; i < 400; i++) g.frame(16.0);
-        assertTrue(g.quality() < 0.7, "slow frames lower the quality: " + g.quality());
+    void budgetIsTheRoomUnderTheTargetButNeverLessThanTheMinimum() {
+        QualityGovernor g = new QualityGovernor(80);
+        assertEquals(12.5, g.targetMillis(), 1e-9);
+        for (int i = 0; i < 100; i++) g.frame(11.1, false);
+        assertEquals(12.5 - 11.1, g.budgetMillis(), 0.05, "90 FPS plain: the effects may take it down to 80");
+        for (int i = 0; i < 3000; i++) g.frame(25.0, false);
+        assertEquals(QualityGovernor.MIN_BUDGET_MILLIS, g.budgetMillis(), 1e-9, "a heavy scene still leaves a small budget");
+    }
+
+    @Test
+    void governorKeepsQualityWhenTheEffectsStayInsideTheBudget() {
+        QualityGovernor g = new QualityGovernor(80);
+        for (int i = 0; i < 100; i++) g.frame(11.1, false);
+        for (int i = 0; i < 400; i++) g.frame(12.2, true); // +1.1 ms, budget is 1.4 ms
+        assertEquals(1.0, g.quality(), 1e-9);
+    }
+
+    @Test
+    void governorTurnsQualityDownWhenTheEffectsCostMoreThanTheBudgetAndBackUpWhenThereIsRoom() {
+        QualityGovernor g = new QualityGovernor(80);
+        for (int i = 0; i < 100; i++) g.frame(11.1, false);
+        for (int i = 0; i < 400; i++) g.frame(16.0, true); // +4.9 ms
+        assertTrue(g.quality() < 0.5, "expensive effects lower the quality: " + g.quality());
         assertTrue(g.quality() >= QualityGovernor.MIN_QUALITY);
-        for (int i = 0; i < 2000; i++) g.frame(8.0);
-        assertEquals(1.0, g.quality(), 1e-9, "fast frames bring it back");
+        for (int i = 0; i < 4000; i++) g.frame(11.5, true); // cheap again
+        assertEquals(1.0, g.quality(), 1e-9, "cheap effects bring it back");
+    }
+
+    @Test
+    void governorWithoutABaselineHoldsTheWholeFrameToTheTarget() {
+        QualityGovernor g = new QualityGovernor(80);
+        for (int i = 0; i < 400; i++) g.frame(12.4, true);
+        assertEquals(1.0, g.quality(), 1e-9, "on target: untouched");
+        for (int i = 0; i < 400; i++) g.frame(18.0, true);
+        assertTrue(g.quality() < 0.7, "slow frames lower the quality: " + g.quality());
     }
 
     @Test
     void governorIgnoresOneOffHitchesAndCanBeSwitchedOff() {
-        QualityGovernor g = new QualityGovernor(90);
-        for (int i = 0; i < 300; i++) g.frame(i % 50 == 0 ? 120.0 : 11.0);
+        QualityGovernor g = new QualityGovernor(80);
+        for (int i = 0; i < 100; i++) g.frame(11.1, false);
+        for (int i = 0; i < 300; i++) g.frame(i % 50 == 0 ? 120.0 : 11.6, true);
         assertEquals(1.0, g.quality(), 1e-9, "a chunk-loading hitch is not the effects' fault");
         QualityGovernor off = new QualityGovernor(0);
-        for (int i = 0; i < 300; i++) off.frame(40.0);
+        for (int i = 0; i < 300; i++) off.frame(40.0, true);
         assertEquals(1.0, off.quality(), 1e-9);
     }
 }
