@@ -532,7 +532,7 @@ public final class UrinthHomeController {
         name.setText(title);
         name.setSingleLine(true);
         name.setEllipsize(android.text.TextUtils.TruncateAt.END);
-        name.setTextColor(highlighted ? GREEN : 0xFF1B2733);
+        name.setTextColor(highlighted ? 0xFF0F8A52 : 0xFF1B2733);
         name.setTextSize(14f);
         texts.addView(name);
         if (subtitle != null) {
@@ -540,7 +540,7 @@ public final class UrinthHomeController {
             version.setText(subtitle);
             version.setSingleLine(true);
             version.setEllipsize(android.text.TextUtils.TruncateAt.END);
-            version.setTextColor(0xFFABC0CB);
+            version.setTextColor(0xFF6B7A87);
             version.setTextSize(11f);
             texts.addView(version);
         }
@@ -609,7 +609,7 @@ public final class UrinthHomeController {
     }
 
     /**
-     * Builds an otherwise-empty AlertDialog with the dark/green card chrome
+     * Builds an otherwise-empty AlertDialog with the white rounded card chrome
      * (urinth_dialog_bg) instead of the plain system dialog look, and a title drawn in the
      * same style as the rest of the launcher.
      */
@@ -620,13 +620,20 @@ public final class UrinthHomeController {
         title.setTextSize(16f);
         title.setTypeface(title.getTypeface(), android.graphics.Typeface.BOLD);
         int pad = dpToPx(18);
-        title.setPadding(pad, pad, pad, dpToPx(6));
+        title.setPadding(pad, pad, pad, dpToPx(8));
 
         AlertDialog dialog = new AlertDialog.Builder(activity)
                 .setCustomTitle(title)
                 .setNegativeButton(android.R.string.cancel, null)
                 .create();
         dialog.getWindow().setBackgroundDrawableResource(R.drawable.urinth_dialog_bg);
+        // Slow, soft pop-in and out, and a lighter dim behind the card.
+        dialog.getWindow().setWindowAnimations(R.style.UrinthDialogAnim);
+        dialog.getWindow().setDimAmount(0.32f);
+        dialog.setOnShowListener(d -> {
+            android.widget.Button cancel = dialog.getButton(AlertDialog.BUTTON_NEGATIVE);
+            if (cancel != null) cancel.setTextColor(0xFF14A765);
+        });
         return dialog;
     }
 
@@ -676,7 +683,7 @@ public final class UrinthHomeController {
 
         TextView label = new TextView(context);
         label.setText(text);
-        label.setTextColor(highlighted ? GREEN : 0xFF1B2733);
+        label.setTextColor(highlighted ? 0xFF0F8A52 : 0xFF1B2733);
         label.setTextSize(14f);
         LinearLayout.LayoutParams labelParams = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
         row.addView(label, labelParams);

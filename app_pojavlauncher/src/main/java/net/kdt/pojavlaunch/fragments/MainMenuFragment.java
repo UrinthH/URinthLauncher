@@ -197,8 +197,8 @@ public class MainMenuFragment extends Fragment {
                 .scaleX(1f)
                 .scaleY(1f)
                 .translationY(0f)
-                .setDuration(340L)
-                .setInterpolator(new android.view.animation.PathInterpolator(0.16f, 1f, 0.3f, 1f))
+                .setDuration(560L)
+                .setInterpolator(new android.view.animation.PathInterpolator(0.05f, 0.7f, 0.1f, 1f))
                 .start();
 
         getChildFragmentManager().beginTransaction()

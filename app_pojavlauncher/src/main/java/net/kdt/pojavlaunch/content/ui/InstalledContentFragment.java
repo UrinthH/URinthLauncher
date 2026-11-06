@@ -90,7 +90,7 @@ public class InstalledContentFragment extends Fragment {
         Context context = inflater.getContext();
         LinearLayout root = new LinearLayout(context);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackground(Fx.glass(context, 18, 0xAA00E6AA));
+        root.setBackground(Fx.glass(context, 18, Fx.EDGE));
         int side = Fx.dp(context, 16);
         root.setPadding(side, Fx.dp(context, 12), side, Fx.dp(context, 12));
 
@@ -180,7 +180,7 @@ public class InstalledContentFragment extends Fragment {
         LinearLayout searchBox = new LinearLayout(context);
         searchBox.setGravity(Gravity.CENTER_VERTICAL);
         searchBox.setPadding(Fx.dp(context, 12), 0, Fx.dp(context, 12), 0);
-        searchBox.setBackground(Fx.fill(context, 0x66082736, 14, 0xFF1D697E));
+        searchBox.setBackground(Fx.fill(context, 0xFFFFFFFF, 14, 0xFFD9E2EA));
         searchBox.addView(Fx.icon(context, R.drawable.ic_dl_search, Fx.MUTED, 18));
         EditText search = new EditText(context);
         search.setHint("Search " + mKind.label.toLowerCase(Locale.ROOT));
@@ -426,7 +426,7 @@ public class InstalledContentFragment extends Fragment {
 
             toggle = new Fx.Toggle(context, true);
             card.addView(toggle);
-            trash = Fx.iconButton(context, R.drawable.ic_fx_trash, Fx.DANGER, 0x66C44857, 42);
+            trash = Fx.iconButton(context, R.drawable.ic_fx_trash, Fx.DANGER, 0xFFF3C4C8, 42);
             card.addView(trash, Fx.margins(Fx.lp(context, 42, 42), context, 4, 0, 0, 0));
         }
 
@@ -483,7 +483,7 @@ public class InstalledContentFragment extends Fragment {
         }
 
         private android.graphics.drawable.Drawable iconBackground(Context context) {
-            return Fx.fill(context, 0x66082736, 12, 0xFF1D697E);
+            return Fx.fill(context, 0xFFFFFFFF, 12, 0xFFD9E2EA);
         }
 
         private void showPlaceholder(Context context) {

@@ -12,6 +12,7 @@
 
     android:paddingTop="@dimen/padding_input_top"
     android:paddingBottom="@dimen/padding_input_bottom"
+    android:textColor="#1B2733"
     android:textAppearance="?android:attr/textAppearanceListItemSmall"
 
 

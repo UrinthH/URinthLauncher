@@ -39,9 +39,9 @@ public class ProfileTypeSelectFragment extends Fragment {
             card.setScaleY(0.96f);
             card.setTranslationY(card.getResources().getDisplayMetrics().density * 16f);
             card.animate().alpha(1f).scaleX(1f).scaleY(1f).translationY(0f)
-                    .setStartDelay(60L + i * 40L)
-                    .setDuration(320L)
-                    .setInterpolator(new android.view.animation.PathInterpolator(0.16f, 1f, 0.3f, 1f))
+                    .setStartDelay(120L + i * 60L)
+                    .setDuration(560L)
+                    .setInterpolator(new android.view.animation.PathInterpolator(0.05f, 0.7f, 0.1f, 1f))
                     .start();
         }
 

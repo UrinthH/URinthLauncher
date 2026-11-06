@@ -159,8 +159,14 @@
         <item name="android:windowExitAnimation">@anim/urinth_pop_out</item>
     </style>
 
-    <style name="UrinthAlertDialog" parent="Theme.AppCompat.Dialog.Alert">
+    <style name="UrinthAlertDialog" parent="Theme.AppCompat.Light.Dialog.Alert">
+        <item name="android:windowBackground">@drawable/urinth_dialog_bg</item>
         <item name="android:windowAnimationStyle">@style/UrinthDialogAnim</item>
+        <item name="android:backgroundDimAmount">0.32</item>
+        <item name="colorAccent">#14A765</item>
+        <item name="android:colorAccent">#14A765</item>
+        <item name="android:textColorPrimary">#1B2733</item>
+        <item name="android:textColorSecondary">#6B7A87</item>
     </style>
 
     <item name="dimension_tracker" type="id" />
