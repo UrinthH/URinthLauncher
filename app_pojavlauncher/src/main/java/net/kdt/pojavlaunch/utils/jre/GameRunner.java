@@ -298,6 +298,41 @@ public class GameRunner {
             return;
         }
 
+        // MobileGlues keeps its settings and log in /sdcard/MG. The game runs inside this app's process,
+        // so on Android 11+ it can only reach that folder with All files access. Ask once per launch;
+        // never block: "Continue anyway" starts the game with whatever MobileGlues can read.
+        if (Renderers.MOBILEGLUES_RENDERER.equals(renderer.tag())
+                && android.os.Build.VERSION.SDK_INT >= 30
+                && !android.os.Environment.isExternalStorageManager()) {
+            Logger.appendToLog("[MobileGlues] All files access is NOT granted: /sdcard/MG settings and log are unreachable");
+            final boolean[] openedSettings = {false};
+            LifecycleAwareAlertDialog.DialogCreator storageDialog = (dialog, builder) ->
+                    builder.setMessage(activity.getString(R.string.mobileglues_storage_access_msg))
+                            .setCancelable(false)
+                            .setPositiveButton(R.string.mobileglues_storage_open_settings, (d, w) -> {
+                                openedSettings[0] = true;
+                                try {
+                                    android.content.Intent intent = new android.content.Intent(
+                                            android.provider.Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
+                                            android.net.Uri.parse("package:" + activity.getPackageName()));
+                                    activity.startActivity(intent);
+                                } catch (Exception e) {
+                                    try {
+                                        activity.startActivity(new android.content.Intent(
+                                                android.provider.Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION));
+                                    } catch (Exception ignored) {
+                                        openedSettings[0] = false;
+                                    }
+                                }
+                            })
+                            .setNegativeButton(R.string.mobileglues_storage_continue, (d, w) -> {});
+            if (LifecycleAwareAlertDialog.haltOnDialog(activity.getLifecycle(), activity, storageDialog)) return;
+            // The person went to grant the permission: stop here, they press Play again afterwards.
+            if (openedSettings[0]) return;
+        } else if (Renderers.MOBILEGLUES_RENDERER.equals(renderer.tag())) {
+            Logger.appendToLog("[MobileGlues] storage access OK (or not needed on this Android version)");
+        }
+
         // Switch renderer to GL4ES when running a compat context version on LTW
         if(isCompatContext(versionInfo) && !hasAngelica(gamedir) && renderer instanceof GLESRenderSpec.LTWRenderSpec) {
             switchRendererIfSupported(true, GameRenderer.getKnownRenderer(Renderers.GL4ES_RENDERER), gameRenderer, instance, activity, 0);

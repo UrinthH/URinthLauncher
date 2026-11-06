@@ -74,6 +74,9 @@
     <string name="mcl_setting_renderer_vulkan_zink">Zink (Vulkan) - all versions</string>
     <string name="mcl_setting_renderer_vulkan_lzink">Legacy Zink (Vulkan) - all versions, low performance</string>
     <string name="mcl_setting_renderer_freedreno_kgsl">Freedreno (KGSL) - all versions</string>
+    <string name="mobileglues_storage_access_msg">MobileGlues reads its settings (MultiDraw mode and others) from the MG folder in your phone storage and writes its log there. Without \"All files access\" it cannot, so it runs on defaults, which can crash with Sodium on some GPUs. Open the permission screen now?</string>
+    <string name="mobileglues_storage_open_settings">Open settings</string>
+    <string name="mobileglues_storage_continue">Continue anyway</string>
     <string name="renderer_fallback_notice">%1$s could not be loaded (%3$s is missing or failed to start). Running with %2$s instead. Install the matching renderer plugin app to use %1$s. The launcher looks for these installed apps: %4$s</string>
     <string name="renderer_autoswitch_notice">%1$s cannot run this game version or mods, so %2$s is used for this launch. Your renderer setting was not changed.</string>
     <string name="mcl_setting_renderer_freedreno_gallium">Freedreno (Gallium, Adreno, external Mesa plugin required)</string>
