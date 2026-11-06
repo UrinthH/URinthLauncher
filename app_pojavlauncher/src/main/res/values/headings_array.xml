@@ -37,4 +37,17 @@
         <item>bmclapi</item>
     </string-array>
 
+    <string-array name="refresh_rate_cap_names">
+        <item>@string/preference_refresh_rate_auto</item>
+        <item>60 Hz</item>
+        <item>90 Hz</item>
+        <item>120 Hz</item>
+    </string-array>
+    <string-array name="refresh_rate_cap_values">
+        <item>0</item>
+        <item>60</item>
+        <item>90</item>
+        <item>120</item>
+    </string-array>
+
 </resources>

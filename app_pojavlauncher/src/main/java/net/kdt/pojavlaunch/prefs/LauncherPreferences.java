@@ -68,6 +68,8 @@ public class LauncherPreferences {
     public static boolean PREF_PERFORMANCE_MODE = false;
     /** Performance Mode only: also drop the game's vsync so the frame rate is not held to the screen. Off by default. */
     public static boolean PREF_UNCAPPED_FPS = false;
+    /** The highest screen refresh rate the player allows, in Hz. 0 is Auto: the highest rate up to 120 Hz. */
+    public static int PREF_REFRESH_RATE_CAP = 0;
     /**
      * Set for the lifetime of one game process that LaunchGuard put into safe launch.
      * Never written to SharedPreferences.
@@ -135,6 +137,8 @@ public class LauncherPreferences {
         PREF_BIG_CORE_AFFINITY = DEFAULT_PREF.getBoolean("bigCoreAffinity", false);
         PREF_PERFORMANCE_MODE = DEFAULT_PREF.getBoolean("performanceMode", false);
         PREF_UNCAPPED_FPS = DEFAULT_PREF.getBoolean("performanceUncappedFps", false);
+        PREF_REFRESH_RATE_CAP = net.kdt.pojavlaunch.game.RefreshRatePolicy.parseCap(
+                DEFAULT_PREF.getString("refreshRateCap", "0"));
         syncRendererWithPerformanceMode();
         PREF_ZINK_PREFER_SYSTEM_DRIVER = DEFAULT_PREF.getBoolean("zinkPreferSystemDriver", false);
         PREF_DOWNLOAD_SOURCE = DEFAULT_PREF.getString("downloadSource", "default");

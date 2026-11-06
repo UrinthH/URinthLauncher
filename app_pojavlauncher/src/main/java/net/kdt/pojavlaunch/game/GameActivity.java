@@ -173,7 +173,12 @@ public class GameActivity extends BaseActivity implements ControlButtonMenuListe
         // Start the service a bit early
         ContextCompat.startForegroundService(this, gameServiceIntent);
         initLayout(R.layout.activity_basemain);
-        RefreshRateBoost.apply(this); // highest refresh rate the screen offers, up to 120 Hz
+        // The highest refresh rate the screen offers (up to 120 Hz, or the limit chosen in Settings).
+        // Performance Mode also votes for it on the game surface and asks again when the system
+        // drops the screen back to 60 Hz.
+        RefreshRateBoost.start(this, LauncherPreferences.PREF_REFRESH_RATE_CAP, PREF_PERFORMANCE_MODE);
+        // Tell Android the game is loading, so phones that can boost start-up do.
+        GameStateSignal.loading(this);
         if(safeLaunch) {
             Logger.appendToLog("[LaunchGuard] The previous launch ended during start-up. Safe launch: "
                     + "custom Java arguments, CPU pinning, sustained performance and the thermal guard are off, RAM is capped at "
@@ -480,6 +485,8 @@ public class GameActivity extends BaseActivity implements ControlButtonMenuListe
         if(PREF_ENABLE_GYRO) mGyroControl.enable();
         if(mVoiceChatAudio != null) mVoiceChatAudio.start();
         PLATFORM.setHovered(true);
+        // Back in front (also after the phone was locked): check the screen refresh rate right away.
+        RefreshRateBoost.onForeground();
     }
 
     @Override
@@ -517,6 +524,8 @@ public class GameActivity extends BaseActivity implements ControlButtonMenuListe
         PerfReport.stop();
         RenderScheduler.stop();
         ThermalGuard.stop();
+        RefreshRateBoost.stop(this);
+        if(isFinishing()) GameStateSignal.stopped(this);
         URinthRender.stopThermalMonitoring();
         // The player left on purpose: this launch did not crash.
         if(isFinishing()) LaunchGuard.markCleanExit();
@@ -683,6 +692,7 @@ public class GameActivity extends BaseActivity implements ControlButtonMenuListe
     public void hideLoadingScreen(){
         if(mLoadingScreen == null || mLoadingHiding) return;
         mLoadingHiding = true;
+        GameStateSignal.playing(this); // start-up is over: the loading boost can end
         if(mLoadingView != null) mLoadingView.setDone();
         StartupTimeline.markNow("Java + Minecraft until the window");
         String startupSummary = StartupTimeline.currentSummary();

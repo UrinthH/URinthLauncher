@@ -71,6 +71,15 @@
             android:defaultValue="false"
             />
 
+        <androidx.preference.ListPreference
+            android:title="@string/preference_refresh_rate_title"
+            android:key="refreshRateCap"
+            android:defaultValue="0"
+            android:entries="@array/refresh_rate_cap_names"
+            android:entryValues="@array/refresh_rate_cap_values"
+            app2:useSimpleSummaryProvider="true"
+            />
+
 
         <androidx.preference.SwitchPreferenceCompat
             android:defaultValue="false"

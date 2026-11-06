@@ -293,7 +293,7 @@ public class GameView extends FrameLayout implements PlatformGrabListener, Surfa
             return;
         }
         // The screen may still be switching to the higher mode that RefreshRateBoost asked for.
-        windowRate = Math.max(mSurface.getDisplay().getRefreshRate(), RefreshRateBoost.targetRate());
+        windowRate = RefreshRateBoost.reportedRate(mSurface.getDisplay().getRefreshRate());
         MojoExec.setDisplayParams(windowWidth, windowHeight, windowRate);
         mSurfaceProvider.updateSize();
     }
@@ -342,6 +342,8 @@ public class GameView extends FrameLayout implements PlatformGrabListener, Surfa
     @Override
     public void onSurfaceAvailable(Surface surface) {
         mCurrentSurface = surface;
+        // Tell the system what frame rate this surface wants, so the screen does not fall back to 60 Hz.
+        RefreshRateBoost.voteOn(surface);
         Platform.updateSurface(surface);
         if(mRefreshOnly) return;
         realStart();
@@ -357,6 +359,7 @@ public class GameView extends FrameLayout implements PlatformGrabListener, Surfa
     @Override
     public void onSurfaceDestroyed() {
         mCurrentSurface = null;
+        RefreshRateBoost.surfaceGone();
         if(PLATFORM != null)
             PLATFORM.surfaceDestroyed();
     }
