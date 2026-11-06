@@ -90,9 +90,9 @@ public final class InstallationChrome {
             label.setSingleLine(true);
             label.setEllipsize(TextUtils.TruncateAt.END);
             tile.addView(label, Fx.margins(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f), context, 8, 0, 6, 0));
-            counts[i] = Fx.text(context, "", 11, Fx.ACCENT, true);
+            counts[i] = Fx.text(context, "", 11, Fx.ACCENT_DEEP, true);
             counts[i].setPadding(Fx.dp(context, 7), Fx.dp(context, 3), Fx.dp(context, 7), Fx.dp(context, 3));
-            counts[i].setBackground(Fx.fill(context, 0x3300E6AA, 8, 0));
+            counts[i].setBackground(Fx.fill(context, 0xFFDDF6E9, 8, 0));
             counts[i].setVisibility(View.GONE);
             tile.addView(counts[i]);
             tile.setOnClickListener(v -> {

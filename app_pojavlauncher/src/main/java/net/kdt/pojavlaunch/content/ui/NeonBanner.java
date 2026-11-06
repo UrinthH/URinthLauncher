@@ -18,10 +18,8 @@ import android.util.TypedValue;
 import android.view.View;
 
 /**
- * The glowing title banner of the settings screens: dark glass, an icon tile, a title and a
- * line under it, a slow light sweep across the glass and an edge that breathes. It draws itself
- * (no child views), runs its own frame loop only while it is on screen, and stands still, fully
- * drawn, when it is not attached.
+ * The title banner of the settings screens: a white rounded card with a hairline edge, a mint icon tile,
+ * a title and a subtitle. It is still: no sweep, no pulsing edge, no frame loop.
  */
 public final class NeonBanner extends View {
     private static final long CYCLE_MS = 5200L;
@@ -108,7 +106,7 @@ public final class NeonBanner extends View {
         float radius = Fx.dp(getContext(), 18);
         clip.reset();
         clip.addRoundRect(bounds, radius, radius, Path.Direction.CW);
-        fill.setShader(new LinearGradient(0, 0, w, h, Fx.PANEL_TOP, Fx.PANEL_BOTTOM, Shader.TileMode.CLAMP));
+        fill.setColor(0xFFFFFFFF);
         float band = w * 0.30f;
         sweepShader = new LinearGradient(0, 0, band, 0,
                 new int[]{0x00FFFFFF, withAlpha(accent, 0x48), 0x00FFFFFF}, new float[]{0f, 0.5f, 1f}, Shader.TileMode.CLAMP);
@@ -118,8 +116,7 @@ public final class NeonBanner extends View {
         float pad = Fx.dp(context, 12);
         float tileSize = h - 2 * pad;
         tileBounds.set(pad, pad, pad + tileSize, pad + tileSize);
-        tile.setShader(new LinearGradient(tileBounds.left, tileBounds.top, tileBounds.right, tileBounds.bottom,
-                withAlpha(accent, 0x55), withAlpha(accent, 0x14), Shader.TileMode.CLAMP));
+        tile.setColor(0xFFE4F7EE);
         lineLength = w * 0.22f;
         underlineShader = new LinearGradient(0, 0, lineLength, 0,
                 new int[]{0x00FFFFFF, accent, 0x00FFFFFF}, new float[]{0f, 0.5f, 1f}, Shader.TileMode.CLAMP);
@@ -134,31 +131,13 @@ public final class NeonBanner extends View {
         float radius = Fx.dp(context, 18);
         canvas.drawRoundRect(bounds, radius, radius, fill);
 
-        // The light sweep: a soft band that crosses the glass, then rests.
-        if (running && phase < SWEEP_PART) {
-            float t = phase / SWEEP_PART;
-            float band = w * 0.30f;
-            float x = -band + t * (w + band);
-            sweepMatrix.reset();
-            sweepMatrix.setTranslate(x, 0);
-            sweepShader.setLocalMatrix(sweepMatrix);
-            canvas.save();
-            canvas.clipPath(clip);
-            canvas.drawRect(x, 0, x + band, h, sweep);
-            canvas.restore();
-        }
-
-        // The edge breathes between a calm and a bright teal.
-        float breath = 0.5f + 0.5f * (float) Math.sin(phase * 2 * Math.PI);
-        edge.setColor(withAlpha(accent, 0x70 + Math.round(0x50 * breath)));
+        edge.setColor(0xFFE1E8EF);
         canvas.drawRoundRect(bounds, radius, radius, edge);
 
         // Icon tile.
         float pad = Fx.dp(context, 12);
         float tileSize = tileBounds.height();
         canvas.drawRoundRect(tileBounds, Fx.dp(context, 12), Fx.dp(context, 12), tile);
-        edge.setColor(withAlpha(accent, 0xB0));
-        canvas.drawRoundRect(tileBounds, Fx.dp(context, 12), Fx.dp(context, 12), edge);
         if (icon != null) {
             int inset = Math.round(tileSize * 0.22f);
             icon.setBounds(Math.round(tileBounds.left) + inset, Math.round(tileBounds.top) + inset,
@@ -180,21 +159,12 @@ public final class NeonBanner extends View {
         float top = (h - block) / 2f;
         canvas.drawText(shownTitle, 0, shownTitle.length(), textLeft, top - titleMetrics.ascent, titlePaint);
         canvas.drawText(shownSubtitle, 0, shownSubtitle.length(), textLeft, top + titleHeight + gap - subtitleMetrics.ascent, subtitlePaint);
-
-        // A short bright line under the banner that slides slowly along the bottom.
-        float lineY = h - Fx.dp(context, 3);
-        float travel = (w - 2 * radius - lineLength) * (0.5f + 0.5f * (float) Math.sin(phase * 2 * Math.PI - Math.PI / 2));
-        float startX = radius + travel;
-        underlineMatrix.setTranslate(startX, 0);
-        underlineShader.setLocalMatrix(underlineMatrix);
-        canvas.drawLine(startX, lineY, startX + lineLength, lineY, underline);
     }
 
     @Override
     protected void onAttachedToWindow() {
         super.onAttachedToWindow();
-        running = true;
-        postOnAnimation(frame);
+        running = false;
     }
 
     @Override

@@ -3,6 +3,18 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/expendable_list_view"
     android:layout_width="match_parent"
-    android:layout_height="@dimen/_200sdp">
+    android:layout_height="@dimen/_200sdp"
+    android:groupIndicator="@null"
+    android:divider="@null"
+    android:childDivider="@null"
+    android:dividerHeight="0dp"
+    android:listSelector="@android:color/transparent"
+    android:cacheColorHint="@android:color/transparent"
+    android:fadingEdge="none"
+    android:overScrollMode="ifContentScrolls"
+    android:scrollbarThumbVertical="@drawable/urinth_scroll_thumb"
+    android:scrollbarSize="4dp"
+    android:paddingHorizontal="10dp"
+    android:clipToPadding="false">
 
 </ExpandableListView>

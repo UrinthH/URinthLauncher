@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Slider track: a dark groove with a teal-to-cyan fill. -->
+<!-- Slider track: light groove with a green fill. -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:id="@android:id/background">
         <shape android:shape="rectangle">
-            <solid android:color="#16303F" />
+            <solid android:color="#FFDCE3EA" />
             <corners android:radius="3dp" />
         </shape>
     </item>
     <item android:id="@android:id/secondaryProgress">
         <clip android:clipOrientation="horizontal" android:gravity="left">
             <shape android:shape="rectangle">
-                <solid android:color="#2A1FE0B4" />
+                <solid android:color="#661FC77A" />
                 <corners android:radius="3dp" />
             </shape>
         </clip>
@@ -18,10 +18,7 @@
     <item android:id="@android:id/progress">
         <clip android:clipOrientation="horizontal" android:gravity="left">
             <shape android:shape="rectangle">
-                <gradient
-                    android:angle="0"
-                    android:endColor="#4FD8FF"
-                    android:startColor="#1FE0B4" />
+                <solid android:color="#FF1FC77A" />
                 <corners android:radius="3dp" />
             </shape>
         </clip>
