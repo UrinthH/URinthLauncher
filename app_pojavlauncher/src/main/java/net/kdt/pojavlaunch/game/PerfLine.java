@@ -24,6 +24,21 @@ final class PerfLine {
     }
 
     /**
+     * The refresh-rate part of the line, for Performance Mode: what the screen last reported
+     * against what the game asked for, and how many times the request had to be repeated. This is
+     * what tells "the game is slow" apart from "the system holds the screen at 60 Hz". Empty when
+     * no rate is being held.
+     */
+    static String screenRate(float seenHz, float wantedHz, int askedAgain) {
+        if (wantedHz <= 0f) return "";
+        StringBuilder out = new StringBuilder(", screen ").append(Math.round(seenHz)).append(" Hz (wanted ")
+                .append(Math.round(wantedHz));
+        if (seenHz < wantedHz - 0.5f) out.append(", BELOW");
+        if (askedAgain > 0) out.append(", asked again ").append(askedAgain).append("x");
+        return out.append(")").toString();
+    }
+
+    /**
      * Reads {major page faults, user ticks, system ticks} from /proc/self/stat. The process name
      * sits in brackets and may itself hold spaces or brackets, so the fields are counted from the
      * last closing bracket. Returns null when the text is not a stat line.

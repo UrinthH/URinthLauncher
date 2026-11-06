@@ -48,6 +48,10 @@ public final class RefreshRateBoost {
 
     private static volatile float sTarget;
     private static volatile boolean sCapChosen;
+    /** For the 30 s [Perf] line: the rate the screen last reported while a rate was being held. */
+    private static volatile float sSeen;
+    private static volatile int sReasks;
+    private static volatile boolean sHolding;
     /** Main thread only. */
     private static Session sSession;
 
@@ -56,6 +60,11 @@ public final class RefreshRateBoost {
     /** The rate requested by the last {@link #start}, or 0 when none was made. */
     public static float targetRate() {
         return sTarget;
+    }
+
+    /** The refresh-rate part of the 30 s [Perf] line, or "" when no rate is being held. */
+    public static String statusLine() {
+        return sHolding ? PerfLine.screenRate(sSeen, sTarget, sReasks) : "";
     }
 
     /**
@@ -95,6 +104,8 @@ public final class RefreshRateBoost {
         if (session != null) session.end();
         sTarget = 0f;
         sCapChosen = false;
+        sHolding = false;
+        sReasks = 0;
     }
 
     /**
@@ -149,6 +160,9 @@ public final class RefreshRateBoost {
             float current = display.getRefreshRate();
             mChoice = choose(display);
             sCapChosen = mCapHz > 0;
+            sSeen = current;
+            sReasks = 0;
+            sHolding = mKeep;
             askWindow();
             Logger.appendToLog("[RefreshRate] screen is at " + current + " Hz, requested " + mChoice.hz + " Hz"
                     + (mChoice.modeId == 0 ? " (current mode)" : " (mode " + mChoice.modeId + ")")
@@ -210,8 +224,10 @@ public final class RefreshRateBoost {
             if (!mListening || mChoice == null) return;
             try {
                 float current = display().getRefreshRate();
+                sSeen = current;
                 if (!mGuard.shouldAsk(SystemClock.elapsedRealtime(), current, mChoice.hz)) return;
                 mReasks++;
+                sReasks = mReasks;
                 // The first few, then one in a while: an adaptive screen can do this all session.
                 if (mReasks <= 3 || mReasks % 25 == 0) {
                     Logger.appendToLog("[RefreshRate] screen dropped to " + current + " Hz, asking for "

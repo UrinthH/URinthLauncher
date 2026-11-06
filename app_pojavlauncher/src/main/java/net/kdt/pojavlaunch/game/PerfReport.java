@@ -59,7 +59,7 @@ public final class PerfReport {
                         PerfLine.residentMegabytes(read("/proc/self/status")),
                         availableMegabytes(activityManager), isLowMemory(activityManager),
                         thermal(powerManager), read("/proc/loadavg"));
-                Logger.appendToLog("[Perf] " + line);
+                Logger.appendToLog("[Perf] " + line + RefreshRateBoost.statusLine());
                 last = stat;
                 lastAt = now;
             }

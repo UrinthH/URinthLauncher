@@ -58,4 +58,22 @@ public class PerfLineTest {
         assertTrue(!line.contains("page faults"));
         assertTrue(!line.contains("heat"));
     }
+
+    @Test
+    public void screenRateShowsWhatTheScreenRunsAtAgainstWhatWasAskedFor() {
+        assertEquals(", screen 90 Hz (wanted 90)", PerfLine.screenRate(90f, 90f, 0));
+        assertEquals(", screen 90 Hz (wanted 90)", PerfLine.screenRate(89.99f, 90f, 0));
+    }
+
+    @Test
+    public void screenRateSaysWhenTheScreenIsBelowAndHowOftenItWasAskedAgain() {
+        assertEquals(", screen 60 Hz (wanted 90, BELOW, asked again 4x)", PerfLine.screenRate(60f, 90f, 4));
+        assertEquals(", screen 120 Hz (wanted 90, asked again 1x)", PerfLine.screenRate(120f, 90f, 1));
+    }
+
+    @Test
+    public void screenRateIsEmptyWhenNoRateIsHeld() {
+        assertEquals("", PerfLine.screenRate(60f, 0f, 0));
+        assertEquals("", PerfLine.screenRate(60f, -1f, 3));
+    }
 }
