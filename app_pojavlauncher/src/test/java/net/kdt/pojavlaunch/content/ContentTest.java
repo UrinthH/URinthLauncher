@@ -285,4 +285,27 @@ public class ContentTest {
         assertEquals("Huge", info.name);
         assertNull(info.icon);
     }
+
+    @Test
+    public void theLauncherManagedFlareModStaysInstalledButIsNotListedOrCounted() throws IOException {
+        File game = temp.newFolder("flaregame");
+        File mods = new File(game, "mods");
+        assertTrue(mods.mkdirs());
+        File flare = new File(mods, "urinth-sunflare.jar");
+        assertTrue(flare.createNewFile());
+        assertTrue(new File(mods, "URinth-SunFlare.jar.disabled").createNewFile());
+        assertTrue(new File(mods, "sodium.jar").createNewFile());
+
+        assertEquals(1, ContentList.count(game, ContentKind.MODS));
+        List<ContentItem> list = ContentList.scan(game, ContentKind.MODS);
+        assertEquals(1, list.size());
+        assertEquals("sodium.jar", list.get(0).fileName());
+        // Listing never touches the file: it is still there for the game to load.
+        assertTrue(flare.isFile());
+        assertFalse(ContentKind.MODS.accepts(flare));
+        // Other kinds and other mods with similar names are unaffected.
+        assertTrue(ContentKind.isLauncherManagedMod("urinth-sunflare.jar.disabled"));
+        assertFalse(ContentKind.isLauncherManagedMod("sunflare-other.jar"));
+        assertTrue(ContentKind.MODS.accepts(new File(mods, "sodium.jar")));
+    }
 }

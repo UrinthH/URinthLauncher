@@ -66,8 +66,6 @@ public class LauncherPreferences {
     public static boolean PREF_BIG_CORE_AFFINITY = false;
     /** Watch device temperature while the game runs and ease CPU/GPU load when it gets hot. */
     public static boolean PREF_PERFORMANCE_MODE = false;
-    /** Performance Mode only: also drop the game's vsync so the frame rate is not held to the screen. Off by default. */
-    public static boolean PREF_UNCAPPED_FPS = false;
     /**
      * Set for the lifetime of one game process that LaunchGuard put into safe launch.
      * Never written to SharedPreferences.
@@ -85,7 +83,6 @@ public class LauncherPreferences {
     public static boolean PREF_MIGRATION_NOTICE = true;
     public static boolean PREF_ALSOFT_FORCE_OPENSL = false;
     public static boolean PREF_VOICE_CHAT_CLEANUP = true;
-    public static boolean PREF_SUN_FLARE_MOD = false;
     public static boolean PREF_SHOW_MEMORY_WARNING_DIALOG = true;
     public static short PREF_BUTTON_TRANSPARENCY = 100;
     public static boolean PREF_UBWC_WORKAROUND = false;
@@ -133,8 +130,7 @@ public class LauncherPreferences {
         // core picked from sysfs max frequencies, which is the wrong choice on chips whose
         // cores all report the same maximum frequency.
         PREF_BIG_CORE_AFFINITY = DEFAULT_PREF.getBoolean("bigCoreAffinity", false);
-        PREF_PERFORMANCE_MODE = DEFAULT_PREF.getBoolean("performanceMode", false);
-        PREF_UNCAPPED_FPS = DEFAULT_PREF.getBoolean("performanceUncappedFps", false);
+        PREF_PERFORMANCE_MODE = performanceModeIsOn();
         syncRendererWithPerformanceMode();
         PREF_ZINK_PREFER_SYSTEM_DRIVER = DEFAULT_PREF.getBoolean("zinkPreferSystemDriver", false);
         PREF_DOWNLOAD_SOURCE = DEFAULT_PREF.getString("downloadSource", "default");
@@ -147,7 +143,6 @@ public class LauncherPreferences {
         PREF_MIGRATION_NOTICE = DEFAULT_PREF.getBoolean("migrationNotice", true);
         PREF_ALSOFT_FORCE_OPENSL = DEFAULT_PREF.getBoolean("alsoftForceOpenSL", false);
         PREF_VOICE_CHAT_CLEANUP = DEFAULT_PREF.getBoolean("voiceChatCleanup", true);
-        PREF_SUN_FLARE_MOD = DEFAULT_PREF.getBoolean("sunFlareMod", false);
         PREF_SHOW_MEMORY_WARNING_DIALOG = DEFAULT_PREF.getBoolean("showMemoryWarning", true);
         PREF_BUTTON_TRANSPARENCY = (short) DEFAULT_PREF.getInt("buttonTransparency", 100);
         PREF_UBWC_WORKAROUND = DEFAULT_PREF.getBoolean("ubwcWorkaround", false);
@@ -248,6 +243,30 @@ public class LauncherPreferences {
      * next normal launch is unchanged.
      */
     private static final String KEY_RENDERER_BEFORE_PERFORMANCE_MODE = "rendererBeforePerformanceMode";
+    /** Set once the one-time "Performance Mode is on by default" step below has run. */
+    private static final String KEY_PERFORMANCE_MODE_DEFAULT_ON = "performanceModeDefaultOn";
+
+    /**
+     * Performance Mode is on by default: it is what turns on the thermal guard, the render thread
+     * scheduler, the refresh rate watch, the SurfaceView and the LTW renderer. A fresh install gets it
+     * on through the default below. A phone that already had the launcher gets it switched on once, the
+     * first time this version starts (the key above marks that as done), because the old default was
+     * off and most players never found the switch. After that the switch on the home screen decides,
+     * and turning it off stays off. The renderer follows the switch (see
+     * {@link #syncRendererWithPerformanceMode}), and the renderer chosen before is remembered and put
+     * back when the mode is turned off.
+     */
+    private static boolean performanceModeIsOn() {
+        SharedPreferences prefs = DEFAULT_PREF;
+        if (!prefs.getBoolean(KEY_PERFORMANCE_MODE_DEFAULT_ON, false)) {
+            prefs.edit()
+                    .putBoolean(KEY_PERFORMANCE_MODE_DEFAULT_ON, true)
+                    .putBoolean("performanceMode", true)
+                    .apply();
+            return true;
+        }
+        return prefs.getBoolean("performanceMode", true);
+    }
 
     /**
      * Turn Performance Mode on or off. Besides the switch itself this keeps the renderer in step:

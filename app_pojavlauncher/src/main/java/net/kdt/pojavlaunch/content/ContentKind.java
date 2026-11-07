@@ -1,6 +1,7 @@
 package net.kdt.pojavlaunch.content;
 
 import net.kdt.pojavlaunch.downloads.DownloadCategory;
+import net.kdt.pojavlaunch.game.SunFlareInstaller;
 
 import java.io.File;
 import java.util.Locale;
@@ -44,12 +45,20 @@ public enum ContentKind {
         return fileName.toLowerCase(Locale.ROOT).endsWith(DISABLED_SUFFIX);
     }
 
-    /** True for a file or folder of this kind, switched on or off. */
+    /**
+     * Mods the launcher puts in the folder itself and keeps there. They stay installed but are left out of
+     * the Mods list and the Mods count, so they cannot be switched off or deleted from the list by accident.
+     */
+    public static boolean isLauncherManagedMod(String fileName) {
+        return activeName(fileName).equalsIgnoreCase(SunFlareInstaller.FILE_NAME);
+    }
+
+    /** True for a file or folder of this kind, switched on or off. Launcher-managed mods are not listed. */
     public boolean accepts(File file) {
         String name = activeName(file.getName()).toLowerCase(Locale.ROOT);
         if (name.startsWith(".")) return false;
         if (file.isDirectory()) return allowsFolders;
-        if (this == MODS) return name.endsWith(".jar");
+        if (this == MODS) return name.endsWith(".jar") && !isLauncherManagedMod(name);
         return name.endsWith(".zip");
     }
 }

@@ -28,10 +28,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Map;
 import java.util.Set;
 
 import git.artdeell.mojo.R;
@@ -48,10 +45,13 @@ import git.artdeell.mojo.R;
  * What it does with that level is limited to what an app can do without root, and none of it
  * touches the render resolution, options.txt or the chosen renderer:
  * <ul>
- *   <li>hot and above: lower the priority of the JVM's JIT compiler threads so they stop
- *       competing with the render thread while the cores are being throttled. Garbage collector
- *       threads are left alone on purpose: starving them on a small heap can end in a long full
- *       collection.</li>
+ *   <li>always: raise the render thread's own priority so Android's other work and the JVM's
+ *       background threads do not make it wait for a core.</li>
+ *   <li>hot and above: the heat level is read by {@link RenderScheduler}, which then lowers the
+ *       JVM's JIT compiler threads and Minecraft's background helpers ahead of any measured
+ *       waiting. That class is the only one that lowers priorities, so two parts never fight over
+ *       the same thread. Garbage collector threads are left alone on purpose: starving them on a
+ *       small heap can end in a long full collection.</li>
  * </ul>
  * It never changes the display refresh rate, the frame rate, the window or Sustained Performance
  * Mode, because those make the frame rate drop and can make screen rotation slow.
@@ -72,8 +72,6 @@ public final class ThermalGuard {
     /** Consecutive calmer readings needed before easing back down one level. */
     private static final int CALMER_READINGS_TO_EASE = 3;
     private static final float CAPPED_REFRESH_RATE = 60f;
-    /** Unix nice value given to background JVM helper threads while the phone is hot. */
-    private static final int BACKGROUND_NICE = 10;
     private static final long TOAST_COOLDOWN_MS = 3L * 60L * 1000L;
 
     private static volatile ThermalGuard sInstance;
@@ -107,10 +105,6 @@ public final class ThermalGuard {
     private boolean mSustainedModeForced;
     private final Set<Integer> mBoostedThreads = new HashSet<>();
     private long mLastToastAt = -TOAST_COOLDOWN_MS;
-    /** Kernel thread id to the priority it had before this guard lowered it. */
-    private final Map<Integer, Integer> mLoweredThreads = new HashMap<>();
-    /** Kernel thread id to thread name; read once per thread, since names rarely change. */
-    private final Map<Integer, String> mThreadNames = new HashMap<>();
 
     private ThermalGuard(Activity activity, GameView gameView) {
         mActivity = activity;
@@ -164,7 +158,7 @@ public final class ThermalGuard {
                 Log.w(TAG, "Could not listen for thermal status changes", error);
             }
         }
-        log("Started. Only JIT compiler thread priority is adjusted, and only when hot.");
+        log("Started. It raises the render thread priority and reports the heat level to the scheduler.");
         mHandler.postDelayed(mPollTask, FIRST_POLL_MS);
     }
 
@@ -179,7 +173,6 @@ public final class ThermalGuard {
             }
         }
         mStatusListener = null;
-        restoreLoweredThreads();
         // The window and surface are about to be destroyed with the activity: nothing to reset.
     }
 
@@ -198,11 +191,8 @@ public final class ThermalGuard {
             } else {
                 mCalmerReadings = 0;
             }
+            // Re-applied on every pass: the render thread only exists once the game has started.
             boostRenderThread();
-            // Re-apply on every pass, not only when the level changes: the game surface gets
-            // re-created when the app is backgrounded, and the JVM starts new helper threads.
-            if (mLevel >= LEVEL_HOT) lowerBackgroundThreads();
-            else restoreLoweredThreads();
         } catch (Throwable error) {
             Log.w(TAG, "Thermal guard pass failed", error);
         } finally {
@@ -271,46 +261,6 @@ public final class ThermalGuard {
     // ---------------------------------------------------------------- what it does about it
 
     /**
-     * Let the render thread win when the cores are being throttled: the JVM's JIT compiler threads
-     * are not latency sensitive, so they go to the back of the queue. This does not lower the
-     * total work done, it only changes who waits for whom.
-     */
-    private void lowerBackgroundThreads() {
-        File[] tasks = new File("/proc/self/task").listFiles();
-        if (tasks == null) return;
-
-        Set<Integer> alive = new HashSet<>();
-        for (File task : tasks) {
-            int tid;
-            try {
-                tid = Integer.parseInt(task.getName());
-            } catch (NumberFormatException notAThread) {
-                continue;
-            }
-            alive.add(tid);
-            if (!mThreadNames.containsKey(tid)) mThreadNames.put(tid, readThreadName(task));
-        }
-        // Forget threads that ended so a recycled thread id is looked at fresh.
-        Iterator<Integer> known = mThreadNames.keySet().iterator();
-        while (known.hasNext()) {
-            if (!alive.contains(known.next())) known.remove();
-        }
-
-        for (Map.Entry<Integer, String> thread : mThreadNames.entrySet()) {
-            int tid = thread.getKey();
-            if (mLoweredThreads.containsKey(tid) || !isBackgroundHelper(thread.getValue())) continue;
-            try {
-                int original = Process.getThreadPriority(tid);
-                if (original >= BACKGROUND_NICE) continue;
-                Process.setThreadPriority(tid, BACKGROUND_NICE);
-                mLoweredThreads.put(tid, original);
-            } catch (RuntimeException gone) {
-                // The thread ended in the meantime, or the system refused: leave it alone.
-            }
-        }
-    }
-
-    /**
      * Give the game's render thread the front of the queue, so the JIT compiler, garbage
      * collector helpers and Android's own work do not make it wait for a core. Android allows an
      * app to raise its own threads to this level. It is applied again on every pass because the
@@ -337,25 +287,6 @@ public final class ThermalGuard {
                 log("The system did not allow raising the render thread priority");
             }
         }
-    }
-
-    private void restoreLoweredThreads() {
-        if (mLoweredThreads.isEmpty()) return;
-        for (Map.Entry<Integer, Integer> lowered : mLoweredThreads.entrySet()) {
-            try {
-                Process.setThreadPriority(lowered.getKey(), lowered.getValue());
-            } catch (RuntimeException gone) {
-                // Already ended.
-            }
-        }
-        mLoweredThreads.clear();
-        log("Background thread priorities restored");
-    }
-
-    /** The kernel cuts thread names to 15 characters, hence the short prefixes. */
-    private static boolean isBackgroundHelper(@Nullable String name) {
-        if (name == null) return false;
-        return name.startsWith("C1 Compiler") || name.startsWith("C2 Compiler");
     }
 
     @Nullable

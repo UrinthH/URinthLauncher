@@ -24,23 +24,25 @@ import java.util.Set;
  *
  * A hitch on screen usually means the render thread was ready to draw but another thread was
  * using the core it needed. The kernel counts, for every thread, how long it spent ready and
- * waiting. This reads that counter for the render thread every second and a half. When the wait
- * grows, Minecraft's background helpers (world and chunk workers, disk workers, Sodium's chunk
- * builders) are moved a little further back in the queue, and moved forward again once the wait
- * is gone. It never touches the render thread's own work, the integrated server, the network
- * threads, the garbage collector or the JIT compiler, and it does nothing at all while the render
- * thread gets its core without waiting. It adds no work for the game: a small file read and a
- * sum per sample.
+ * waiting. This reads that counter for the render thread every second. When the wait grows,
+ * Minecraft's background helpers (world and chunk workers, disk workers, Sodium's chunk builders)
+ * and the JVM's JIT compiler threads are moved a little further back in the queue, and moved
+ * forward again once the wait is gone. It never touches the render thread's own work, the
+ * integrated server, the network threads or the garbage collector, and it does nothing at all
+ * while the render thread gets its core without waiting. It adds no work for the game: a small
+ * file read and a sum per sample.
  *
- * When the phone is hot ({@link ThermalGuard}) the helpers are lowered ahead of time, since a
- * throttled CPU is where contention starts.
+ * When the phone is hot ({@link ThermalGuard}) the helpers and compiler threads are lowered ahead
+ * of time, since a throttled CPU is where contention starts. This class is the only place that
+ * lowers thread priorities, so two parts never fight over the same thread.
  *
  * A summary line goes into the game log once a minute, so a lag report can be matched to what
  * the render thread was actually going through.
  */
 public final class RenderScheduler {
     private static final String TAG = "RenderScheduler";
-    private static final long SAMPLE_MS = 1_500L;
+    /** One second: a 130 ms stall is 13% of it, enough to register, where 1.5 s diluted it to 8.7%. */
+    private static final long SAMPLE_MS = 1_000L;
     private static final long SUMMARY_MS = 60_000L;
     private static final int GIVE_UP_AFTER_FAILED_READS = 4;
 
@@ -103,7 +105,7 @@ public final class RenderScheduler {
         mRunning = true;
         mSummaryStartedAt = SystemClock.elapsedRealtime();
         mHandler.postDelayed(mSampleTask, SAMPLE_MS);
-        log("Started: helper threads are lowered only while the render thread is waiting for a core");
+        log("Started: helper and JIT compiler threads are lowered only while the render thread is waiting for a core");
     }
 
     private void end() {
@@ -116,7 +118,9 @@ public final class RenderScheduler {
         if (!mRunning) return;
         try {
             long now = SystemClock.elapsedRealtimeNanos();
-            Set<Integer> helpers = scanThreads();
+            Set<Integer> helpers = new HashSet<>();
+            Set<Integer> compilers = new HashSet<>();
+            scanThreads(helpers, compilers);
             if (mRenderTid > 0) {
                 long wait = SchedulerPolicy.parseWaitNanos(readFile(new File("/proc/self/task/" + mRenderTid + "/schedstat")));
                 if (wait < 0) {
@@ -138,7 +142,7 @@ public final class RenderScheduler {
                 }
             }
             int level = Math.max(mPolicy.level, levelForHeat(ThermalGuard.currentHeatLevel()));
-            apply(level, helpers);
+            apply(level, helpers, compilers);
             maybeSummarise();
         } catch (Throwable error) {
             Log.w(TAG, "Render scheduler pass failed", error);
@@ -150,18 +154,20 @@ public final class RenderScheduler {
         }
     }
 
-    /** A hot phone starts the helpers lowered, a critical one lowers them clearly. */
+    /** A hot phone starts the helpers and compiler threads lowered, a critical one lowers them clearly. */
     private static int levelForHeat(int heatLevel) {
         if (heatLevel >= ThermalGuard.HEAT_CRITICAL) return SchedulerPolicy.LEVEL_STRONG;
         if (heatLevel >= ThermalGuard.HEAT_HOT) return SchedulerPolicy.LEVEL_MILD;
         return SchedulerPolicy.LEVEL_NONE;
     }
 
-    /** Find the render thread and the helper threads. Names are read once per thread. */
-    private Set<Integer> scanThreads() {
-        Set<Integer> helpers = new HashSet<>();
+    /**
+     * Find the render thread, the helper threads and the JIT compiler threads, filling the two
+     * sets. Names are read once per thread.
+     */
+    private void scanThreads(Set<Integer> helpers, Set<Integer> compilers) {
         File[] tasks = new File("/proc/self/task").listFiles();
-        if (tasks == null) return helpers;
+        if (tasks == null) return;
         Set<Integer> alive = new HashSet<>();
         for (File task : tasks) {
             int tid;
@@ -181,28 +187,42 @@ public final class RenderScheduler {
                 log("Watching the render thread");
             } else if (SchedulerPolicy.isHelperThread(name)) {
                 helpers.add(tid);
+            } else if (SchedulerPolicy.isJitThread(name)) {
+                compilers.add(tid);
             }
         }
         mThreadNames.keySet().retainAll(alive);
         mOriginalPriorities.keySet().retainAll(alive);
         mAppliedPriorities.keySet().retainAll(alive);
-        return helpers;
     }
 
-    private void apply(int level, Set<Integer> helpers) {
+    private void apply(int level, Set<Integer> helpers, Set<Integer> compilers) {
         if (level == SchedulerPolicy.LEVEL_NONE) {
             if (!mAppliedPriorities.isEmpty()) restoreAll();
-            if (mAppliedLevel != level) log("Helper threads back to normal priority");
+            if (mAppliedLevel != level) log("Helper and JIT compiler threads back to normal priority");
             mAppliedLevel = level;
             return;
         }
-        int nice = SchedulerPolicy.niceFor(level);
-        for (int tid : helpers) {
+        lower(helpers, SchedulerPolicy.niceFor(level));
+        lower(compilers, SchedulerPolicy.niceForJit(level));
+        if (mAppliedLevel != level) {
+            log("Background threads lowered (" + (level >= SchedulerPolicy.LEVEL_STRONG ? "strongly" : "slightly")
+                    + "): " + helpers.size() + " helpers, " + compilers.size() + " JIT compiler threads");
+        }
+        mAppliedLevel = level;
+    }
+
+    /** Give every thread in the set this nice value. A thread already further back is left as it is. */
+    private void lower(Set<Integer> tids, int nice) {
+        for (int tid : tids) {
             Integer current = mAppliedPriorities.get(tid);
             if (current != null && current == nice) continue;
             try {
                 if (!mOriginalPriorities.containsKey(tid)) {
-                    mOriginalPriorities.put(tid, Process.getThreadPriority(tid));
+                    int original = Process.getThreadPriority(tid);
+                    // Never move a thread forward: one that is already at or behind this value stays put.
+                    if (original >= nice) continue;
+                    mOriginalPriorities.put(tid, original);
                 }
                 Process.setThreadPriority(tid, nice);
                 mAppliedPriorities.put(tid, nice);
@@ -210,11 +230,6 @@ public final class RenderScheduler {
                 // The thread ended in the meantime, or the system refused: leave it alone.
             }
         }
-        if (mAppliedLevel != level) {
-            log("Helper threads lowered (" + (level >= SchedulerPolicy.LEVEL_STRONG ? "strongly" : "slightly")
-                    + "): " + helpers.size() + " threads");
-        }
-        mAppliedLevel = level;
     }
 
     private void restoreAll() {

@@ -343,6 +343,8 @@ public class GameView extends FrameLayout implements PlatformGrabListener, Surfa
     public void onSurfaceAvailable(Surface surface) {
         mCurrentSurface = surface;
         Platform.updateSurface(surface);
+        // A new surface (first start, or back from the background) votes for the high refresh rate again.
+        RefreshRateBoost.voteForSurface(surface);
         if(mRefreshOnly) return;
         realStart();
         mRefreshOnly = true;

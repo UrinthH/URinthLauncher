@@ -79,8 +79,8 @@ final class SchedulerPolicy {
     /**
      * Background work that can wait a little without the player noticing: Minecraft's worker
      * pool (chunk and world tasks), its disk workers and Sodium's chunk builders. Never the
-     * render thread, the integrated server, the network threads (PvP needs those prompt), the
-     * garbage collector or the JIT compiler.
+     * render thread, the integrated server, the network threads (PvP needs those prompt) or the
+     * garbage collector. The JIT compiler has its own rule, {@link #isJitThread}.
      */
     static boolean isHelperThread(String name) {
         if (name == null) return false;
@@ -89,7 +89,28 @@ final class SchedulerPolicy {
                 || name.startsWith("Chunk Render") || name.startsWith("Chunk Builder");
     }
 
+    /**
+     * The JVM's JIT compiler threads ("C1 CompilerThread0", "C2 CompilerThread1", cut to 15
+     * characters by the kernel). They are the biggest source of CPU competition in the first minutes
+     * of a modded game, when the game's own hot code is being compiled on the same few cores the
+     * render thread needs, and they are not latency sensitive: compiling a little later changes
+     * nothing on screen. They are never lowered while the render thread is getting its cores.
+     */
+    static boolean isJitThread(String name) {
+        if (name == null) return false;
+        return name.startsWith("C1 Compiler") || name.startsWith("C2 Compiler");
+    }
+
     static int niceFor(int level) {
         return level >= LEVEL_STRONG ? 10 : level == LEVEL_MILD ? 4 : 0;
+    }
+
+    /**
+     * Compiler threads step back a little earlier than the helpers: slightly lower at the mild level
+     * (still in the normal scheduling group, just with a smaller share) and as far back as the
+     * helpers at the strong level.
+     */
+    static int niceForJit(int level) {
+        return level >= LEVEL_STRONG ? 10 : level == LEVEL_MILD ? 6 : 0;
     }
 }

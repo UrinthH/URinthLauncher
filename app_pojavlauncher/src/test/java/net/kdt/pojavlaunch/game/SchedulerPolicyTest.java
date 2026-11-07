@@ -90,4 +90,35 @@ public class SchedulerPolicyTest {
         assertEquals(4, SchedulerPolicy.niceFor(SchedulerPolicy.LEVEL_MILD));
         assertEquals(10, SchedulerPolicy.niceFor(SchedulerPolicy.LEVEL_STRONG));
     }
+
+    @Test
+    public void jitCompilerThreadsAreTheirOwnGroup() {
+        // The kernel cuts the names to 15 characters, so the real ones look like this.
+        assertTrue(SchedulerPolicy.isJitThread("C2 CompilerThre"));
+        assertTrue(SchedulerPolicy.isJitThread("C1 CompilerThre"));
+        assertTrue(SchedulerPolicy.isJitThread("C2 CompilerThread0"));
+        // Not the render thread, not the garbage collector, not the helpers, not other VM threads.
+        assertFalse(SchedulerPolicy.isJitThread("Render thread"));
+        assertFalse(SchedulerPolicy.isJitThread("G1 Main Marker"));
+        assertFalse(SchedulerPolicy.isJitThread("GC Thread#0"));
+        assertFalse(SchedulerPolicy.isJitThread("Worker-Main-3"));
+        assertFalse(SchedulerPolicy.isJitThread("Sodium Chunk Builder"));
+        assertFalse(SchedulerPolicy.isJitThread(null));
+        // A compiler thread is never also counted as a helper, so it is only ever lowered once.
+        assertFalse(SchedulerPolicy.isHelperThread("C1 CompilerThre"));
+    }
+
+    @Test
+    public void jitNiceValuesStepBackBeforeTheHelpersDoAndNeverMoveForward() {
+        assertEquals(0, SchedulerPolicy.niceForJit(SchedulerPolicy.LEVEL_NONE));
+        assertEquals(6, SchedulerPolicy.niceForJit(SchedulerPolicy.LEVEL_MILD));
+        assertEquals(10, SchedulerPolicy.niceForJit(SchedulerPolicy.LEVEL_STRONG));
+        // At the mild level the compiler threads are lowered more than the helpers; at strong, equally.
+        assertTrue(SchedulerPolicy.niceForJit(SchedulerPolicy.LEVEL_MILD) > SchedulerPolicy.niceFor(SchedulerPolicy.LEVEL_MILD));
+        assertEquals(SchedulerPolicy.niceFor(SchedulerPolicy.LEVEL_STRONG), SchedulerPolicy.niceForJit(SchedulerPolicy.LEVEL_STRONG));
+        // Each level is at least as far back as the one before it.
+        for (int level = SchedulerPolicy.LEVEL_MILD; level <= SchedulerPolicy.LEVEL_STRONG; level++) {
+            assertTrue(SchedulerPolicy.niceForJit(level) >= SchedulerPolicy.niceForJit(level - 1));
+        }
+    }
 }

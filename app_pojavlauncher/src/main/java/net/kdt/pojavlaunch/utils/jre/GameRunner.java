@@ -212,11 +212,15 @@ public class GameRunner {
         }
     }
 
-    /** Puts the sun lens flare mod into the instance, or takes it out, depending on the Settings switch. */
+    /**
+     * Keeps the bundled sun lens flare mod in Fabric 1.21.4 instances. There is no Settings switch for it any
+     * more and it is hidden from the Mods list; the mod itself is off until it is switched on in the game's own
+     * Video Settings, so it costs nothing while it is off.
+     */
     private static void prepareSunFlare(AppCompatActivity activity, Instance instance, String versionId) {
         try {
             SunFlareInstaller.Result result = SunFlareInstaller.sync(instance.getGameDirectory(), versionId,
-                    LauncherPreferences.PREF_SUN_FLARE_MOD, () -> activity.getAssets().open(SunFlareInstaller.ASSET_PATH));
+                    true, () -> activity.getAssets().open(SunFlareInstaller.ASSET_PATH));
             Logger.appendToLog("[SunFlare] " + result);
         } catch (Throwable t) {
             Logger.appendToLog("[SunFlare] skipped: " + t);

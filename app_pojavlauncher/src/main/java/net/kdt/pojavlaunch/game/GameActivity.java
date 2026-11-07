@@ -204,6 +204,9 @@ public class GameActivity extends BaseActivity implements ControlButtonMenuListe
         if(PREF_PERFORMANCE_MODE) {
             ThermalGuard.start(this, launcherGLView);
             RenderScheduler.start();
+            // Keep the highest refresh rate asked for in apply() above: the game surface votes for it,
+            // and the request is repeated if the system lowers the rate while playing.
+            RefreshRateBoost.start(this, launcherGLView);
             // Smooth screen flips: let the system rotate the window without freezing it until the
             // game has redrawn (seamless on Android 8+, a quick crossfade before that). Set once,
             // before the first frame; the system falls back on its own where it cannot do this.
@@ -516,6 +519,7 @@ public class GameActivity extends BaseActivity implements ControlButtonMenuListe
         if(mVoiceChatAudio != null) mVoiceChatAudio.stop();
         PerfReport.stop();
         RenderScheduler.stop();
+        RefreshRateBoost.stop();
         ThermalGuard.stop();
         URinthRender.stopThermalMonitoring();
         // The player left on purpose: this launch did not crash.
