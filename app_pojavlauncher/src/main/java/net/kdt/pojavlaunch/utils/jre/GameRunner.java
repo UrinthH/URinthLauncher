@@ -14,6 +14,7 @@ import net.kdt.pojavlaunch.JVersionList;
 import net.kdt.pojavlaunch.Tools;
 import net.kdt.pojavlaunch.authenticator.accounts.Account;
 import net.kdt.pojavlaunch.game.StartupTimeline;
+import net.kdt.pojavlaunch.game.FindModInstaller;
 import net.kdt.pojavlaunch.game.SunFlareInstaller;
 import net.kdt.pojavlaunch.game.VoiceChatAudio;
 import net.kdt.pojavlaunch.game.renderer.def.Renderers;
@@ -224,6 +225,20 @@ public class GameRunner {
             Logger.appendToLog("[SunFlare] " + result);
         } catch (Throwable t) {
             Logger.appendToLog("[SunFlare] skipped: " + t);
+        }
+    }
+
+    /**
+     * Puts the URinth Find mod (the /find chat command) into Fabric 1.21.4 instances, once. It is an ordinary mod in
+     * the Mods list: deleting or switching it off there is respected and it is never put back.
+     */
+    private static void prepareFindMod(AppCompatActivity activity, Instance instance, String versionId) {
+        try {
+            FindModInstaller.Result result = FindModInstaller.sync(instance.getGameDirectory(), versionId,
+                    () -> activity.getAssets().open(FindModInstaller.ASSET_PATH));
+            Logger.appendToLog("[Find] " + result);
+        } catch (Throwable t) {
+            Logger.appendToLog("[Find] skipped: " + t);
         }
     }
 
@@ -450,6 +465,7 @@ public class GameRunner {
         gameRenderer.setupEnvironment(activity, isMobileGluesSupportedVersion(versionInfo));
         VoiceChatAudio.detect(instance.getGameDirectory(), LauncherPreferences.PREF_VOICE_CHAT_CLEANUP);
         prepareSunFlare(activity, instance, versionId);
+        prepareFindMod(activity, instance, versionId);
         JREUtils.setGameEnvironment(activity);
         JREUtils.chdir(instance.getGameDirectory().getAbsolutePath());
 

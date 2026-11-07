@@ -26,8 +26,27 @@ jobs:
           name: urinth-sunflare-jar
           path: sunflare-mod/build/libs/urinth-sunflare-*.jar
 
+  find-mod:
+    runs-on: ubuntu-22.04
+    defaults:
+      run:
+        working-directory: find-mod
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Build and test the find mod
+        run: ./gradlew build --no-daemon --stacktrace
+      - uses: actions/upload-artifact@v4
+        with:
+          name: urinth-find-jar
+          path: find-mod/build/libs/urinth-find-*.jar
+
   build:
-    needs: sunflare-mod
+    needs: [sunflare-mod, find-mod]
     if: ${{ !cancelled() }}
     runs-on: ubuntu-22.04
     env:
@@ -52,6 +71,19 @@ jobs:
         run: |
           mkdir -p app_pojavlauncher/src/main/assets/mods
           cp sunflare-jar/urinth-sunflare-*.jar app_pojavlauncher/src/main/assets/mods/urinth-sunflare.jar
+
+      # The /find chat command mod built above is bundled too and put into Fabric 1.21.4 instances once.
+      - name: Get the find mod
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: urinth-find-jar
+          path: find-jar
+      - name: Bundle the find mod
+        continue-on-error: true
+        run: |
+          mkdir -p app_pojavlauncher/src/main/assets/mods
+          cp find-jar/urinth-find-*.jar app_pojavlauncher/src/main/assets/mods/urinth-find.jar
 
       - name: Get LTW
         uses: dawidd6/action-download-artifact@v6
