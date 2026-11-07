@@ -1,0 +1,20 @@
+{
+	"schemaVersion": 1,
+	"id": "urinth_find",
+	"version": "${version}",
+	"name": "URinth Find",
+	"description": "Type /find <player> in chat to see where a player is: their coordinates and dimension. In a world you host it works for everybody at once. On a server it shows the players near you, and everybody when the server has this mod too.",
+	"authors": ["URinth"],
+	"license": "MIT",
+	"environment": "*",
+	"entrypoints": {
+		"main": ["dev.urinth.find.FindMod"],
+		"client": ["dev.urinth.find.FindClient"]
+	},
+	"depends": {
+		"fabricloader": ">=0.16.0",
+		"minecraft": "~1.21.4",
+		"java": ">=21",
+		"fabric-api": "*"
+	}
+}
