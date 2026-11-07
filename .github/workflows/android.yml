@@ -20,16 +20,7 @@ jobs:
           distribution: temurin
           java-version: '25'
       - uses: gradle/actions/setup-gradle@v4
-      - name: Build the jar
-        run: ./gradlew remapJar --no-daemon --stacktrace
-      - name: Print the jar
+      - name: Run every test and print the results
         run: |
-          ls -l build/libs
-          sha256sum build/libs/urinth-find-*.jar
-          unzip -l build/libs/urinth-find-*.jar
-          echo "JAR-BEGIN"
-          base64 -w 100 build/libs/urinth-find-*.jar
-          echo "JAR-END"
-      - name: Run every test, plus the extra wire test
-        continue-on-error: true
-        run: ./gradlew test --no-daemon --stacktrace --info 2>&1 | grep -E " PASSED| FAILED| SKIPPED|error:|BUILD|tests completed|WireTest|Exception" | head -150
+          ./gradlew test --no-daemon --stacktrace
+          grep -h "<testsuite " build/test-results/test/*.xml | sed -E 's/ timestamp=.*//'
