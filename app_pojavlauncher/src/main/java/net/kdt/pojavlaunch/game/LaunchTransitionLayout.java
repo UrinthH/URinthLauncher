@@ -37,9 +37,13 @@ import git.artdeell.mojo.R;
  * system's animator duration scale). It stops itself when the zoom ends.
  */
 public final class LaunchTransitionLayout extends FrameLayout implements Choreographer.FrameCallback {
-    private static final int COLOR_BG = 0xFF060E14;
-    private static final int COLOR_TEAL = 0xFF3CE6C0;
-    private static final int COLOR_CYAN = 0xFF4FD8FF;
+    // The launcher's light theme, the same colours the loading screen it grows into is drawn in.
+    private static final int COLOR_BG = 0xFFFFFFFF;
+    private static final int COLOR_GREEN = 0xFF1FC77A;
+    private static final int COLOR_GREEN_DEEP = 0xFF14A765;
+    private static final int COLOR_GRAY = 0xFF9FB3C0;
+    /** What the launcher is dimmed with while the square pops up: a cool ink tint, not black. */
+    private static final int COLOR_SCRIM = 0xFF1B2733;
     private static final int STREAKS = 44;
     private static final float TINY_DP = 64f;
     private static final float RADIUS_DP = 16f;
@@ -110,7 +114,7 @@ public final class LaunchTransitionLayout extends FrameLayout implements Choreog
         textBlock.setOrientation(LinearLayout.VERTICAL);
         textBlock.setGravity(Gravity.CENTER);
         statusText = new TextView(context);
-        statusText.setTextColor(0xFF3CE6C0);
+        statusText.setTextColor(0xFF0F8A52);
         statusText.setTextSize(13f);
         statusText.setLetterSpacing(0.12f);
         statusText.setAllCaps(true);
@@ -261,9 +265,9 @@ public final class LaunchTransitionLayout extends FrameLayout implements Choreog
             canvas.translate(-snapshot.getWidth() / 2f, -snapshot.getHeight() / 2f);
             canvas.drawBitmap(snapshot, 0, 0, paint);
             canvas.restoreToCount(save);
-            // Dim the launcher so the square is what the eye goes to.
-            paint.setColor(Color.BLACK);
-            paint.setAlpha(Math.round(255 * 0.55f * pop * backdropAlpha));
+            // Dim the launcher a little so the white square is what the eye goes to.
+            paint.setColor(COLOR_SCRIM);
+            paint.setAlpha(Math.round(255 * 0.22f * pop * backdropAlpha));
             canvas.drawRect(0, 0, w, h, paint);
             paint.setAlpha(255);
         }
@@ -285,7 +289,7 @@ public final class LaunchTransitionLayout extends FrameLayout implements Choreog
         for (int i = 0; i < STREAKS; i++) {
             float start = inner + reach * 0.05f * ((i * 5) % 7) / 7f * amount;
             float end = start + reach * streakLength[i] * amount;
-            int color = (i % 3 == 0) ? Color.WHITE : (i % 2 == 0 ? COLOR_TEAL : COLOR_CYAN);
+            int color = (i % 3 == 0) ? COLOR_GRAY : (i % 2 == 0 ? COLOR_GREEN : COLOR_GREEN_DEEP);
             strokePaint.setColor((color & 0x00FFFFFF) | (Math.round(255 * 0.45f * amount) << 24));
             canvas.drawLine(cx + streakCos[i] * start, cy + streakSin[i] * start,
                     cx + streakCos[i] * end, cy + streakSin[i] * end, strokePaint);
@@ -307,13 +311,13 @@ public final class LaunchTransitionLayout extends FrameLayout implements Choreog
         float edge = LaunchZoomMath.clamp01(1f - e * 1.15f);
         if (edge > 0.01f) {
             strokePaint.setStyle(Paint.Style.STROKE);
-            strokePaint.setColor(withAlpha(COLOR_CYAN, 0.07f * edge));
+            strokePaint.setColor(withAlpha(COLOR_GREEN, 0.10f * edge));
             strokePaint.setStrokeWidth(density * 14f);
             canvas.drawRoundRect(rect, radius, radius, strokePaint);
-            strokePaint.setColor(withAlpha(COLOR_CYAN, 0.14f * edge));
+            strokePaint.setColor(withAlpha(COLOR_GREEN, 0.18f * edge));
             strokePaint.setStrokeWidth(density * 7f);
             canvas.drawRoundRect(rect, radius, radius, strokePaint);
-            strokePaint.setColor(withAlpha(COLOR_TEAL, 0.95f * edge));
+            strokePaint.setColor(withAlpha(COLOR_GREEN, 0.95f * edge));
             strokePaint.setStrokeWidth(density * 1.8f);
             canvas.drawRoundRect(rect, radius, radius, strokePaint);
         }
@@ -324,7 +328,7 @@ public final class LaunchTransitionLayout extends FrameLayout implements Choreog
             float tiny = density * TINY_DP;
             strokePaint.setStyle(Paint.Style.STROKE);
             strokePaint.setStrokeWidth(density * 2f);
-            strokePaint.setColor(withAlpha(COLOR_CYAN, 0.6f * (1f - ringP)));
+            strokePaint.setColor(withAlpha(COLOR_GREEN, 0.6f * (1f - ringP)));
             float r = tiny * (0.5f + 1.2f * LaunchZoomMath.smooth(ringP));
             canvas.drawCircle(cx, cy, r, strokePaint);
         }
