@@ -1,0 +1,19 @@
+{
+	"schemaVersion": 1,
+	"id": "urinth_optimizer",
+	"version": "${version}",
+	"name": "URinth Optimizer",
+	"description": "Keeps the game smooth at a long render distance. The view distance adapts to your frame rate (fog and culling move with it, nothing reloads), plus client, rendering and server optimizations. Settings: Options > Video Settings, or /urinthopt.",
+	"authors": ["URinth"],
+	"license": "MIT",
+	"environment": "*",
+	"entrypoints": {
+		"main": ["dev.urinth.optimizer.OptimizerMod"]
+	},
+	"depends": {
+		"fabricloader": ">=0.16.0",
+		"minecraft": "~1.21.4",
+		"java": ">=21",
+		"fabric-api": "*"
+	}
+}

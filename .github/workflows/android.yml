@@ -45,6 +45,35 @@ jobs:
           name: urinth-find-jar
           path: find-mod/build/libs/urinth-find-*.jar
 
+  optimizer-mod:
+    runs-on: ubuntu-22.04
+    defaults:
+      run:
+        working-directory: optimizer-mod
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Build and test the optimizer mod
+        run: ./gradlew build --no-daemon --stacktrace
+      - name: Show what the game looks like to the mod
+        if: always()
+        run: |
+          for f in log classes callers search bytecode; do
+            if [ -f "build/probe/$f.txt" ]; then
+              echo "::group::probe $f"
+              cat "build/probe/$f.txt"
+              echo "::endgroup::"
+            fi
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: urinth-optimizer-jar
+          path: optimizer-mod/build/libs/urinth-optimizer-*.jar
+
   build:
     needs: [sunflare-mod, find-mod]
     if: ${{ !cancelled() }}
