@@ -1,7 +1,7 @@
 name: Find jar dump
 
 # Scratch run: builds only the find mod and prints the jar into the log, because the sandbox that wrote the
-# mod cannot download from the artifact store. This branch is deleted again right after.
+# mod cannot download from the artifact store. This branch can be deleted.
 on:
   push:
     branches:
@@ -20,7 +20,16 @@ jobs:
           distribution: temurin
           java-version: '25'
       - uses: gradle/actions/setup-gradle@v4
-      - name: Run every test and print the results
+      - name: Build the jar and run every test
+        run: ./gradlew build --no-daemon --stacktrace
+      - name: Test results
         run: |
-          ./gradlew test --no-daemon --stacktrace
           grep -h "<testsuite " build/test-results/test/*.xml | sed -E 's/ timestamp=.*//'
+      - name: Print the jar
+        run: |
+          ls -l build/libs
+          sha256sum build/libs/urinth-find-*.jar
+          unzip -l build/libs/urinth-find-*.jar
+          echo "JAR-BEGIN"
+          base64 -w 100 build/libs/urinth-find-1.1.0.jar
+          echo "JAR-END"

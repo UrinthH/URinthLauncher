@@ -79,8 +79,10 @@ class FindReplyTest {
 
     @Test
     void tooFarSaysWhatIsNeeded() {
+        FindReply reply = FindReply.tooFar("Notkiahh");
+        assertFalse(reply.isSuccess());
         assertEquals("Notkiahh is online, but too far away for your game to know where they are.\n"
-                + "The server needs the URinth Find mod to tell you.", FindReply.tooFar("Notkiahh").plainText());
+                + "The server must have the URinth Find mod, or you must be an operator on it.", reply.plainText());
     }
 
     @Test
@@ -95,5 +97,26 @@ class FindReplyTest {
         assertEquals("", reply.dimension());
         assertEquals("", reply.others());
         assertEquals("XYZ: x1 y2 z3\nUnknown < ", reply.plainText());
+    }
+
+    @Test
+    void anUnansweredLookupIsSaidPlainly() {
+        FindReply reply = FindReply.noAnswer("FarAway");
+        assertFalse(reply.isSuccess());
+        assertEquals(FindReply.NO_ANSWER, reply.status());
+        assertEquals("FarAway is online, but the server did not say where they are.\n"
+                + "The server may block /data or have command feedback turned off.", reply.plainText());
+    }
+
+    @Test
+    void thereIsNoLimitOnHowFarAwayAPlayerCanBe() {
+        assertEquals("XYZ: x100000 y64 z-100000\nOverworld < Far",
+                FindReply.found(new Located("Far", 100000, 64, -100000, "minecraft:overworld")).plainText());
+        assertEquals("XYZ: x-100000.50 y-60 z100000.25\nNether < Far",
+                FindReply.found(new Located("Far", -100000.5, -60, 100000.25, "minecraft:the_nether")).plainText());
+        assertEquals("XYZ: x29999984 y319 z-29999984\nEnd < Far",
+                FindReply.found(new Located("Far", 29999984, 319, -29999984, "minecraft:the_end")).plainText());
+        assertEquals("XYZ: x12345678.50 y64 z-98765432.25\nOverworld < Far",
+                FindReply.found(new Located("Far", 12345678.5, 64, -98765432.25, "minecraft:overworld")).plainText());
     }
 }

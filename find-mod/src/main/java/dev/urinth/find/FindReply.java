@@ -25,6 +25,8 @@ public record FindReply(int status, String name, double x, double y, double z, S
     public static final int NO_PERMISSION = 3;
     /** The player is online, but the game cannot tell where they are. Only made on the client. */
     public static final int TOO_FAR = 4;
+    /** The server was asked with /data, as an operator may, and sent nothing usable back. Only made on the client. */
+    public static final int NO_ANSWER = 5;
 
     /** Most names listed when several players fit; the rest are counted. */
     static final int MAX_LISTED = 8;
@@ -69,6 +71,10 @@ public record FindReply(int status, String name, double x, double y, double z, S
         return new FindReply(TOO_FAR, name, 0, 0, 0, "", "");
     }
 
+    public static FindReply noAnswer(String name) {
+        return new FindReply(NO_ANSWER, name, 0, 0, 0, "", "");
+    }
+
     public boolean isSuccess() {
         return status == OK;
     }
@@ -109,7 +115,13 @@ public record FindReply(int status, String name, double x, double y, double z, S
                 out.add(new Part(name, Tint.WHITE));
                 out.add(new Part(" is online, but too far away for your game to know where they are.", Tint.YELLOW));
                 out.add(new Part("\n", Tint.WHITE));
-                out.add(new Part("The server needs the URinth Find mod to tell you.", Tint.GRAY));
+                out.add(new Part("The server must have the URinth Find mod, or you must be an operator on it.", Tint.GRAY));
+                break;
+            case NO_ANSWER:
+                out.add(new Part(name, Tint.WHITE));
+                out.add(new Part(" is online, but the server did not say where they are.", Tint.YELLOW));
+                out.add(new Part("\n", Tint.WHITE));
+                out.add(new Part("The server may block /data or have command feedback turned off.", Tint.GRAY));
                 break;
             default:
                 out.add(new Part("Could not find \"" + name + "\".", Tint.RED));

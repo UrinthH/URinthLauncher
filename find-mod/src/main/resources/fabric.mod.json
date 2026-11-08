@@ -3,7 +3,7 @@
 	"id": "urinth_find",
 	"version": "${version}",
 	"name": "URinth Find",
-	"description": "Type /find <player> in chat to see where a player is: their coordinates and dimension. In a world you host it works for everybody at once. On a server it shows the players near you, and everybody when the server has this mod too.",
+	"description": "Type /find <player> in chat to see where a player is: their coordinates and dimension, at any distance. In a world you host it works for everybody at once. On a server it shows the players near you, everybody when the server has this mod too, and anybody at all when you are an operator.",
 	"authors": ["URinth"],
 	"license": "MIT",
 	"environment": "*",
