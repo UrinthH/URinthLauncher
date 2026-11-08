@@ -20,7 +20,9 @@ import net.kdt.pojavlaunch.progresskeeper.ProgressListener;
 
 /**
  * Starts and stops the Play animation (see {@link LaunchTransitionLayout}) on the launcher
- * screen, and lets the code that starts the game wait for the zoom to land first.
+ * screen: the launcher shrinks into a small rounded window while the game starts. It also lets
+ * the code that starts the game wait until that window has settled first, so the game's own
+ * screen opens on exactly the picture the launcher is showing.
  *
  * <p>The animation is only decoration. If anything about it cannot be done (the screen has no
  * size yet, there is no room for the snapshot), the game starts exactly as it did before.
@@ -53,13 +55,13 @@ public final class LaunchTransition {
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         sActive = layout;
 
-        // Back does nothing while the square is still growing. Once it fills the screen and the
-        // game is still being prepared, back hides it again (the preparation carries on).
+        // Back does nothing while the screen is still shrinking. Once the window has settled and
+        // the game is still being prepared, back hides it again (the preparation carries on).
         if (activity instanceof AppCompatActivity) {
             sBackCallback = new OnBackPressedCallback(true) {
                 @Override
                 public void handleOnBackPressed() {
-                    if (sActive != null && sActive.isZoomFinished()) cancel();
+                    if (sActive != null && sActive.isSettled()) cancel();
                 }
             };
             ((AppCompatActivity) activity).getOnBackPressedDispatcher().addCallback((AppCompatActivity) activity, sBackCallback);
@@ -107,12 +109,20 @@ public final class LaunchTransition {
         return sActive != null ? sOriginWallMs : 0L;
     }
 
-    /** A half-size picture of the launcher, or null if there is no memory for it. */
+    /**
+     * A picture of the launcher, or null if there is no memory for it. Full size, because the first
+     * frame of the shrink is this picture standing in for the launcher: a smaller one would show as
+     * a blur the moment Play is tapped. Only on a very large screen is it taken at half size.
+     */
     private static Bitmap takeSnapshot(ViewGroup content) {
+        int width = content.getWidth();
+        int height = content.getHeight();
+        float scale = (long) width * height > 5_000_000L ? 0.5f : 1f;
         try {
-            Bitmap bitmap = Bitmap.createBitmap(content.getWidth() / 2, content.getHeight() / 2, Bitmap.Config.ARGB_8888);
+            Bitmap bitmap = Bitmap.createBitmap(Math.max(1, Math.round(width * scale)),
+                    Math.max(1, Math.round(height * scale)), Bitmap.Config.ARGB_8888);
             Canvas canvas = new Canvas(bitmap);
-            canvas.scale(0.5f, 0.5f);
+            canvas.scale(scale, scale);
             content.draw(canvas);
             return bitmap;
         } catch (Throwable error) {
@@ -125,13 +135,13 @@ public final class LaunchTransition {
     }
 
     /**
-     * Run this once the zoom has landed. If no animation is showing (the game was started from
-     * a notification, say, or the animation was hidden), it runs right away.
+     * Run this once the window has settled into its small size. If no animation is showing (the
+     * game was started from a notification, say, or the animation was hidden), it runs right away.
      */
-    public static void runAfterZoom(Runnable runnable) {
+    public static void runWhenSettled(Runnable runnable) {
         LaunchTransitionLayout active = sActive;
         if (active == null) runnable.run();
-        else active.runAfterZoom(runnable);
+        else active.runWhenSettled(runnable);
     }
 
     /** Remove the animation, e.g. because the download failed. */

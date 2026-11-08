@@ -109,8 +109,10 @@ public class LauncherActivity extends BaseActivity {
 
         String normalizedVersionId = MoJsonExtras.normalizeVersionId(selectedInstance.versionId);
         JVersionList.Version mcVersion = MoJsonExtras.getListedVersion(normalizedVersionId);
-        // The Play animation: a tiny square that zooms into the loading screen while the game
-        // files are checked. Pure decoration; the game starts with or without it.
+        // The Play animation: the launcher's screen shrinks into a small, wide, rounded window in
+        // the middle of a white page while the game files are checked, and the game's screen then
+        // zooms that window to full screen once the game is up. Pure decoration; the game starts
+        // with or without it.
         LaunchTransition.start(this, normalizedVersionId);
         new MoJsonDownloader().start(
                 this.getAssets(),

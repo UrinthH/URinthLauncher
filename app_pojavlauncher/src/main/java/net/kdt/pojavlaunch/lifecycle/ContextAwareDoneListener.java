@@ -38,7 +38,7 @@ public class ContextAwareDoneListener implements MoJsonExtras.DoneListener, Cont
         mainIntent.putExtra(INTENT_LAUNCH_VERSION, mNormalizedVersionid);
         mainIntent.putExtra(INTENT_LAUNCH_CLASSPATH, classpath);
         mainIntent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
-        // Carry on the loading-screen animation from where the launcher's Play animation is.
+        // Carry on the loading screen's animation from where the launcher's Play animation is.
         mainIntent.putExtra(GameActivity.INTENT_HUD_ORIGIN_MS, LaunchTransition.originWallMs());
         return mainIntent;
     }
@@ -58,8 +58,9 @@ public class ContextAwareDoneListener implements MoJsonExtras.DoneListener, Cont
 
     @Override
     public void executeWithActivity(Activity activity) {
-        // If the Play animation is still zooming in, let it land before the game takes over.
-        LaunchTransition.runAfterZoom(() -> startGame(activity));
+        // If the Play animation is still shrinking the launcher into its window, let it settle
+        // before the game's screen opens, so that screen starts on the same picture.
+        LaunchTransition.runWhenSettled(() -> startGame(activity));
     }
 
     private void startGame(Activity activity) {
