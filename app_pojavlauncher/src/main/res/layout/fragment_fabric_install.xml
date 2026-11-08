@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/background_app"
+    android:background="#FFF3F6FB"
     android:paddingHorizontal="20dp"
     android:paddingTop="18dp"
     android:paddingBottom="16dp">
@@ -17,7 +17,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
         android:text="@string/fabric_dl_loader_title"
-        android:textColor="#F2F8FA"
+        android:textColor="#1B2733"
         android:textSize="22sp"
         android:letterSpacing="0.01"
         android:textStyle="bold"
@@ -29,7 +29,7 @@
     <View
         android:id="@+id/view"
         style="@style/ThickDivider"
-        android:alpha="0.65"
+        android:background="#FFE2E8EE"
         android:layout_width="match_parent"
         android:layout_marginTop="@dimen/padding_large"
         app:layout_constraintTop_toBottomOf="@+id/title_textview" />
@@ -39,7 +39,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/fabric_dl_game_version"
-        android:textColor="#B7CBD5"
+        android:textColor="#6B7A87"
         app:layout_constraintBottom_toTopOf="@+id/fabric_installer_game_ver_spinner"
         app:layout_constraintStart_toStartOf="@+id/fabric_installer_game_ver_spinner" />
 
@@ -48,8 +48,11 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="@dimen/padding_extra_large"
-        android:background="@drawable/urinth_modrinth_input_bg"
+        android:background="@drawable/urinth_input_light_bg"
         android:minHeight="54dp"
+        android:popupBackground="@drawable/urinth_popup_bg"
+        android:dropDownVerticalOffset="4dp"
+        app:popupTheme="@style/UrinthSpinnerPopupTheme"
         android:layout_marginBottom="8dp"
         android:paddingVertical="0dp"
         android:paddingStart="7dp"
@@ -65,6 +68,7 @@
         android:paddingHorizontal="@dimen/_8sdp"
         android:rotation="180"
         android:src="@drawable/spinner_arrow"
+        android:tint="#5B6B78"
         app:layout_constraintBottom_toBottomOf="@+id/fabric_installer_game_ver_spinner"
         app:layout_constraintEnd_toEndOf="@+id/fabric_installer_game_ver_spinner"
         app:layout_constraintTop_toTopOf="@+id/fabric_installer_game_ver_spinner" />
@@ -75,7 +79,7 @@
         android:layout_height="wrap_content"
 
         android:text="@string/fabric_dl_loader_version"
-        android:textColor="#B7CBD5"
+        android:textColor="#6B7A87"
         app:layout_constraintBottom_toTopOf="@+id/fabric_installer_loader_ver_spinner"
         app:layout_constraintStart_toStartOf="@+id/fabric_installer_loader_ver_spinner" />
 
@@ -84,8 +88,11 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="@dimen/padding_extra_large"
-        android:background="@drawable/urinth_modrinth_input_bg"
-        android:minHeight="48dp"
+        android:background="@drawable/urinth_input_light_bg"
+        android:minHeight="54dp"
+        android:popupBackground="@drawable/urinth_popup_bg"
+        android:dropDownVerticalOffset="4dp"
+        app:popupTheme="@style/UrinthSpinnerPopupTheme"
         android:paddingVertical="0dp"
         android:paddingStart="7dp"
         android:paddingEnd="7dp"
@@ -99,6 +106,7 @@
         android:paddingHorizontal="@dimen/_8sdp"
         android:rotation="180"
         android:src="@drawable/spinner_arrow"
+        android:tint="#5B6B78"
         app:layout_constraintBottom_toBottomOf="@+id/fabric_installer_loader_ver_spinner"
         app:layout_constraintEnd_toEndOf="@+id/fabric_installer_loader_ver_spinner"
         app:layout_constraintTop_toTopOf="@+id/fabric_installer_loader_ver_spinner" />
@@ -110,7 +118,7 @@
         android:layout_height="wrap_content"
 
         android:text="@string/mcl_options"
-        android:textColor="#B7CBD5"
+        android:textColor="#6B7A87"
         app:layout_constraintBottom_toTopOf="@+id/fabric_installer_only_stable_checkbox"
         app:layout_constraintStart_toStartOf="@+id/fabric_installer_only_stable_checkbox" />
     <CheckBox
@@ -118,8 +126,8 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="@string/fabric_dl_only_stable"
-        android:textColor="#F2F8FA"
-        android:buttonTint="#00DDB5"
+        android:textColor="#1B2733"
+        android:buttonTint="#1FC77A"
         android:layout_marginTop="@dimen/padding_extra_large"
         android:minHeight="@dimen/_30sdp"
         android:checked="true"
@@ -144,7 +152,7 @@
             android:layout_weight="1"
             android:gravity="center_vertical"
             android:text="@string/modloader_dl_failed_to_load_list"
-            android:textColor="#FF7B86"
+            android:textColor="#E5484D"
             android:textStyle="bold" />
 
         <Button
@@ -152,20 +160,24 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/global_retry"
-            android:backgroundTint="#0B6D73"
-            android:textColor="#F2F8FA" />
+            android:backgroundTint="#1FC77A"
+            android:textColor="#FFFFFF" />
     </LinearLayout>
 
-    <com.kdt.mcgui.MineButton
+    <androidx.appcompat.widget.AppCompatButton
         android:id="@+id/fabric_installer_start_button"
         android:layout_width="0dp"
-        android:layout_height="wrap_content"
+        android:layout_height="52dp"
+        android:background="@drawable/urinth_btn_install"
+        android:stateListAnimator="@animator/urinth_card_press"
+        android:textAllCaps="false"
+        android:textSize="15sp"
+        android:textStyle="bold"
         android:layout_marginTop="@dimen/padding_heavy"
         android:layout_marginBottom="@dimen/padding_heavy"
         android:enabled="false"
         android:text="@string/fabric_dl_install"
-        android:backgroundTint="#00DDB5"
-        android:textColor="#03231F"
+        android:textColor="@color/urinth_install_text"
         app:layout_constraintBottom_toTopOf="@+id/fabric_installer_progress_bar"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -179,7 +191,7 @@
         android:layout_height="wrap_content"
         android:layout_marginBottom="8dp"
         android:indeterminate="true"
-        android:indeterminateTint="#00DDB5"
+        android:indeterminateTint="#1FC77A"
         android:visibility="visible"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"

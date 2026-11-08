@@ -31,7 +31,7 @@ import org.slf4j.LoggerFactory;
  * <ul>
  *   <li>"Sun Flare: ..." and "Sun Beams: ..." buttons (and a "Fancy Leaves" one) on Sodium's video settings screen,</li>
  *   <li>the same button on the vanilla Video Settings screen,</li>
- *   <li>the chat commands /sunflare [off|subtle|full|strong] /sunflare beams [off|low|medium|high|extreme], /sunflare leaves [off|light|balanced|safe] and /sunflare style [real|pack],</li>
+ *   <li>the chat commands /sunflare perf (stutter and frame-rate report), /sunflare fps [n] (the Perf Guard), /sunflare [off|subtle|full|strong] /sunflare beams [off|low|medium|high|extreme], /sunflare leaves [off|light|balanced|safe] and /sunflare style [real|pack],</li>
  *   <li>a key binding in Controls (unbound by default).</li>
  * </ul>
  */
@@ -39,6 +39,7 @@ public final class SunFlareMod implements ClientModInitializer {
     static final Logger LOG = LoggerFactory.getLogger("urinth_sunflare");
 
     private FlareConfig config;
+    private PerfMonitor perf;
     private final Map<Screen, Button[]> buttons = new WeakHashMap<>();
 
     @Override
@@ -50,6 +51,10 @@ public final class SunFlareMod implements ClientModInitializer {
         FlareRenderer renderer = new FlareRenderer(config);
         HudRenderCallback.EVENT.register(renderer::render);
         GodRays godRays = new GodRays(config);
+        // finds the cause of stutter and freezes: counts them and writes logs/urinth-perf.log (nothing per frame, see PerfMonitor)
+        perf = new PerfMonitor(FabricLoader.getInstance().getGameDir().resolve("logs").resolve("urinth-perf.log"),
+            config::perfLog, godRays::describe);
+        godRays.setPerf(perf);
         WorldRenderEvents.LAST.register(godRays::render);
         BlobShadow blobShadow = new BlobShadow();
         WorldRenderEvents.AFTER_ENTITIES.register(blobShadow::render);
@@ -123,6 +128,17 @@ public final class SunFlareMod implements ClientModInitializer {
             applyLeaves(true);
             x.setMessage(label(SettingsScreens.LEAVES, x.getWidth()));
         }).bounds(lv[0], lv[1], lv[2], lv[3]).build();
+        if (kind == SettingsScreens.Kind.SODIUM) {
+            // the Perf Guard: the lowest frame rate the effects may push the game to. Sodium's screen only; the vanilla screen has
+            // no free room for a fifth button, there /sunflare fps does the same.
+            int[] pf = SettingsScreens.bounds(kind, width, SettingsScreens.PERF);
+            Button guard = Button.builder(label(SettingsScreens.PERF, pf[2]), x -> {
+                config.cycleTargetFps();
+                config.save();
+                x.setMessage(label(SettingsScreens.PERF, x.getWidth()));
+            }).bounds(pf[0], pf[1], pf[2], pf[3]).build();
+            return new Button[] {flare, beams, style, leaves, guard};
+        }
         return new Button[] {flare, beams, style, leaves};
     }
 
@@ -149,7 +165,8 @@ public final class SunFlareMod implements ClientModInitializer {
 
     private Component label(int slot, int width) {
         int value = slot == SettingsScreens.FLARE ? config.mode() : slot == SettingsScreens.BEAMS ? config.beams()
-            : slot == SettingsScreens.LEAVES ? config.leaves() : (config.realStyle() ? 0 : 1);
+            : slot == SettingsScreens.LEAVES ? config.leaves() : slot == SettingsScreens.PERF ? config.targetFps()
+            : (config.realStyle() ? 0 : 1);
         return Component.literal(SettingsScreens.label(slot, value, width));
     }
 
@@ -196,6 +213,31 @@ public final class SunFlareMod implements ClientModInitializer {
                         return 1;
                     })));
             root.then(beamsNode);
+            var perfNode = ClientCommandManager.literal("perf").executes(ctx -> {
+                for (String line : perf.summary()) ctx.getSource().sendFeedback(Component.literal(line));
+                ctx.getSource().sendFeedback(Component.literal("Stutter log: " + (config.perfLog() ? perf.logFile() : "off")
+                    + " | Perf Guard: " + FlareConfig.fpsName(config.targetFps())));
+                return 1;
+            });
+            perfNode.then(ClientCommandManager.literal("reset").executes(ctx -> {
+                perf.stats().reset();
+                ctx.getSource().sendFeedback(Component.literal("Stutter counters reset"));
+                return 1;
+            }));
+            perfNode.then(ClientCommandManager.literal("log")
+                .then(ClientCommandManager.literal("on").executes(ctx -> {
+                    config.setPerfLog(true);
+                    config.save();
+                    ctx.getSource().sendFeedback(Component.literal("Stutter log: on (" + perf.logFile() + ")"));
+                    return 1;
+                }))
+                .then(ClientCommandManager.literal("off").executes(ctx -> {
+                    config.setPerfLog(false);
+                    config.save();
+                    ctx.getSource().sendFeedback(Component.literal("Stutter log: off"));
+                    return 1;
+                })));
+            root.then(perfNode);
             var leavesNode = ClientCommandManager.literal("leaves").executes(ctx -> {
                 config.cycleLeaves();
                 config.save();

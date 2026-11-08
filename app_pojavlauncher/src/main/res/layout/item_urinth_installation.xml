@@ -28,7 +28,7 @@
             android:layout_height="wrap_content"
             android:ellipsize="end"
             android:singleLine="true"
-            android:textColor="#F2F8FA"
+            android:textColor="#1B2733"
             android:textSize="10sp"
             android:textStyle="bold" />
 
@@ -38,7 +38,7 @@
             android:layout_height="wrap_content"
             android:ellipsize="end"
             android:singleLine="true"
-            android:textColor="#ABC0CB"
+            android:textColor="#6B7A87"
             android:textSize="8sp" />
     </LinearLayout>
 
@@ -53,5 +53,5 @@
         android:contentDescription="@string/urinth_btn_more_desc"
         android:padding="5dp"
         android:src="@drawable/ic_urinth_more"
-        android:tint="#F2F8FA" />
+        android:tint="#5B6B78" />
 </LinearLayout>

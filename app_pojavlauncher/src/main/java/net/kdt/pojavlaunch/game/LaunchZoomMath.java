@@ -1,30 +1,38 @@
 package net.kdt.pojavlaunch.game;
 
 /**
- * The numbers behind the Play animation: a tiny rounded square pops up in the middle of the
- * launcher, holds for a moment, then the "camera" zooms into it until it fills the screen.
+ * The numbers behind the Play animation, which has two halves that mirror each other.
  *
  * <pre>
- *     0 -  380 ms  the square pops in (a small overshoot, then settles)
- *   380 - 1000 ms  it holds and breathes while the launcher dims behind it
- *  1000 - 2000 ms  the zoom: the square grows exponentially (a steady camera push-in, not a
- *                  slow start and a sudden jump), the launcher behind scales up and fades out
+ *  Play tapped    the launcher's screen shrinks into a small, wide, rounded window in the middle
+ *                 of a clean white page (SHRINK_MS). The window shows the game's loading screen.
+ *  game starting  the window stays where it is while Java and Minecraft start up.
+ *  game is up     the window zooms to full screen, fast (EXPAND_MS), then the game shows through
+ *                 (FADE_MS).
  * </pre>
  *
- * <p>Growth is exponential on purpose: zooming a camera at a constant rate multiplies the size
- * by the same factor every moment, which reads as smooth. An ease in and out on the progress
- * keeps the start and the landing soft.
+ * <p>All of it hangs on one number, the <i>expansion</i> {@code e}: 0 is the small window and 1 is
+ * the full screen. The shrink plays e from 1 down to 0, the zoom plays it from 0 up to 1, and
+ * everything else (the window's size, its corner radius, its shadow and edge, the caption under
+ * it) is a function of e, so the two halves always match and the two screens that show them (the
+ * launcher's and the game's) cannot drift apart.
+ *
+ * <p>The window is the whole screen drawn smaller, not a cropped piece of it, so it has the
+ * screen's own wide shape. Its size changes at a constant rate (the camera zooms, it does not
+ * crawl and then jump), which is why {@link #windowScale} is exponential.
  *
  * <p>Plain Java with no Android classes, so it is covered by JVM unit tests.
  */
 public final class LaunchZoomMath {
-    public static final long POP_MS = 380;
-    public static final long HOLD_END_MS = 1000;
-    public static final long ZOOM_MS = 1000;
-    public static final long TOTAL_MS = HOLD_END_MS + ZOOM_MS;
+    /** How big the small window is, compared with the whole screen. */
+    public static final float MINI_SCALE = 0.60f;
 
-    /** How far the launcher behind the square scales up by the end of the zoom. */
-    public static final float BACKDROP_MAX_SCALE = 7f;
+    /** The launcher's screen shrinks into the window over this long. */
+    public static final long SHRINK_MS = 460;
+    /** The window zooms to full screen over this long. Short on purpose: it is the "game is up" moment. */
+    public static final long EXPAND_MS = 360;
+    /** The white page and the window fade away to the game over this long, after the zoom. */
+    public static final long FADE_MS = 200;
 
     private LaunchZoomMath() {}
 
@@ -32,58 +40,108 @@ public final class LaunchZoomMath {
         return v < 0f ? 0f : (v > 1f ? 1f : v);
     }
 
+    /** Ease in and out, with a gentle start and landing. */
     public static float smooth(float p) {
         p = clamp01(p);
         return p * p * (3f - 2f * p);
     }
 
-    /** 0 before the pop, rising to 1 with a little overshoot on the way, exactly 1 once it is done. */
-    public static float pop(long elapsedMs) {
-        float p = clamp01(elapsedMs / (float) POP_MS);
-        if (p <= 0f) return 0f;
-        if (p >= 1f) return 1f;
-        float c1 = 1.7f;
-        float c3 = c1 + 1f;
-        float q = p - 1f;
-        return 1f + c3 * q * q * q + c1 * q * q;
+    /** Like {@link #smooth} but with a longer, softer start and landing. */
+    public static float smoother(float p) {
+        p = clamp01(p);
+        return p * p * p * (p * (p * 6f - 15f) + 10f);
     }
 
-    /** 0 until the zoom starts, then linear 0..1 over the zoom. */
-    public static float zoomProgress(long elapsedMs) {
-        return clamp01((elapsedMs - HOLD_END_MS) / (float) ZOOM_MS);
+    // ---- the shrink (Play tapped) -----------------------------------------------------------
+
+    /** 0..1 over the shrink. */
+    public static float shrinkProgress(long elapsedMs) {
+        return clamp01(elapsedMs / (float) SHRINK_MS);
     }
 
-    /** Ease in and out of the zoom: soft start, steady middle, soft landing. */
-    public static float zoomEase(float u) {
+    /** The expansion during the shrink: 1 (the full screen) falling to 0 (the small window). */
+    public static float shrinkExpansion(float progress) {
+        return 1f - smoother(progress);
+    }
+
+    /**
+     * The loading screen fading in over the launcher's picture inside the window: not there at
+     * the start, all there before the shrink is over. The launcher's picture stays fully opaque
+     * underneath, so the cross-fade never dips.
+     */
+    public static float hudAlpha(float progress) {
+        return smooth((progress - 0.25f) / 0.45f);
+    }
+
+    // ---- the zoom (game is up) --------------------------------------------------------------
+
+    /** 0..1 over the zoom. */
+    public static float expandProgress(long elapsedMs) {
+        return clamp01(elapsedMs / (float) EXPAND_MS);
+    }
+
+    /**
+     * Fast start, soft landing: most of the distance is covered in the first part of the zoom
+     * (it reads as a quick push-in), and it settles gently onto the full screen.
+     */
+    public static float expandEase(float u) {
         u = clamp01(u);
-        return u < 0.5f ? 4f * u * u * u : 1f - (float) Math.pow(-2f * u + 2f, 3) / 2f;
+        float rest = 1f - u;
+        float out = 1f - rest * rest * rest * rest;
+        return 0.55f * out + 0.45f * smooth(u);
     }
 
-    /** Size of the square at zoom ease e: {@code base} at 0, {@code full} at 1, constant growth rate between. */
-    public static float rectSize(float base, float full, float e) {
-        if (base <= 0f) return full * clamp01(e);
-        if (full <= base) return base;
-        return base * (float) Math.exp(clamp01(e) * Math.log(full / base));
+    // ---- what the expansion looks like ------------------------------------------------------
+
+    /**
+     * The window's size compared with the full screen at expansion {@code e}: {@code mini} at 0,
+     * exactly 1 at 1, and the same factor per step in between.
+     */
+    public static float windowScale(float mini, float e) {
+        if (mini <= 0f || mini >= 1f) return 1f;
+        return (float) Math.pow(mini, 1f - clamp01(e));
     }
 
-    /** Scale of the launcher snapshot behind the square, growing at the same steady rate. */
-    public static float backdropScale(float e) {
-        return (float) Math.exp(clamp01(e) * Math.log(BACKDROP_MAX_SCALE));
-    }
-
-    /** The launcher behind the square: fully there until the zoom is under way, gone before it lands. */
-    public static float backdropAlpha(float e) {
-        return 1f - smooth((clamp01(e) - 0.08f) / 0.62f);
-    }
-
-    /** Corner radius: the full rounding while small, square corners by the time it fills the screen. */
+    /** Corner radius: the full rounding on the small window, square corners on the full screen. */
     public static float cornerRadius(float radius, float e) {
-        return radius * (1f - smooth(clamp01(e)));
+        return radius * (1f - smooth(e));
     }
 
-    /** Light streaks fly out from the square in the middle of the zoom and are gone at both ends. */
-    public static float streakAmount(float u) {
-        u = clamp01(u);
-        return (float) Math.pow(Math.sin(Math.PI * u), 1.2);
+    /** The soft shadow under the window: there on the small window, gone on the full screen. */
+    public static float shadowAlpha(float e) {
+        return 1f - smooth(e);
+    }
+
+    /** The thin green edge of the window. */
+    public static float edgeAlpha(float e) {
+        return 1f - clamp01(e * 1.25f);
+    }
+
+    /** The status text under the window: only while the window is small. */
+    public static float captionAlpha(float e) {
+        return 1f - clamp01(e / 0.3f);
+    }
+
+    // ---- where things go --------------------------------------------------------------------
+
+    /**
+     * Whether a view of this size is the whole screen, or close enough to it (a window that keeps
+     * clear of a camera cut-out is a little narrower than the screen). A smaller window (split
+     * screen, say) or a bigger one is not, and is then laid out by its own size instead.
+     */
+    public static boolean coversScreen(int viewWidth, int viewHeight, int screenWidth, int screenHeight) {
+        if (viewWidth <= 0 || viewHeight <= 0 || screenWidth <= 0 || screenHeight <= 0) return false;
+        if (viewWidth > screenWidth + 2 || viewHeight > screenHeight + 2) return false;
+        return viewWidth >= screenWidth * 0.85f && viewHeight >= screenHeight * 0.85f;
+    }
+
+    /**
+     * Where the text under the window starts: a gap below the window, but never so low that it
+     * runs off the bottom of the view.
+     */
+    public static float captionTop(float windowBottom, float gap, float captionHeight, float viewHeight) {
+        float wanted = windowBottom + gap;
+        float lowest = viewHeight - captionHeight - gap;
+        return Math.min(wanted, Math.max(0f, lowest));
     }
 }

@@ -22,11 +22,12 @@ import java.util.Random;
 import git.artdeell.mojo.R;
 
 /**
- * The loading screen shown while the game starts: a futuristic HUD in the same style as the
- * UrinthUltra intro. A grid and a scan line sweep over a dark gradient, particles drift (or, in
- * Performance Mode, binary rain falls), the logo sits inside turning rings with a glowing progress
- * ring and orbiting comets around it, energy pulses leave the core, the name glitches now and then,
- * and a five-step bar along the bottom lights up as start-up moves through its stages.
+ * The loading screen shown while the game starts: a HUD in the same style as the UrinthUltra
+ * intro, on a clean white background in the launcher's light colours (ink text, green accents,
+ * pale grey lines). A grid and a scan line sweep over it, particles drift, the logo sits inside
+ * turning rings with a progress ring and orbiting comets around it, energy pulses leave the core,
+ * the name glitches now and then, and a five-step bar along the bottom lights up as start-up moves
+ * through its stages.
  *
  * <p>The bar shows real progress only: a step lights when the game log shows that step has begun
  * (see {@link LaunchStage}). Inside a step the fill creeps forward but never reaches the next
@@ -38,13 +39,19 @@ import git.artdeell.mojo.R;
  * artwork made of plain shapes and the launcher's own logo.
  */
 public final class LaunchLoadingView extends View implements Choreographer.FrameCallback {
-    private static final int COLOR_BG_TOP = 0xFF060E14;
-    private static final int COLOR_BG_BOTTOM = 0xFF0C1C27;
-    private static final int COLOR_TEAL = 0xFF3CE6C0;
-    private static final int COLOR_CYAN = 0xFF4FD8FF;
-    private static final int COLOR_RED = 0xFFFF2D3F;
+    // The launcher's light theme: white page, ink text, green accents, a pale grey for lines.
+    private static final int COLOR_BG_TOP = 0xFFFFFFFF;
+    private static final int COLOR_BG_BOTTOM = 0xFFF1F5FA;
+    private static final int COLOR_GREEN = 0xFF1FC77A;
+    private static final int COLOR_GREEN_DEEP = 0xFF14A765;
+    private static final int COLOR_GREEN_TEXT = 0xFF0F8A52;
+    private static final int COLOR_RED = 0xFFF0283A;
     private static final int COLOR_PURPLE = 0xFF9B3DFF;
-    private static final int COLOR_DIM = 0xFF8FA9B6;
+    private static final int COLOR_INK = 0xFF1B2733;
+    private static final int COLOR_DIM = 0xFF6B7A87;
+    private static final int COLOR_GRID = 0xFFB9C7D2;
+    private static final int COLOR_TRACK = 0xFFDCE5EC;
+    private static final int COLOR_TICK = 0xFF9FB3C0;
 
     private static final String[] STEP_LABELS = {"01 PREPARE", "02 JAVA", "03 GAME", "04 WINDOW", "05 ASSETS"};
     private static final int STEPS = STEP_LABELS.length;
@@ -66,7 +73,6 @@ public final class LaunchLoadingView extends View implements Choreographer.Frame
     private final Bitmap logo;
 
     private final Paint bgPaint = new Paint();
-    private final Paint vignettePaint = new Paint();
     private final Paint gridPaint = new Paint();
     private final Paint scanPaint = new Paint();
     private final Paint glowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -274,16 +280,15 @@ public final class LaunchLoadingView extends View implements Choreographer.Frame
         logoSize = Math.min(h * 0.21f, w * 0.15f);
 
         bgPaint.setShader(new LinearGradient(0, 0, 0, h, COLOR_BG_TOP, COLOR_BG_BOTTOM, Shader.TileMode.CLAMP));
-        vignettePaint.setShader(new RadialGradient(centerX, h * 0.45f, Math.max(w, h) * 0.75f,
-                new int[]{0x00060E14, 0x00060E14, 0xFF060E14}, new float[]{0f, 0.45f, 1f}, Shader.TileMode.CLAMP));
+        // A soft lavender halo behind the logo; on white it has to be much fainter than on dark.
         glowPaint.setShader(new RadialGradient(centerX, centerY, logoSize * 1.3f,
-                new int[]{withAlpha(COLOR_PURPLE, 1f), withAlpha(COLOR_PURPLE, 0.4f), withAlpha(COLOR_PURPLE, 0f)},
+                new int[]{withAlpha(COLOR_PURPLE, 0.30f), withAlpha(COLOR_PURPLE, 0.12f), withAlpha(COLOR_PURPLE, 0f)},
                 new float[]{0f, 0.45f, 1f}, Shader.TileMode.CLAMP));
 
         // The scan band: drawn above y=0 and moved down the screen by a canvas translation.
         float band = density * 70f;
         scanBandShader = new LinearGradient(0, -band, 0, 0,
-                withAlpha(COLOR_TEAL, 0f), withAlpha(COLOR_TEAL, 0.16f), Shader.TileMode.CLAMP);
+                withAlpha(COLOR_GREEN, 0f), withAlpha(COLOR_GREEN, 0.10f), Shader.TileMode.CLAMP);
 
         namePaint.setTextSize(Math.min(h * 0.066f, w * 0.05f));
         nameBaseline = centerY + logoSize * 0.9f + namePaint.getTextSize() * 1.05f;
@@ -291,7 +296,7 @@ public final class LaunchLoadingView extends View implements Choreographer.Frame
         // A bright highlight that slides along the line under the name.
         sweepWidth = Math.max(density * 60f, w * 0.08f);
         sweepShader = new LinearGradient(0, 0, sweepWidth, 0,
-                new int[]{withAlpha(COLOR_CYAN, 0f), withAlpha(Color.WHITE, 0.95f), withAlpha(COLOR_CYAN, 0f)},
+                new int[]{withAlpha(COLOR_GREEN, 0f), withAlpha(COLOR_GREEN, 0.95f), withAlpha(COLOR_GREEN, 0f)},
                 new float[]{0f, 0.5f, 1f}, Shader.TileMode.CLAMP);
     }
 
@@ -327,7 +332,6 @@ public final class LaunchLoadingView extends View implements Choreographer.Frame
         if (rain) drawRain(canvas, w, h);
         else drawParticles(canvas, w, h);
         drawScanLine(canvas, w, h);
-        canvas.drawRect(0, 0, w, h, vignettePaint);
         drawBrackets(canvas, w, h);
         drawReadouts(canvas, w, h);
         drawLogoGlow(canvas);
@@ -344,7 +348,7 @@ public final class LaunchLoadingView extends View implements Choreographer.Frame
     private void drawGrid(Canvas canvas, int w, int h) {
         float step = density * 30f;
         float drift = (timeMs * 0.012f * density) % step;
-        gridPaint.setColor(withAlpha(COLOR_TEAL, 0.07f));
+        gridPaint.setColor(withAlpha(COLOR_GRID, 0.22f));
         for (float x = centerX % step - step; x < w; x += step) {
             canvas.drawLine(x, 0, x, h, gridPaint);
         }
@@ -358,8 +362,8 @@ public final class LaunchLoadingView extends View implements Choreographer.Frame
             float y = (particleY[i] - timeMs / 1000f * particleSpeed[i]) % 1f;
             if (y < 0f) y += 1f;
             float twinkle = 0.35f + 0.65f * (0.5f + 0.5f * (float) Math.sin(timeMs / 260f + particlePhase[i]));
-            int color = (i % 5 == 0) ? COLOR_RED : COLOR_TEAL;
-            particlePaint.setColor(withAlpha(color, 0.55f * twinkle));
+            int color = (i % 5 == 0) ? COLOR_RED : COLOR_GREEN;
+            particlePaint.setColor(withAlpha(color, 0.30f * twinkle));
             canvas.drawCircle(particleX[i] * w, y * h, particleSize[i] * density, particlePaint);
         }
     }
@@ -378,8 +382,8 @@ public final class LaunchLoadingView extends View implements Choreographer.Frame
                 if (y < 0 || y > h) continue;
                 float fade = 1f - k / (float) RAIN_LENGTH;
                 int bit = ((i * 31 + k * 17 + frame * (k + 1)) & 1);
-                smallPaint.setColor(k == 0 ? withAlpha(Color.WHITE, 0.55f)
-                        : withAlpha(COLOR_TEAL, 0.42f * fade));
+                smallPaint.setColor(k == 0 ? withAlpha(COLOR_INK, 0.5f)
+                        : withAlpha(COLOR_GREEN, 0.42f * fade));
                 canvas.drawText(bit == 0 ? "0" : "1", x, y, smallPaint);
             }
         }
@@ -396,7 +400,7 @@ public final class LaunchLoadingView extends View implements Choreographer.Frame
         scanPaint.setShader(scanBandShader);
         canvas.drawRect(0, -density * 70f, w, 0, scanPaint);
         scanPaint.setShader(null);
-        scanPaint.setColor(withAlpha(COLOR_TEAL, 0.5f));
+        scanPaint.setColor(withAlpha(COLOR_GREEN, 0.4f));
         canvas.drawRect(0, -density * 0.5f, w, density * 0.5f, scanPaint);
         canvas.restoreToCount(save);
     }
@@ -406,7 +410,7 @@ public final class LaunchLoadingView extends View implements Choreographer.Frame
         float len = density * 18f;
         ringPaint.setShader(null);
         ringPaint.setStrokeWidth(density * 1.6f);
-        ringPaint.setColor(withAlpha(COLOR_TEAL, 0.75f));
+        ringPaint.setColor(withAlpha(COLOR_GREEN_DEEP, 0.8f));
         canvas.drawLine(inset, inset, inset + len, inset, ringPaint);
         canvas.drawLine(inset, inset, inset, inset + len, ringPaint);
         canvas.drawLine(w - inset, inset, w - inset - len, inset, ringPaint);
@@ -430,19 +434,19 @@ public final class LaunchLoadingView extends View implements Choreographer.Frame
         canvas.drawCircle(margin + density * 3f, top - size * 0.35f, density * 2.6f, particlePaint);
 
         smallPaint.setTextAlign(Paint.Align.LEFT);
-        smallPaint.setColor(withAlpha(COLOR_TEAL, 0.9f));
+        smallPaint.setColor(withAlpha(COLOR_GREEN_TEXT, 0.95f));
         canvas.drawText("LAUNCH SEQUENCE", margin + density * 12f, top, smallPaint);
         smallPaint.setColor(withAlpha(COLOR_DIM, 0.9f));
         canvas.drawText(versionLine, margin, top + size * 1.5f, smallPaint);
 
         smallPaint.setTextAlign(Paint.Align.RIGHT);
         if (infoPerformance) {
-            smallPaint.setColor(withAlpha(COLOR_TEAL, 0.95f));
+            smallPaint.setColor(withAlpha(COLOR_GREEN_TEXT, 0.95f));
             canvas.drawText("PERFORMANCE MODE ON", w - margin, top, smallPaint);
         }
 
         // Quietly flickering values in the bottom corners.
-        smallPaint.setColor(withAlpha(COLOR_DIM, 0.35f));
+        smallPaint.setColor(withAlpha(COLOR_DIM, 0.5f));
         float bottom = h - margin;
         smallPaint.setTextAlign(Paint.Align.LEFT);
         canvas.drawText("SYS " + hexLeft, margin, bottom, smallPaint);
@@ -465,7 +469,7 @@ public final class LaunchLoadingView extends View implements Choreographer.Frame
         float r = logoSize * (0.55f + 1.5f * smooth(p));
         ringPaint.setShader(null);
         ringPaint.setStrokeWidth(density * (2.2f - 1.4f * p));
-        ringPaint.setColor(withAlpha(COLOR_TEAL, 0.5f * (1f - p)));
+        ringPaint.setColor(withAlpha(COLOR_GREEN, 0.5f * (1f - p)));
         canvas.drawCircle(centerX, centerY, r, ringPaint);
     }
 
@@ -475,7 +479,7 @@ public final class LaunchLoadingView extends View implements Choreographer.Frame
         // Ring 1: three arcs turning clockwise.
         float r1 = logoSize * 0.64f;
         ringPaint.setStrokeWidth(density * 1.6f);
-        ringPaint.setColor(withAlpha(COLOR_TEAL, 0.95f));
+        ringPaint.setColor(withAlpha(COLOR_GREEN, 0.95f));
         rect.set(centerX - r1, centerY - r1, centerX + r1, centerY + r1);
         float a1 = timeMs * 0.08f;
         for (int i = 0; i < 3; i++) {
@@ -503,7 +507,7 @@ public final class LaunchLoadingView extends View implements Choreographer.Frame
             float dist = Math.abs(((angle - comet + 540f) % 360f) - 180f); // 0 at the comet head
             float near = Math.max(0f, 1f - dist / 70f);
             float len = rOut + near * logoSize * 0.05f;
-            tickPaint.setColor(withAlpha(near > 0.55f ? Color.WHITE : COLOR_TEAL, 0.16f + 0.84f * near));
+            tickPaint.setColor(withAlpha(near > 0.55f ? COLOR_INK : COLOR_TICK, 0.5f + 0.5f * near));
             double rad = Math.toRadians(angle);
             float cos = (float) Math.cos(rad);
             float sin = (float) Math.sin(rad);
@@ -517,28 +521,30 @@ public final class LaunchLoadingView extends View implements Choreographer.Frame
         ringPaint.setShader(null);
         rect.set(centerX - r, centerY - r, centerX + r, centerY + r);
         ringPaint.setStrokeWidth(density * 2.2f);
-        ringPaint.setColor(withAlpha(COLOR_TEAL, 0.12f));
+        ringPaint.setColor(COLOR_TRACK);
         canvas.drawCircle(centerX, centerY, r, ringPaint);
         float sweep = 360f * clamp01(shown);
         if (sweep <= 0.5f) return;
         // Soft glow: the same arc drawn wider and fainter underneath.
         ringPaint.setStrokeWidth(density * 9f);
-        ringPaint.setColor(withAlpha(COLOR_CYAN, 0.10f));
+        ringPaint.setColor(withAlpha(COLOR_GREEN, 0.10f));
         canvas.drawArc(rect, -90f, sweep, false, ringPaint);
         ringPaint.setStrokeWidth(density * 5f);
-        ringPaint.setColor(withAlpha(COLOR_CYAN, 0.18f));
+        ringPaint.setColor(withAlpha(COLOR_GREEN, 0.18f));
         canvas.drawArc(rect, -90f, sweep, false, ringPaint);
         ringPaint.setStrokeWidth(density * 2.2f);
-        ringPaint.setColor(withAlpha(COLOR_CYAN, 0.98f));
+        ringPaint.setColor(withAlpha(COLOR_GREEN, 0.98f));
         canvas.drawArc(rect, -90f, sweep, false, ringPaint);
-        // A bright head at the leading edge.
+        // A bead at the leading edge: a soft halo, a solid dot and a white centre.
         double rad = Math.toRadians(-90f + sweep);
         float hx = centerX + (float) Math.cos(rad) * r;
         float hy = centerY + (float) Math.sin(rad) * r;
-        particlePaint.setColor(withAlpha(COLOR_CYAN, 0.35f));
-        canvas.drawCircle(hx, hy, density * 6f, particlePaint);
-        particlePaint.setColor(withAlpha(Color.WHITE, 0.98f));
-        canvas.drawCircle(hx, hy, density * 2.8f, particlePaint);
+        particlePaint.setColor(withAlpha(COLOR_GREEN, 0.28f));
+        canvas.drawCircle(hx, hy, density * 6.5f, particlePaint);
+        particlePaint.setColor(COLOR_GREEN_DEEP);
+        canvas.drawCircle(hx, hy, density * 3.2f, particlePaint);
+        particlePaint.setColor(Color.WHITE);
+        canvas.drawCircle(hx, hy, density * 1.2f, particlePaint);
     }
 
     /** Three small lights orbit outside the progress ring, each dragging a fading tail. */
@@ -550,14 +556,14 @@ public final class LaunchLoadingView extends View implements Choreographer.Frame
         for (int i = 0; i < COMETS; i++) {
             float head = cometStart[i] + timeMs * cometSpeed[i];
             float dir = cometSpeed[i] > 0 ? 1f : -1f;
-            int color = (i == 1) ? COLOR_RED : COLOR_CYAN;
+            int color = (i == 1) ? COLOR_RED : COLOR_GREEN;
             for (int t = COMET_TRAIL; t >= 1; t--) {
                 float a = head - dir * t * 4f;
                 ringPaint.setColor(withAlpha(color, 0.5f * (1f - t / (float) (COMET_TRAIL + 1))));
                 canvas.drawArc(rect, dir > 0 ? a : a - 4f, 4.5f, false, ringPaint);
             }
             double rad = Math.toRadians(head);
-            particlePaint.setColor(withAlpha(Color.WHITE, 0.95f));
+            particlePaint.setColor(withAlpha(color, 0.95f));
             canvas.drawCircle(centerX + (float) Math.cos(rad) * r, centerY + (float) Math.sin(rad) * r,
                     density * 2.2f, particlePaint);
         }
@@ -579,38 +585,38 @@ public final class LaunchLoadingView extends View implements Choreographer.Frame
         float r = logoSize * (1.0f + 1.6f * smooth(p));
         ringPaint.setShader(null);
         ringPaint.setStrokeWidth(density * 3f);
-        ringPaint.setColor(withAlpha(Color.WHITE, 0.85f * (1f - p)));
+        ringPaint.setColor(withAlpha(COLOR_GREEN, 0.85f * (1f - p)));
         canvas.drawCircle(centerX, centerY, r, ringPaint);
     }
 
     private void drawName(Canvas canvas) {
         namePaint.setTextAlign(Paint.Align.LEFT);
-        float whiteWidth = namePaint.measureText("Urinth");
+        float inkWidth = namePaint.measureText("Urinth");
         float redWidth = namePaint.measureText("Ultra");
-        float left = centerX - (whiteWidth + redWidth) / 2f;
+        float left = centerX - (inkWidth + redWidth) / 2f;
 
-        // Now and then the name glitches: a cyan and a red copy split apart for a moment.
+        // Now and then the name glitches: a green and a red copy split apart for a moment.
         float glitchAge = timeMs % 4200f;
         if (glitchAge < 180f) {
             float split = density * (2f + 2.5f * (float) Math.sin(glitchAge / 180f * Math.PI));
-            namePaint.setColor(withAlpha(COLOR_CYAN, 0.55f));
+            namePaint.setColor(withAlpha(COLOR_GREEN, 0.45f));
             canvas.drawText("Urinth", left + split, nameBaseline, namePaint);
-            canvas.drawText("Ultra", left + whiteWidth + split, nameBaseline, namePaint);
-            namePaint.setColor(withAlpha(COLOR_RED, 0.55f));
+            canvas.drawText("Ultra", left + inkWidth + split, nameBaseline, namePaint);
+            namePaint.setColor(withAlpha(COLOR_RED, 0.45f));
             canvas.drawText("Urinth", left - split, nameBaseline, namePaint);
-            canvas.drawText("Ultra", left + whiteWidth - split, nameBaseline, namePaint);
+            canvas.drawText("Ultra", left + inkWidth - split, nameBaseline, namePaint);
         }
-        namePaint.setColor(Color.WHITE);
+        namePaint.setColor(COLOR_INK);
         canvas.drawText("Urinth", left, nameBaseline, namePaint);
         namePaint.setColor(COLOR_RED);
-        canvas.drawText("Ultra", left + whiteWidth, nameBaseline, namePaint);
+        canvas.drawText("Ultra", left + inkWidth, nameBaseline, namePaint);
 
         // A thin line under the name with a highlight sliding along it.
-        float lineW = (whiteWidth + redWidth) * 1.25f;
+        float lineW = (inkWidth + redWidth) * 1.25f;
         float lineLeft = centerX - lineW / 2f;
         float lineY = nameBaseline + namePaint.getTextSize() * 0.35f;
         barPaint.setShader(null);
-        barPaint.setColor(withAlpha(COLOR_TEAL, 0.25f));
+        barPaint.setColor(COLOR_TRACK);
         canvas.drawRect(lineLeft, lineY, lineLeft + lineW, lineY + density * 1.2f, barPaint);
         float travel = lineW + sweepWidth;
         float x = lineLeft - sweepWidth + travel * ((timeMs % 2200f) / 2200f);
@@ -640,14 +646,14 @@ public final class LaunchLoadingView extends View implements Choreographer.Frame
             float left = barLeft + i * (segW + gap);
             float fraction = clamp01(filled - i);
             barPaint.setShader(null);
-            barPaint.setColor(withAlpha(Color.WHITE, 0.09f));
+            barPaint.setColor(COLOR_TRACK);
             canvas.drawRect(left, barTop, left + segW, barTop + barH, barPaint);
             boolean current = !done && i == Math.min(stage, STEPS - 1);
             if (fraction > 0f) {
-                int color = i == STEPS - 1 ? COLOR_CYAN : COLOR_TEAL;
+                int color = i == STEPS - 1 ? COLOR_GREEN_DEEP : COLOR_GREEN;
                 float fillRight = left + segW * fraction;
                 // A soft glow under the lit part.
-                barPaint.setColor(withAlpha(color, current ? 0.22f : 0.12f));
+                barPaint.setColor(withAlpha(color, current ? 0.20f : 0.10f));
                 canvas.drawRect(left, barTop - density * 2f, fillRight, barTop + barH + density * 2f, barPaint);
                 barPaint.setColor(withAlpha(color, 0.95f));
                 canvas.drawRect(left, barTop, fillRight, barTop + barH, barPaint);
@@ -667,11 +673,11 @@ public final class LaunchLoadingView extends View implements Choreographer.Frame
             boolean reached = fraction >= 1f || i < stage || done;
             float pulse = 0.65f + 0.35f * (float) Math.sin(timeMs / 220f);
             if (current) {
-                smallPaint.setColor(withAlpha(Color.WHITE, pulse));
+                smallPaint.setColor(withAlpha(COLOR_INK, pulse));
             } else if (reached) {
-                smallPaint.setColor(withAlpha(COLOR_TEAL, 0.95f));
+                smallPaint.setColor(withAlpha(COLOR_GREEN_TEXT, 0.95f));
             } else {
-                smallPaint.setColor(withAlpha(COLOR_DIM, 0.6f));
+                smallPaint.setColor(withAlpha(COLOR_DIM, 0.85f));
             }
             canvas.drawText(STEP_LABELS[i], left + segW / 2f, barTop - density * 6f, smallPaint);
         }

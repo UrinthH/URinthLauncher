@@ -299,7 +299,7 @@ public class GameActivity extends BaseActivity implements ControlButtonMenuListe
         if(mLoadingScreen == null) return;
         if(mLoadingView != null) {
             mLoadingView.setInfo(mLoadingVersion, PREF_PERFORMANCE_MODE);
-            mLoadingView.setRain(PREF_PERFORMANCE_MODE);
+            mLoadingView.setRain(false); // no falling binary digits
         }
         // Show the first stage right away: the screen must not open on its placeholder text.
         showLoadingStage(LaunchStage.PREPARING, System.currentTimeMillis() - mLoadingStartMs);
@@ -691,16 +691,35 @@ public class GameActivity extends BaseActivity implements ControlButtonMenuListe
         StartupTimeline.markNow("Java + Minecraft until the window");
         String startupSummary = StartupTimeline.currentSummary();
         if(startupSummary != null) Logger.appendToLog(startupSummary);
-        ((TextView) mLoadingScreen.findViewById(R.id.main_loading_screen_text)).setText(getString(R.string.loading_screen_booted, PLATFORM.backendName()));
-        mLoadingScreen.animate()
-                .alpha(0f)
-                .setStartDelay(150)
-                .setDuration(350)
-                .withEndAction(() -> {
-                    ((ViewGroup) mLoadingScreen.getParent()).removeView(mLoadingScreen);
-                    mLoadingScreen = null;
-                })
-                .start();
+        final View screen = mLoadingScreen;
+        ((TextView) screen.findViewById(R.id.main_loading_screen_text)).setText(getString(R.string.loading_screen_booted, PLATFORM.backendName()));
+        // The game is up. Until now the loading screen has been a small, wide, rounded window on a
+        // white page; it zooms to full screen, fast, and then the game (Minecraft's own loading
+        // screen by now) shows through.
+        final java.util.concurrent.atomic.AtomicBoolean revealing = new java.util.concurrent.atomic.AtomicBoolean(false);
+        final Runnable showGame = () -> {
+            if(!revealing.compareAndSet(false, true)) return;
+            screen.animate()
+                    .alpha(0f)
+                    .setDuration(LaunchZoomMath.FADE_MS)
+                    .withEndAction(() -> {
+                        ViewGroup parent = (ViewGroup) screen.getParent();
+                        if(parent != null) parent.removeView(screen);
+                        if(mLoadingScreen == screen) mLoadingScreen = null;
+                    })
+                    .start();
+        };
+        if(screen instanceof LaunchWindowLayout) {
+            // The game must never stay hidden behind the loading screen: if the zoom cannot run
+            // (the screen is not being drawn, say), the game is shown anyway a moment later.
+            Tools.MAIN_HANDLER.postDelayed(showGame, LaunchZoomMath.EXPAND_MS + 1500);
+            try {
+                ((LaunchWindowLayout) screen).expand(showGame);
+            } catch(RuntimeException e) {
+                Log.w("MainActivity", "Could not zoom the loading window", e);
+                showGame.run();
+            }
+        } else showGame.run();
     }
 
     @Override

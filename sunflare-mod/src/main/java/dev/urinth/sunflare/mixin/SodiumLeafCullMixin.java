@@ -26,11 +26,13 @@ public abstract class SodiumLeafCullMixin {
         int depth = LeafCull.depth();
         if (depth <= 0 || !(self.getBlock() instanceof LeavesBlock)) return;
         BlockPos.MutableBlockPos p = LeafCull.scratch();
-        if (LeafCull.hidden(depth, n -> {
+        // A plain loop on purpose: this runs for every leaf face of every chunk that is built, and a lambda that captures the
+        // position, the direction and the world would be a new object each time. Millions of those make the garbage collector
+        // work (and the game stutter) while chunks load. Same test as LeafCull.hidden.
+        for (int n = 1; n <= depth; n++) {
             p.set(pos.getX() + facing.getStepX() * n, pos.getY() + facing.getStepY() * n, pos.getZ() + facing.getStepZ() * n);
-            return view.getBlockState(p).getBlock() instanceof LeavesBlock;
-        })) {
-            cir.setReturnValue(false);
+            if (!(view.getBlockState(p).getBlock() instanceof LeavesBlock)) return;
         }
+        cir.setReturnValue(false);
     }
 }

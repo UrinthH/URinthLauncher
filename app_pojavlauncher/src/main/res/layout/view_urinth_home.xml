@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Fixed-size home page, built for a landscape screen about 360dp tall. Nothing scrolls: every
      block has a fixed height or a weight, and every list is capped in UrinthHomeController.
-     Wrapped in an outer FrameLayout so the red edge-glow overlay can sit on top of everything
-     else without affecting the vertical layout underneath. -->
+     Light, clean design: white rounded cards on a soft grey-blue page, no animated decoration. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
@@ -31,7 +30,8 @@
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="@string/urinth_menu_desc"
             android:padding="8dp"
-            android:src="@drawable/ic_urinth_menu" />
+            android:src="@drawable/ic_urinth_menu"
+            android:tint="#1B2733" />
 
         <ImageView
             android:id="@+id/urinth_logo"
@@ -52,7 +52,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/urinth_brand"
-                android:textColor="#F2F8FA"
+                android:textColor="#1B2733"
                 android:textSize="15sp"
                 android:textStyle="bold" />
 
@@ -60,7 +60,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/urinth_subtitle"
-                android:textColor="#1FC77A"
+                android:textColor="#6B7A87"
                 android:textSize="8.5sp" />
         </LinearLayout>
 
@@ -87,12 +87,13 @@
                 android:textSize="11sp"
                 android:textStyle="bold" />
 
-            <net.kdt.pojavlaunch.fragments.ShimmerTextView
+            <TextView
                 android:id="@+id/urinth_credit_name"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="4dp"
                 android:text="@string/urinth_made_by_name"
+                android:textColor="#1B2733"
                 android:textSize="11sp"
                 android:textStyle="bold" />
         </LinearLayout>
@@ -109,6 +110,9 @@
             android:id="@+id/urinth_sidebar"
             android:layout_width="110dp"
             android:layout_height="match_parent"
+            android:layout_marginStart="8dp"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="8dp"
             android:background="@drawable/urinth_sidebar_bg"
             android:orientation="vertical"
             android:paddingTop="6dp"
@@ -178,7 +182,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="6dp"
                     android:text="@string/urinth_status_ready"
-                    android:textColor="#F2F8FA"
+                    android:textColor="#1B2733"
                     android:textSize="10sp" />
             </LinearLayout>
 
@@ -191,7 +195,7 @@
                 android:singleLine="true"
                 android:ellipsize="end"
                 android:text="@string/urinth_tagline"
-                android:textColor="#ABC0CB"
+                android:textColor="#6B7A87"
                 android:textSize="9sp" />
         </LinearLayout>
 
@@ -230,7 +234,7 @@
                             android:id="@+id/urinth_hero_image"
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
-                            android:background="#FF0E1E28"
+                            android:background="#FFE9EEF3"
                             android:contentDescription="@null"
                             android:scaleType="centerCrop" />
 
@@ -238,13 +242,6 @@
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
                             android:background="@drawable/urinth_hero_fade_light" />
-
-                        <!-- Alpha is pulsed in code (UrinthHomeController) for a slow glowing effect. -->
-                        <View
-                            android:id="@+id/urinth_hero_glow"
-                            android:layout_width="match_parent"
-                            android:layout_height="match_parent"
-                            android:background="@drawable/urinth_hero_glow_pulse" />
 
                         <!-- Branding and tagline are baked into the hero photo. Keep only launcher controls. -->
 
@@ -295,7 +292,7 @@
                                         android:maxWidth="170dp"
                                         android:singleLine="true"
                                         android:text="@string/urinth_last_played"
-                                        android:textColor="#F2F8FA"
+                                        android:textColor="#FFFFFF"
                                         android:textSize="10sp" />
 
                                     <ImageView
@@ -320,7 +317,7 @@
                             android:paddingBottom="4dp"
                             android:singleLine="true"
                             android:text="@string/urinth_explore_worlds"
-                            android:textColor="#F2F8FA"
+                            android:textColor="#FFFFFF"
                             android:textSize="9sp" />
 
                         <ImageView
@@ -405,7 +402,7 @@
                                     android:layout_height="wrap_content"
                                     android:ellipsize="end"
                                     android:singleLine="true"
-                                    android:textColor="#F2F8FA"
+                                    android:textColor="#1B2733"
                                     android:textSize="13sp"
                                     android:textStyle="bold" />
 
@@ -416,7 +413,7 @@
                                     android:layout_marginTop="2dp"
                                     android:ellipsize="end"
                                     android:singleLine="true"
-                                    android:textColor="#ABC0CB"
+                                    android:textColor="#6B7A87"
                                     android:textSize="9.5sp" />
                             </LinearLayout>
 
@@ -451,7 +448,7 @@
                                     android:layout_height="11dp"
                                     android:contentDescription="@null"
                                     android:src="@drawable/ic_urinth_link"
-                                    android:tint="#F2F8FA" />
+                                    android:tint="#5B6B78" />
 
                                 <TextView
                                     android:layout_width="0dp"
@@ -460,7 +457,7 @@
                                     android:layout_weight="1"
                                     android:singleLine="true"
                                     android:text="@string/urinth_link_quick"
-                                    android:textColor="#F2F8FA"
+                                    android:textColor="#1B2733"
                                     android:textSize="9sp" />
 
                                 <ImageView
@@ -468,7 +465,7 @@
                                     android:layout_height="9dp"
                                     android:contentDescription="@null"
                                     android:src="@drawable/ic_urinth_external"
-                                    android:tint="#ABC0CB" />
+                                    android:tint="#8896A2" />
                             </LinearLayout>
 
                             <LinearLayout
@@ -486,7 +483,7 @@
                                     android:layout_height="11dp"
                                     android:contentDescription="@null"
                                     android:src="@drawable/ic_urinth_globe"
-                                    android:tint="#F2F8FA" />
+                                    android:tint="#5B6B78" />
 
                                 <TextView
                                     android:layout_width="0dp"
@@ -495,7 +492,7 @@
                                     android:layout_weight="1"
                                     android:singleLine="true"
                                     android:text="@string/urinth_link_website"
-                                    android:textColor="#F2F8FA"
+                                    android:textColor="#1B2733"
                                     android:textSize="9sp" />
 
                                 <ImageView
@@ -503,7 +500,7 @@
                                     android:layout_height="9dp"
                                     android:contentDescription="@null"
                                     android:src="@drawable/ic_urinth_external"
-                                    android:tint="#ABC0CB" />
+                                    android:tint="#8896A2" />
                             </LinearLayout>
 
                             <LinearLayout
@@ -529,7 +526,7 @@
                                     android:layout_weight="1"
                                     android:singleLine="true"
                                     android:text="@string/urinth_link_discord"
-                                    android:textColor="#F2F8FA"
+                                    android:textColor="#1B2733"
                                     android:textSize="9sp" />
 
                                 <ImageView
@@ -537,7 +534,7 @@
                                     android:layout_height="9dp"
                                     android:contentDescription="@null"
                                     android:src="@drawable/ic_urinth_external"
-                                    android:tint="#ABC0CB" />
+                                    android:tint="#8896A2" />
                             </LinearLayout>
 
                             <LinearLayout
@@ -555,7 +552,7 @@
                                     android:layout_height="11dp"
                                     android:contentDescription="@null"
                                     android:src="@drawable/ic_px_book"
-                                    android:tint="#F2F8FA" />
+                                    android:tint="#5B6B78" />
 
                                 <TextView
                                     android:layout_width="0dp"
@@ -564,7 +561,7 @@
                                     android:layout_weight="1"
                                     android:singleLine="true"
                                     android:text="@string/urinth_link_docs"
-                                    android:textColor="#F2F8FA"
+                                    android:textColor="#1B2733"
                                     android:textSize="9sp" />
 
                                 <ImageView
@@ -572,7 +569,7 @@
                                     android:layout_height="9dp"
                                     android:contentDescription="@null"
                                     android:src="@drawable/ic_urinth_external"
-                                    android:tint="#ABC0CB" />
+                                    android:tint="#8896A2" />
                             </LinearLayout>
                         </LinearLayout>
                     </LinearLayout>
@@ -612,7 +609,7 @@
                                 android:layout_weight="1"
                                 android:singleLine="true"
                                 android:text="@string/urinth_news_title"
-                                android:textColor="#F2F8FA"
+                                android:textColor="#1B2733"
                                 android:textSize="11sp"
                                 android:textStyle="bold" />
 
@@ -669,21 +666,14 @@
                                 android:id="@+id/urinth_banner_image"
                                 android:layout_width="match_parent"
                                 android:layout_height="match_parent"
-                                android:background="#FF0E1E28"
+                                android:background="#FFE9EEF3"
                                 android:contentDescription="@null"
                                 android:scaleType="centerCrop" />
 
                             <View
                                 android:layout_width="match_parent"
                                 android:layout_height="match_parent"
-                                android:background="@drawable/urinth_hero_fade" />
-
-                            <!-- Alpha is pulsed in code (UrinthHomeController) for a slow glowing effect. -->
-                            <View
-                                android:id="@+id/urinth_banner_glow"
-                                android:layout_width="match_parent"
-                                android:layout_height="match_parent"
-                                android:background="@drawable/urinth_banner_glow_pulse" />
+                                android:background="@drawable/urinth_banner_fade" />
 
                             <LinearLayout
                                 android:layout_width="match_parent"
@@ -712,7 +702,7 @@
                                         android:layout_height="wrap_content"
                                         android:singleLine="true"
                                         android:text="@string/urinth_addons_title"
-                                        android:textColor="#F2F8FA"
+                                        android:textColor="#1B2733"
                                         android:textSize="9sp"
                                         android:textStyle="bold" />
 
@@ -721,7 +711,7 @@
                                         android:layout_height="wrap_content"
                                         android:singleLine="true"
                                         android:text="@string/urinth_addons_sub"
-                                        android:textColor="#ABC0CB"
+                                        android:textColor="#6B7A87"
                                         android:textSize="7.5sp" />
                                 </LinearLayout>
 
@@ -729,14 +719,14 @@
                                     android:id="@+id/urinth_addons_btn"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:background="@drawable/urinth_pill_bg"
+                                    android:background="@drawable/urinth_btn_green"
                                     android:paddingStart="8dp"
                                     android:paddingTop="4dp"
                                     android:paddingEnd="8dp"
                                     android:paddingBottom="4dp"
                                     android:singleLine="true"
                                     android:text="@string/urinth_addons_btn"
-                                    android:textColor="#1FC77A"
+                                    android:textColor="#FFFFFF"
                                     android:textSize="8.5sp" />
                             </LinearLayout>
                         </FrameLayout>
@@ -777,7 +767,7 @@
                                     android:layout_marginStart="5dp"
                                     android:singleLine="true"
                                     android:text="@string/urinth_installations_title"
-                                    android:textColor="#F2F8FA"
+                                    android:textColor="#1B2733"
                                     android:textSize="10sp"
                                     android:textStyle="bold" />
                             </LinearLayout>
@@ -805,12 +795,12 @@
                                 android:layout_marginTop="2dp"
                                 android:singleLine="true"
                                 android:text="@string/urinth_installations_empty"
-                                android:textColor="#ABC0CB"
+                                android:textColor="#6B7A87"
                                 android:textSize="9sp" />
                         </LinearLayout>
 
                         <!-- Performance Mode: one tap boost. Replaces the old Recent Activity card.
-                             PerformanceCardArt draws the decoration behind the content. -->
+                             Plain white card, no animated decoration. -->
                         <FrameLayout
                             android:id="@+id/urinth_perf_panel"
                             android:layout_width="match_parent"
@@ -818,11 +808,6 @@
                             android:layout_marginTop="6dp"
                             android:layout_weight="1.3"
                             android:background="@drawable/urinth_perf_panel_bg">
-
-                            <net.kdt.pojavlaunch.fragments.PerformanceCardArt
-                                android:layout_width="match_parent"
-                                android:layout_height="match_parent"
-                                android:importantForAccessibility="no" />
 
                             <LinearLayout
                                 android:layout_width="match_parent"
@@ -860,7 +845,7 @@
                                         android:letterSpacing="0.04"
                                         android:singleLine="true"
                                         android:text="@string/urinth_perf_title"
-                                        android:textColor="#F2F8FA"
+                                        android:textColor="#1B2733"
                                         android:textSize="12sp"
                                         android:textStyle="bold" />
 
@@ -879,7 +864,7 @@
                                         android:paddingBottom="2dp"
                                         android:singleLine="true"
                                         android:text="@string/urinth_perf_state_off"
-                                        android:textColor="#ABC0CB"
+                                        android:textColor="#6B7A87"
                                         android:textSize="8sp"
                                         android:textStyle="bold" />
                                 </LinearLayout>
@@ -909,58 +894,10 @@
                 android:id="@+id/urinth_center_container"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:background="#FF0B1A24"
+                android:background="#FFF3F6FB"
                 android:visibility="gone" />
         </FrameLayout>
     </LinearLayout>
 </LinearLayout>
-
-    <!-- A faint drift of white ash/snow specks over the whole screen, driven by its own frame
-         loop in ParticleOverlayView. Kept deliberately subtle (few, small, slow, low opacity). -->
-    <net.kdt.pojavlaunch.fragments.ParticleOverlayView
-        android:id="@+id/urinth_particles"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:clickable="false"
-        android:duplicateParentState="false"
-        android:focusable="false" />
-
-    <!-- Pulsing red glow hugging every edge of the screen: four separate strips, each a clean
-         edge-to-transparent fade, so every strip lines up exactly with the real screen edge
-         instead of a stroke centered on its own bounds. The whole group's alpha is animated in
-         code (UrinthHomeController) and nothing here intercepts touches. -->
-    <FrameLayout
-        android:id="@+id/urinth_red_edge_glow"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:clickable="false"
-        android:duplicateParentState="false"
-        android:focusable="false">
-
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="14dp"
-            android:layout_gravity="top"
-            android:background="@drawable/urinth_edge_glow_top" />
-
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="14dp"
-            android:layout_gravity="bottom"
-            android:background="@drawable/urinth_edge_glow_bottom" />
-
-        <View
-            android:layout_width="14dp"
-            android:layout_height="match_parent"
-            android:layout_gravity="left"
-            android:background="@drawable/urinth_edge_glow_left" />
-
-        <View
-            android:layout_width="14dp"
-            android:layout_height="match_parent"
-            android:layout_gravity="right"
-            android:background="@drawable/urinth_edge_glow_right" />
-
-    </FrameLayout>
 
 </FrameLayout>

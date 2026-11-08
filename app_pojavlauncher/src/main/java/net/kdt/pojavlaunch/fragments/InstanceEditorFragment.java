@@ -223,9 +223,9 @@ public class InstanceEditorFragment extends Fragment implements CropperUtils.Cro
     }
 
     private void styleModrinthEditor(@NonNull View root) {
-        // Re-skin the existing editor controls (dark glass, teal edges) without changing their behavior or IDs.
+        // Re-skin the existing editor controls (white fields, hairline edges) without changing their behavior or IDs.
         Context context = root.getContext();
-        root.setBackground(Fx.glass(context, 18, 0xAA00E6AA));
+        root.setBackground(Fx.fill(context, Fx.BG, 0, 0));
 
         int[] fieldIds = {
                 R.id.vprof_editor_instance_name,
@@ -239,7 +239,7 @@ public class InstanceEditorFragment extends Fragment implements CropperUtils.Cro
         for (int id : fieldIds) {
             View field = root.findViewById(id);
             if (field != null) {
-                field.setBackground(Fx.fill(context, 0x88051A28, 14, 0xFF1D697E));
+                field.setBackground(Fx.fill(context, 0xFFFFFFFF, 14, 0xFFD9E2EA));
                 field.setPadding(dpEditor(14), field.getPaddingTop(), dpEditor(14), field.getPaddingBottom());
             }
         }
@@ -252,14 +252,14 @@ public class InstanceEditorFragment extends Fragment implements CropperUtils.Cro
         for (int id : labelIds) {
             TextView label = root.findViewById(id);
             if (label != null) {
-                label.setTextColor(0xFF5FE3C4);
+                label.setTextColor(0xFF0F8A52);
                 label.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 11);
                 label.setAllCaps(true);
                 label.setLetterSpacing(0.14f);
             }
         }
 
-        mInstanceIcon.setBackground(Fx.fill(context, 0x88051A28, 18, 0xFF00E6AA));
+        mInstanceIcon.setBackground(Fx.fill(context, 0xFFFFFFFF, 18, 0xFF1FC77A));
 
         mDefaultName.setTextColor(Fx.TEXT);
         mDefaultName.setHintTextColor(Fx.MUTED);
@@ -282,19 +282,19 @@ public class InstanceEditorFragment extends Fragment implements CropperUtils.Cro
         mSaveButton.setBackground(Fx.accentGradient(context, 16));
         mSaveButton.setAllCaps(false);
         mDeleteButton.setBackgroundTintList(null);
-        mDeleteButton.setTextColor(0xFFFFE0E2);
-        mDeleteButton.setBackground(Fx.fill(context, Fx.DANGER_FILL, 16, 0xFFC44857));
+        mDeleteButton.setTextColor(Fx.DANGER);
+        mDeleteButton.setBackground(Fx.fill(context, Fx.DANGER_FILL, 16, 0xFFF3C4C8));
         mDeleteButton.setAllCaps(false);
 
-        mDefaultRuntime.setPopupBackgroundDrawable(Fx.fill(context, 0xFF071F2E, 12, 0xFF1D697E));
-        mDefaultRenderer.setPopupBackgroundDrawable(Fx.fill(context, 0xFF071F2E, 12, 0xFF1D697E));
+        mDefaultRuntime.setPopupBackgroundDrawable(Fx.fill(context, 0xFFFFFFFF, 12, 0xFFD9E2EA));
+        mDefaultRenderer.setPopupBackgroundDrawable(Fx.fill(context, 0xFFFFFFFF, 12, 0xFFD9E2EA));
 
         // Alive: fields light up when touched, buttons press in, and everything slides in once.
         EditText[] typed = {mDefaultName, mDefaultJvmArgument};
         for (final EditText field : typed) {
             field.setOnFocusChangeListener((v, focused) -> v.setBackground(focused
-                    ? Fx.fill(context, 0xAA062433, 14, 0xFF00E6AA)
-                    : Fx.fill(context, 0x88051A28, 14, 0xFF1D697E)));
+                    ? Fx.fill(context, 0xFFFFFFFF, 14, 0xFF1FC77A)
+                    : Fx.fill(context, 0xFFFFFFFF, 14, 0xFFD9E2EA)));
         }
         View[] pressable = {mSaveButton, mDeleteButton, mControlSelectButton, mVersionSelectButton, mInstanceIcon};
         for (View view : pressable) Motion.press(view);

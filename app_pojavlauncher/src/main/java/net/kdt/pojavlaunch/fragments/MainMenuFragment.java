@@ -102,6 +102,8 @@ public class MainMenuFragment extends Fragment {
                 centerContainer.animate().cancel();
                 centerContainer.setVisibility(View.GONE);
                 centerContainer.setAlpha(1f);
+                centerContainer.setScaleX(1f);
+                centerContainer.setScaleY(1f);
                 centerContainer.setTranslationY(0f);
                 if (homeController != null) homeController.setCenterOpen(false);
                 if (launcherView != null) launcherView.onCenterContentClosed();
@@ -182,13 +184,21 @@ public class MainMenuFragment extends Fragment {
         centerContainer.animate().cancel();
         centerContainer.setVisibility(View.VISIBLE);
         if (homeController != null) homeController.setCenterOpen(true);
-        centerContainer.setAlpha(0.72f);
-        centerContainer.setTranslationY(dp(30));
+        // Soft pop-in: the page fades in while growing from 96% and rising a little, on an
+        // ease-out curve that settles gently instead of stopping hard.
+        centerContainer.setPivotX(centerContainer.getWidth() / 2f);
+        centerContainer.setPivotY(0f);
+        centerContainer.setAlpha(0f);
+        centerContainer.setScaleX(0.96f);
+        centerContainer.setScaleY(0.96f);
+        centerContainer.setTranslationY(dp(18));
         centerContainer.animate()
                 .alpha(1f)
+                .scaleX(1f)
+                .scaleY(1f)
                 .translationY(0f)
-                .setDuration(280L)
-                .setInterpolator(new android.view.animation.DecelerateInterpolator())
+                .setDuration(560L)
+                .setInterpolator(new android.view.animation.PathInterpolator(0.05f, 0.7f, 0.1f, 1f))
                 .start();
 
         getChildFragmentManager().beginTransaction()

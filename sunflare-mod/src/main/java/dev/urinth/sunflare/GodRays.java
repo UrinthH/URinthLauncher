@@ -87,9 +87,31 @@ final class GodRays {
     private double presence;
     private boolean failed;
 
+    /** The picture of the last full frame (one of ping/pong), where it was made, and where its point of origin was. */
+    private TextureTarget cached;
+    private boolean cacheValid;
+    private int cacheW;
+    private int cacheH;
+    private int cachePx0;
+    private int cachePy0;
+    private int cachePx1;
+    private int cachePy1;
+    private double cacheSu;
+    private double cacheSv;
+    private PerfMonitor perf;
+
     GodRays(FlareConfig config) {
         this.config = config;
         this.governor = new QualityGovernor(config.targetFps());
+    }
+
+    void setPerf(PerfMonitor perf) {
+        this.perf = perf;
+    }
+
+    /** What the frame-rate guard is doing, for the status command and the stutter log. */
+    String describe() {
+        return governor.describe();
     }
 
     /** Quality of the effects now (0.1..1), shared with the other effects so one guard looks after the whole frame. */
@@ -103,6 +125,7 @@ final class GodRays {
         double ms = lastFrame == 0 ? 0.0 : (now - lastFrame) / 1e6;
         double dt = Math.min(0.1, ms / 1000.0);
         lastFrame = now;
+        if (perf != null && ms > 0.0) perf.frame(ms);
         governor.setTargetFps(config.targetFps());
         if (ms > 0.0) governor.frame(ms, lastDrawn);
         lastDrawn = false;
@@ -132,6 +155,7 @@ final class GodRays {
         double target = usable ? GodRayMath.daylight(dir[1], SunMath.nightFactor(dayTime), level.getRainLevel(1.0f)) : 0.0;
         presence += (target - presence) * (1.0 - Math.exp(-dt * 2.0));
         if (presence < 0.01) return false;
+        if (governor.paused()) return false; // the guard found the rays too expensive for now: a paused frame costs nothing
 
         ctx.positionMatrix().get(view);
         projection.set(RenderSystem.getProjectionMatrix());
@@ -181,6 +205,14 @@ final class GodRays {
         inverse.set(projection).mul(RenderSystem.getModelViewMatrix()).invert();
         ensureTargets(windowW, windowH, config.godRayDivisor());
         ensureFalloff(mc);
+
+        // the frame-rate guard decides: make the whole picture, or show the last one again (moved with the camera)
+        QualityGovernor.Plan plan = governor.plan(cacheUsable(windowW, windowH, su, sv));
+        if (plan == QualityGovernor.Plan.PAUSE) return false;
+        if (plan == QualityGovernor.Plan.REUSE) {
+            drawReused(main, mx0, my0, mx1, my1, px0, py0, px1, py1, windowW, windowH, su, sv, amount, density);
+            return true;
+        }
 
         main.bindWrite(true);
         RenderSystem.disableCull();
@@ -319,6 +351,18 @@ final class GodRays {
         mesh = buf.build();
         if (mesh != null) BufferUploader.drawWithShader(mesh);
 
+        // keep this picture: the next frames may show it again (see drawReused)
+        cached = from;
+        cacheValid = true;
+        cacheW = windowW;
+        cacheH = windowH;
+        cachePx0 = px0;
+        cachePy0 = py0;
+        cachePx1 = px1;
+        cachePy1 = py1;
+        cacheSu = su;
+        cacheSv = sv;
+
         RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
         RenderSystem.colorMask(true, true, true, true);
         RenderSystem.defaultBlendFunc();
@@ -326,6 +370,77 @@ final class GodRays {
         RenderSystem.enableDepthTest();
         RenderSystem.enableCull();
         return true;
+    }
+
+    /**
+     * Whether the picture of an earlier full frame can be shown again: it is still there, the window has the same size, and the
+     * point the rays come from has not jumped (it does when the sun goes from in front of the player to behind).
+     */
+    private boolean cacheUsable(int windowW, int windowH, double su, double sv) {
+        return cacheValid && cached != null && cacheW == windowW && cacheH == windowH
+            && Math.abs(su - cacheSu) < 0.35 && Math.abs(sv - cacheSv) < 0.35;
+    }
+
+    /**
+     * The cheap frame: no render target changes, no reading back of the finished frame, only three draws in the main picture. It
+     * makes the same sky mask as a full frame (that is what keeps the rays off the open sky), then adds the picture of the last
+     * full frame, moved by as much as the point the rays come from has moved since. For the few frames between two full ones
+     * that is the same as turning the camera a little, and the rays are soft, so it cannot be told apart. The picture is zero at its
+     * edge, so moving it leaves no border. The state calls are the same as in the full path, in the same order.
+     */
+    private void drawReused(RenderTarget main, float mx0, float my0, float mx1, float my1, int px0, int py0, int px1, int py1,
+                            int windowW, int windowH, double su, double sv, double amount, double density) {
+        main.bindWrite(true);
+        RenderSystem.disableCull();
+        RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
+
+        // 1. the sky mask: alpha of the main picture inside the box = 1 where the depth buffer holds sky
+        RenderSystem.enableScissor(px0, py0, px1 - px0, py1 - py0);
+        RenderSystem.colorMask(false, false, false, true);
+        GlStateManager._clearColor(0f, 0f, 0f, 0f);
+        GlStateManager._clear(16384);
+        RenderSystem.disableScissor();
+        RenderSystem.disableBlend();
+        RenderSystem.enableDepthTest();
+        RenderSystem.depthFunc(515); // GL_LEQUAL
+        RenderSystem.depthMask(false);
+        RenderSystem.setShader(CoreShaders.POSITION_COLOR);
+        BufferBuilder buf = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
+        quad(buf, mx0, my0, mx1, my1, SKY_DEPTH);
+        MeshData mesh = buf.build();
+        if (mesh != null) BufferUploader.drawWithShader(mesh);
+        RenderSystem.depthMask(true);
+        RenderSystem.disableDepthTest();
+
+        // 2. the last full picture, moved with the point the rays come from, added except over open sky
+        float cw = cachePx1 - cachePx0;
+        float ch = cachePy1 - cachePy0;
+        float dx = (float) ((su - cacheSu) * windowW);
+        float dy = (float) ((sv - cacheSv) * windowH);
+        float u0 = (px0 - dx - cachePx0) / cw;
+        float u1 = (px1 - dx - cachePx0) / cw;
+        float v0 = (py0 - dy - cachePy0) / ch;
+        float v1 = (py1 - dy - cachePy0) / ch;
+        RenderSystem.colorMask(true, true, true, true);
+        RenderSystem.enableBlend();
+        RenderSystem.blendFuncSeparate(GlStateManager.SourceFactor.ONE_MINUS_DST_ALPHA, GlStateManager.DestFactor.ONE,
+            GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ZERO);
+        RenderSystem.setShader(CoreShaders.POSITION_TEX_COLOR);
+        RenderSystem.setShaderTexture(0, cached.getColorTextureId());
+        float a = (float) Math.min(1.0, amount);
+        float gain = (float) density;
+        RenderSystem.setShaderColor(gain, gain, gain, 1f);
+        buf = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
+        quadUv(buf, mx0, my0, mx1, my1, u0, v0, u1, v1, (float) (tint[0] * a), (float) (tint[1] * a), (float) (tint[2] * a), 1f);
+        mesh = buf.build();
+        if (mesh != null) BufferUploader.drawWithShader(mesh);
+
+        RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
+        RenderSystem.colorMask(true, true, true, true);
+        RenderSystem.defaultBlendFunc();
+        RenderSystem.disableBlend();
+        RenderSystem.enableDepthTest();
+        RenderSystem.enableCull();
     }
 
     /** A full-target quad in clip space (x0..x1, y0..y1), placed through the inverse of the GPU's matrices at depth z. */
@@ -374,6 +489,8 @@ final class GodRays {
         if (work != null) work.destroyBuffers();
         if (ping != null) ping.destroyBuffers();
         if (pong != null) pong.destroyBuffers();
+        cached = null; // it was one of the targets that are gone
+        cacheValid = false;
         small = new TextureTarget(w, h, false);
         small.setClearColor(1f, 1f, 1f, 0f); // white, so the next step can take the colour from it; alpha is the sky
         small.setFilterMode(9729);

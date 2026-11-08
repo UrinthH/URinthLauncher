@@ -207,6 +207,7 @@
                 android:paddingHorizontal="@dimen/_8sdp"
                 android:rotation="180"
                 android:src="@drawable/spinner_arrow"
+                android:tint="#5B6B78"
 
                 app:layout_constraintBottom_toBottomOf="@id/vprof_editor_spinner_runtime"
                 app:layout_constraintEnd_toEndOf="@id/vprof_editor_spinner_runtime"
@@ -240,6 +241,7 @@
                 android:paddingHorizontal="@dimen/_8sdp"
                 android:rotation="180"
                 android:src="@drawable/spinner_arrow"
+                android:tint="#5B6B78"
 
                 app:layout_constraintBottom_toBottomOf="@id/vprof_editor_instance_renderer"
                 app:layout_constraintEnd_toEndOf="@id/vprof_editor_instance_renderer"

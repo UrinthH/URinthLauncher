@@ -64,11 +64,14 @@
 
 		</net.kdt.pojavlaunch.customcontrols.ControlLayout>
 
-		<FrameLayout
+		<!-- The white page with the loading screen on it as a small, wide, rounded window. When the
+		     game is up, the window zooms to full screen (see LaunchWindowLayout). The child that is
+		     a LaunchLoadingView is the window; the other child is the text under it. -->
+		<net.kdt.pojavlaunch.game.LaunchWindowLayout
 			android:id="@+id/main_loading_screen"
 			android:layout_width="match_parent"
 			android:layout_height="match_parent"
-			android:background="#FF060E14"
+			android:background="@color/urinth_loading_bg"
 			android:visibility="visible"
 			>
 
@@ -77,12 +80,11 @@
 				android:layout_width="match_parent"
 				android:layout_height="match_parent" />
 
-			<!-- Stage and elapsed time, drawn as text so they stay readable and translatable. -->
+			<!-- Stage and elapsed time, drawn as text so they stay readable and translatable.
+			     LaunchWindowLayout puts this block under the window. -->
 			<LinearLayout
-				android:layout_width="match_parent"
+				android:layout_width="wrap_content"
 				android:layout_height="wrap_content"
-				android:layout_gravity="bottom"
-				android:layout_marginBottom="64dp"
 				android:gravity="center"
 				android:orientation="vertical">
 
@@ -93,7 +95,7 @@
 					android:text="@string/loading_screen_title"
 					android:textAllCaps="true"
 					android:letterSpacing="0.12"
-					android:textColor="#FF3CE6C0"
+					android:textColor="#FF0F8A52"
 					android:textStyle="bold"
 					android:textSize="13sp" />
 
@@ -103,10 +105,10 @@
 					android:layout_height="wrap_content"
 					android:layout_marginTop="4dp"
 					android:text="@string/loading_screen_warning"
-					android:textColor="#FF8FA9B6"
+					android:textColor="#FF6B7A87"
 					android:textSize="11sp" />
 			</LinearLayout>
-		</FrameLayout>
+		</net.kdt.pojavlaunch.game.LaunchWindowLayout>
 
 		<com.kdt.LoggerView
 			android:id="@+id/mainLoggerView"

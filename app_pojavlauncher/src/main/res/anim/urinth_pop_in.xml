@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Soft pop-in for dialogs and popups: eases in over ~0.5 s, fading while growing from 90% and rising a little. -->
+<set xmlns:android="http://schemas.android.com/apk/res/android"
+    android:interpolator="@interpolator/urinth_ease"
+    android:shareInterpolator="true">
+    <alpha android:fromAlpha="0" android:toAlpha="1" android:duration="380" />
+    <scale
+        android:fromXScale="0.90" android:toXScale="1"
+        android:fromYScale="0.90" android:toYScale="1"
+        android:pivotX="50%" android:pivotY="40%"
+        android:duration="520" />
+    <translate android:fromYDelta="4%" android:toYDelta="0" android:duration="520" />
+</set>

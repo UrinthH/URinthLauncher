@@ -19,20 +19,20 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
-/** The dark teal "futuristic" look of the installation screens, shared by the settings and the content manager. */
+/** The light, clean look of the installation screens, shared by the settings and the content manager. */
 public final class Fx {
-    public static final int BG = 0xFF04121C;
-    public static final int PANEL_TOP = 0xFF0C2C3D;
-    public static final int PANEL_BOTTOM = 0xFF071B29;
-    public static final int EDGE = 0x6600E6AA;
-    public static final int EDGE_SOFT = 0x3300E6AA;
-    public static final int ACCENT = 0xFF00E6AA;
-    public static final int ACCENT_DEEP = 0xFF0B6D73;
-    public static final int ON_ACCENT = 0xFF03231F;
-    public static final int TEXT = 0xFFF2F8FA;
-    public static final int MUTED = 0xFF91AAB8;
-    public static final int DANGER = 0xFFFF5C6C;
-    public static final int DANGER_FILL = 0x66701F2B;
+    public static final int BG = 0xFFF3F6FB;
+    public static final int PANEL_TOP = 0xFFFFFFFF;
+    public static final int PANEL_BOTTOM = 0xFFFFFFFF;
+    public static final int EDGE = 0xFFE1E8EF;
+    public static final int EDGE_SOFT = 0xFFEDF1F5;
+    public static final int ACCENT = 0xFF1FC77A;
+    public static final int ACCENT_DEEP = 0xFF14A765;
+    public static final int ON_ACCENT = 0xFFFFFFFF;
+    public static final int TEXT = 0xFF1B2733;
+    public static final int MUTED = 0xFF6B7A87;
+    public static final int DANGER = 0xFFE5484D;
+    public static final int DANGER_FILL = 0xFFFFF0F1;
 
     private Fx() {}
 
@@ -40,7 +40,7 @@ public final class Fx {
         return Math.round(value * context.getResources().getDisplayMetrics().density);
     }
 
-    /** A dark glass panel with a thin teal edge. */
+    /** A white rounded panel with a hairline edge. */
     public static GradientDrawable glass(Context context, float radiusDp, int edge) {
         GradientDrawable drawable = new GradientDrawable(GradientDrawable.Orientation.TL_BR, new int[]{PANEL_TOP, PANEL_BOTTOM});
         drawable.setCornerRadius(dp(context, radiusDp));
@@ -57,14 +57,13 @@ public final class Fx {
     }
 
     public static GradientDrawable accentGradient(Context context, float radiusDp) {
-        GradientDrawable drawable = new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT, new int[]{0xFF00E6AA, 0xFF05B88F});
+        GradientDrawable drawable = new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT, new int[]{0xFF1FC77A, 0xFF19B56C});
         drawable.setCornerRadius(dp(context, radiusDp));
-        drawable.setStroke(Math.max(1, dp(context, 1)), 0xFF63FFDC);
-        return drawable;
+                return drawable;
     }
 
     public static void ripple(View view, android.graphics.drawable.Drawable shape) {
-        view.setBackground(new RippleDrawable(ColorStateList.valueOf(0x3300E6AA), shape, null));
+        view.setBackground(new RippleDrawable(ColorStateList.valueOf(0x261FC77A), shape, null));
         view.setClickable(true);
     }
 
@@ -102,11 +101,11 @@ public final class Fx {
     public static final int PRIMARY = 0, GHOST = 1, DANGER_STYLE = 2;
 
     public static TextView button(Context context, CharSequence label, int style) {
-        TextView button = text(context, label, 15, style == PRIMARY ? ON_ACCENT : style == DANGER_STYLE ? 0xFFFFE0E2 : TEXT, true);
+        TextView button = text(context, label, 15, style == PRIMARY ? ON_ACCENT : style == DANGER_STYLE ? DANGER : TEXT, true);
         button.setGravity(Gravity.CENTER);
         button.setPadding(dp(context, 18), dp(context, 11), dp(context, 18), dp(context, 11));
         ripple(button, style == PRIMARY ? accentGradient(context, 14)
-                : style == DANGER_STYLE ? fill(context, DANGER_FILL, 14, 0xFFC44857)
+                : style == DANGER_STYLE ? fill(context, DANGER_FILL, 14, 0xFFF3C4C8)
                 : glass(context, 14, EDGE));
         return button;
     }
@@ -114,7 +113,7 @@ public final class Fx {
     /** A small round-cornered button holding only an icon. */
     public static FrameLayout iconButton(Context context, int iconRes, int tint, int edge, float sizeDp) {
         FrameLayout box = new FrameLayout(context);
-        ripple(box, fill(context, 0x22000000, 12, edge));
+        ripple(box, fill(context, 0xFFF6F8FB, 12, edge));
         ImageView icon = new ImageView(context);
         icon.setImageResource(iconRes);
         icon.setColorFilter(tint);
@@ -168,15 +167,15 @@ public final class Fx {
 
         private void apply(boolean animate) {
             Context context = getContext();
-            track.setBackground(fill(context, checked ? ACCENT_DEEP : 0xFF1B3445, 13, checked ? ACCENT : 0xFF2E4A5C));
-            knob.setBackground(fill(context, checked ? ACCENT : 0xFF7F97A5, 10, 0));
+            track.setBackground(fill(context, checked ? ACCENT : 0xFFDCE3EA, 13, 0));
+            knob.setBackground(fill(context, 0xFFFFFFFF, 10, checked ? 0 : 0xFFC9D3DC));
             float offset = (dp(context, 54) - dp(context, 46)) / 2f + dp(context, 3) + (checked ? dp(context, 20) : 0);
-            if (animate) knob.animate().translationX(offset).setDuration(140).start();
+            if (animate) knob.animate().translationX(offset).setDuration(260).setInterpolator(new android.view.animation.PathInterpolator(0.2f, 0.9f, 0.2f, 1f)).start();
             else knob.setTranslationX(offset);
         }
     }
 
-    /** A dark glass dialog around {@code content}. */
+    /** A white rounded dialog around {@code content}. */
     public static Dialog dialog(Context context, View content) {
         Dialog dialog = new Dialog(context);
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
@@ -193,6 +192,8 @@ public final class Fx {
             int width = Math.min(dp(context, 520), Math.round(context.getResources().getDisplayMetrics().widthPixels * 0.9f));
             window.setLayout(width, ViewGroup.LayoutParams.WRAP_CONTENT);
             window.setGravity(Gravity.CENTER);
+            window.setWindowAnimations(git.artdeell.mojo.R.style.UrinthDialogAnim);
+            window.setDimAmount(0.32f);
         }
         return dialog;
     }

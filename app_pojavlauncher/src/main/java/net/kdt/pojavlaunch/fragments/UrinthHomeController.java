@@ -4,10 +4,6 @@ import net.kdt.pojavlaunch.downloads.DownloadCategory;
 import net.kdt.pojavlaunch.downloads.ui.DownloadsFragment;
 import android.content.Context;
 import android.graphics.Bitmap;
-import android.media.MediaPlayer;
-import android.os.Handler;
-import android.os.Looper;
-import android.os.SystemClock;
 import android.text.Spannable;
 import android.text.SpannableString;
 import android.text.style.ForegroundColorSpan;
@@ -79,33 +75,6 @@ public final class UrinthHomeController {
     private Account[] savedAccounts = new Account[0];
     private Bitmap avatar;
     private boolean released;
-    private MediaPlayer themeMusic;
-    private MediaPlayer fadingOutMusic;
-    private int musicRes;
-    private boolean musicPaused;
-    private static final long MUSIC_FADE_MS = 700;
-    // Wall-clock timer (not an animator), so the fade also works with "Animator duration scale" off.
-    private final Handler musicHandler = new Handler(Looper.getMainLooper());
-
-    // The glow pulse is driven by hand with a Handler loop instead of ValueAnimator: on a lot of
-    // devices (especially ones people tweak for performance) "Developer options > Animator
-    // duration scale" is set to Off, which makes every ValueAnimator jump straight to its end
-    // value instead of animating — the glow would just sit there fully lit. A plain Handler timer
-    // runs on real wall-clock time and ignores that setting entirely, so the pulse always animates.
-    private View heroGlowView;
-    private View bannerGlowView;
-    private View edgeGlowView;
-    private final Handler glowHandler = new Handler(Looper.getMainLooper());
-    private boolean glowPulsing;
-    private long glowStartUptime;
-    private final Runnable glowTick = this::onGlowTick;
-
-    /** The faint drifting ash/snow specks; drives its own frame loop, see ParticleOverlayView. */
-    private ParticleOverlayView particleView;
-
-    /** The shimmering "Made by" credit line in the top bar; drives its own frame loop too. */
-    private ShimmerTextView creditName;
-
     /** The 5 sidebar categories, in the same order as the layout, for the active-highlight. */
     private View navHome, navNews, navInstallations, navSkins, navSettings;
 
@@ -141,22 +110,6 @@ public final class UrinthHomeController {
         // now baked into the hero photo itself, so there's nothing left here to colour.
         setPhoto(root.findViewById(R.id.urinth_hero_image), "urinth_photo_hero");
         setPhoto(root.findViewById(R.id.urinth_banner_image), "urinth_photo_banner");
-        startMusic();
-        heroGlowView = root.findViewById(R.id.urinth_hero_glow);
-        bannerGlowView = root.findViewById(R.id.urinth_banner_glow);
-        edgeGlowView = root.findViewById(R.id.urinth_red_edge_glow);
-        // The edge-glow group is 4 overlapping strips; render it as one flattened layer so the
-        // pulsed alpha applies evenly across the whole border instead of double-darkening corners.
-        if (edgeGlowView != null) edgeGlowView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
-        startGlowLoop();
-        particleView = root.findViewById(R.id.urinth_particles);
-        if (particleView != null) {
-            particleView.setHackMode(LauncherPreferences.PREF_PERFORMANCE_MODE);
-            particleView.start();
-        }
-        creditName = root.findViewById(R.id.urinth_credit_name);
-        if (creditName != null) creditName.start();
-
         navHome = root.findViewById(R.id.urinth_nav_home);
         navNews = root.findViewById(R.id.urinth_nav_news);
         navInstallations = root.findViewById(R.id.urinth_nav_installations);
@@ -175,189 +128,12 @@ public final class UrinthHomeController {
     public void release() {
         released = true;
         ExtraCore.removeExtraListenerFromValue(ExtraConstants.REFRESH_ACCOUNT_SPINNER, accountRefreshListener);
-        musicHandler.removeCallbacksAndMessages(null);
-        releasePlayer(fadingOutMusic);
-        fadingOutMusic = null;
-        releasePlayer(themeMusic);
-        themeMusic = null;
-        stopGlowLoop();
-        if (particleView != null) {
-            particleView.release();
-            particleView = null;
-        }
-        if (creditName != null) {
-            creditName.stop();
-            creditName = null;
-        }
     }
 
-    /** The track for the current mode: the Performance Mode song when it is on, the home theme otherwise. */
-    private static int wantedTrack() {
-        return LauncherPreferences.PREF_PERFORMANCE_MODE ? R.raw.urinth_performance : R.raw.urinth_theme;
-    }
+    /** The home screen has no music and no background animation any more; kept so the host can still call them. */
+    public void pauseMusic() {}
 
-    /** Starts the looping home-screen music for the current mode. Safe to call once. */
-    private void startMusic() {
-        musicRes = wantedTrack();
-        themeMusic = createLooping(musicRes);
-        if (themeMusic != null) themeMusic.start();
-    }
-
-    private MediaPlayer createLooping(int res) {
-        try {
-            MediaPlayer player = MediaPlayer.create(context, res);
-            if (player != null) player.setLooping(true);
-            return player;
-        } catch (Exception e) {
-            // Missing/corrupt audio resource shouldn't break the home screen.
-            return null;
-        }
-    }
-
-    private static void releasePlayer(MediaPlayer player) {
-        if (player == null) return;
-        try {
-            player.stop();
-        } catch (IllegalStateException ignored) {
-            // already stopped/released elsewhere
-        }
-        player.release();
-    }
-
-    private static void setVolume(MediaPlayer player, float volume) {
-        if (player == null) return;
-        try {
-            player.setVolume(volume, volume);
-        } catch (IllegalStateException ignored) {
-            // released meanwhile
-        }
-    }
-
-    /**
-     * Swaps to the track that fits the current mode (if it is not already playing): the old song
-     * fades out while the new one fades in and loops. Does nothing when the right song is playing.
-     */
-    private void switchMusic() {
-        if (released) return;
-        int want = wantedTrack();
-        if (want == musicRes) return;
-        musicRes = want;
-        musicHandler.removeCallbacksAndMessages(null);
-        releasePlayer(fadingOutMusic);
-        fadingOutMusic = themeMusic;
-        final MediaPlayer incoming = createLooping(want);
-        themeMusic = incoming;
-        if (musicPaused) {
-            // The app is in the background: no sound now, the new song starts when it comes back.
-            releasePlayer(fadingOutMusic);
-            fadingOutMusic = null;
-            return;
-        }
-        setVolume(incoming, 0f);
-        if (incoming != null) incoming.start();
-        final long start = SystemClock.uptimeMillis();
-        musicHandler.post(new Runnable() {
-            @Override
-            public void run() {
-                if (released) return;
-                float p = Math.min(1f, (SystemClock.uptimeMillis() - start) / (float) MUSIC_FADE_MS);
-                setVolume(fadingOutMusic, 1f - p);
-                setVolume(incoming, p);
-                if (p < 1f) {
-                    musicHandler.postDelayed(this, 40);
-                } else {
-                    releasePlayer(fadingOutMusic);
-                    fadingOutMusic = null;
-                }
-            }
-        });
-    }
-
-    /** Pause the music and the glow pulses when the app goes into the background. */
-    public void pauseMusic() {
-        musicPaused = true;
-        // Finish any fade at once so nothing is left half-way.
-        musicHandler.removeCallbacksAndMessages(null);
-        releasePlayer(fadingOutMusic);
-        fadingOutMusic = null;
-        setVolume(themeMusic, 1f);
-        if (themeMusic != null && themeMusic.isPlaying()) themeMusic.pause();
-        pauseGlowLoop();
-        if (particleView != null) particleView.pause();
-    }
-
-    /** Resume the music and the glow pulses when the app comes back to the foreground. */
-    public void resumeMusic() {
-        if (released) return;
-        musicPaused = false;
-        // Performance Mode may have been changed while away (for example in settings).
-        if (particleView != null) particleView.setHackMode(LauncherPreferences.PREF_PERFORMANCE_MODE);
-        if (wantedTrack() != musicRes) {
-            releasePlayer(themeMusic);
-            musicRes = wantedTrack();
-            themeMusic = createLooping(musicRes);
-        }
-        if (themeMusic != null && !themeMusic.isPlaying()) themeMusic.start();
-        resumeGlowLoop();
-        if (particleView != null) particleView.resume();
-    }
-
-    /** Starts the self-driven glow pulse loop (see the field comment on glowHandler for why). */
-    private void startGlowLoop() {
-        glowPulsing = true;
-        glowStartUptime = SystemClock.uptimeMillis();
-        glowHandler.removeCallbacks(glowTick);
-        glowHandler.post(glowTick);
-    }
-
-    private void pauseGlowLoop() {
-        glowPulsing = false;
-        glowHandler.removeCallbacks(glowTick);
-    }
-
-    private void resumeGlowLoop() {
-        if (released || glowPulsing) return;
-        // Shift the start time so the pulse continues smoothly instead of jumping on resume.
-        glowStartUptime = SystemClock.uptimeMillis() - glowElapsedAtPause;
-        glowPulsing = true;
-        glowHandler.removeCallbacks(glowTick);
-        glowHandler.post(glowTick);
-    }
-
-    private void stopGlowLoop() {
-        glowPulsing = false;
-        glowHandler.removeCallbacks(glowTick);
-        heroGlowView = null;
-        bannerGlowView = null;
-        edgeGlowView = null;
-    }
-
-    private long glowElapsedAtPause;
-
-    private void onGlowTick() {
-        if (!glowPulsing || released) return;
-        long elapsed = SystemClock.uptimeMillis() - glowStartUptime;
-        glowElapsedAtPause = elapsed;
-        applyGlowAlpha(heroGlowView, 0.12f, 1f, 1800L, elapsed, 0L);
-        applyGlowAlpha(bannerGlowView, 0.12f, 1f, 1800L, elapsed, 0L);
-        applyGlowAlpha(edgeGlowView, 0.2f, 1f, 1500L, elapsed, 150L);
-        // ~60fps; smooth enough for an alpha pulse without burning battery like a tight loop would.
-        glowHandler.postDelayed(glowTick, 16L);
-    }
-
-    /**
-     * Sets a view's alpha to a smooth, continuously repeating brighter-then-dimmer-then-brighter
-     * wave between minAlpha and maxAlpha. A sine easing is used so the pulse accelerates into and
-     * out of each peak instead of ticking linearly. Does nothing if the view is missing.
-     */
-    private static void applyGlowAlpha(View view, float minAlpha, float maxAlpha, long periodMs,
-                                        long elapsedMs, long phaseOffsetMs) {
-        if (view == null) return;
-        double progress = ((elapsedMs + phaseOffsetMs) % periodMs) / (double) periodMs; // 0..1
-        double wave = (1 - Math.cos(progress * Math.PI * 2)) / 2; // 0 -> 1 -> 0, eased
-        float alpha = (float) (minAlpha + (maxAlpha - minAlpha) * wave);
-        view.setAlpha(alpha);
-    }
+    public void resumeMusic() {}
 
     private void bindActions(View root) {
         root.findViewById(R.id.urinth_menu_btn).setOnClickListener(v ->
@@ -411,7 +187,19 @@ public final class UrinthHomeController {
         View[] all = {navHome, navNews, navInstallations, navSkins, navSettings};
         for (View item : all) {
             if (item == null) continue;
-            item.setBackgroundResource(item == active ? R.drawable.urinth_nav_active : R.drawable.urinth_nav_idle);
+            boolean on = item == active;
+            item.setBackgroundResource(on ? R.drawable.urinth_nav_active : R.drawable.urinth_nav_idle);
+            if (item instanceof LinearLayout) {
+                LinearLayout row = (LinearLayout) item;
+                for (int i = 0; i < row.getChildCount(); i++) {
+                    View child = row.getChildAt(i);
+                    if (child instanceof ImageView) {
+                        ((ImageView) child).setColorFilter(on ? 0xFF14A765 : 0xFF6B7A87);
+                    } else if (child instanceof TextView) {
+                        ((TextView) child).setTextColor(on ? 0xFF0F6B43 : 0xFF2A3742);
+                    }
+                }
+            }
         }
     }
 
@@ -538,40 +326,13 @@ public final class UrinthHomeController {
         boolean enabled = !LauncherPreferences.PREF_PERFORMANCE_MODE;
         // The setting changes at once; only what the card shows waits for the animation's burst.
         LauncherPreferences.setPerformanceMode(enabled);
-        if (particleView != null) particleView.setHackMode(enabled); // snow <-> binary rain
-        switchMusic(); // ON: the Performance Mode song starts at once; OFF: the home theme comes back
-        if (!enabled) {
-            showPerformanceModeChange(false);
-            return;
-        }
-        perfButton.setEnabled(false); // no second tap while the animation plays
-        PerformanceBoostView.play(activity, perfPanel, perfIcon, new PerformanceBoostView.Listener() {
-            @Override
-            public void onBurst() {
-                renderPerformanceMode();
-                bouncePerformanceCard();
-            }
-
-            @Override
-            public void onFinished() {
-                perfButton.setEnabled(true);
-                renderPerformanceMode();
-                Toast.makeText(context, R.string.urinth_perf_toast_on, Toast.LENGTH_SHORT).show();
-            }
-        });
+        showPerformanceModeChange(enabled);
     }
 
     private void showPerformanceModeChange(boolean enabled) {
         renderPerformanceMode();
-        bouncePerformanceCard();
         Toast.makeText(context, enabled ? R.string.urinth_perf_toast_on : R.string.urinth_perf_toast_off,
                 Toast.LENGTH_SHORT).show();
-    }
-
-    private void bouncePerformanceCard() {
-        perfPanel.setScaleX(0.94f);
-        perfPanel.setScaleY(0.94f);
-        perfPanel.animate().scaleX(1f).scaleY(1f).setDuration(260).start();
     }
 
     private void renderPerformanceMode() {
@@ -581,9 +342,9 @@ public final class UrinthHomeController {
         perfChip.setSelected(on);
         perfState.setSelected(on);
         perfState.setText(on ? R.string.urinth_perf_state_on : R.string.urinth_perf_state_off);
-        perfState.setTextColor(on ? 0xFF1FC77A : 0xFFABC0CB);
+        perfState.setTextColor(on ? 0xFF14A765 : 0xFF6B7A87);
         perfButton.setText(on ? R.string.urinth_perf_button_on : R.string.urinth_perf_button_off);
-        perfIcon.setAlpha(on ? 1f : 0.6f);
+        perfIcon.setAlpha(on ? 1f : 0.7f);
     }
 
     private String ageLabel(long now, long then) {
@@ -646,7 +407,6 @@ public final class UrinthHomeController {
 
     /** While a settings or manager screen is open the falling specks fade back, so they do not cross the text. */
     public void setCenterOpen(boolean open) {
-        if (particleView != null) particleView.animate().alpha(open ? 0.22f : 1f).setDuration(320).start();
     }
 
     private void openDownloads(DownloadCategory category, View nav) {
@@ -772,7 +532,7 @@ public final class UrinthHomeController {
         name.setText(title);
         name.setSingleLine(true);
         name.setEllipsize(android.text.TextUtils.TruncateAt.END);
-        name.setTextColor(highlighted ? GREEN : 0xFFF2F8FA);
+        name.setTextColor(highlighted ? 0xFF0F8A52 : 0xFF1B2733);
         name.setTextSize(14f);
         texts.addView(name);
         if (subtitle != null) {
@@ -780,7 +540,7 @@ public final class UrinthHomeController {
             version.setText(subtitle);
             version.setSingleLine(true);
             version.setEllipsize(android.text.TextUtils.TruncateAt.END);
-            version.setTextColor(0xFFABC0CB);
+            version.setTextColor(0xFF6B7A87);
             version.setTextSize(11f);
             texts.addView(version);
         }
@@ -849,24 +609,31 @@ public final class UrinthHomeController {
     }
 
     /**
-     * Builds an otherwise-empty AlertDialog with the dark/green card chrome
+     * Builds an otherwise-empty AlertDialog with the white rounded card chrome
      * (urinth_dialog_bg) instead of the plain system dialog look, and a title drawn in the
      * same style as the rest of the launcher.
      */
     private AlertDialog themedDialog(int titleRes) {
         TextView title = new TextView(context);
         title.setText(titleRes);
-        title.setTextColor(0xFFF2F8FA);
+        title.setTextColor(0xFF1B2733);
         title.setTextSize(16f);
         title.setTypeface(title.getTypeface(), android.graphics.Typeface.BOLD);
         int pad = dpToPx(18);
-        title.setPadding(pad, pad, pad, dpToPx(6));
+        title.setPadding(pad, pad, pad, dpToPx(8));
 
         AlertDialog dialog = new AlertDialog.Builder(activity)
                 .setCustomTitle(title)
                 .setNegativeButton(android.R.string.cancel, null)
                 .create();
         dialog.getWindow().setBackgroundDrawableResource(R.drawable.urinth_dialog_bg);
+        // Slow, soft pop-in and out, and a lighter dim behind the card.
+        dialog.getWindow().setWindowAnimations(R.style.UrinthDialogAnim);
+        dialog.getWindow().setDimAmount(0.32f);
+        dialog.setOnShowListener(d -> {
+            android.widget.Button cancel = dialog.getButton(AlertDialog.BUTTON_NEGATIVE);
+            if (cancel != null) cancel.setTextColor(0xFF14A765);
+        });
         return dialog;
     }
 
@@ -916,7 +683,7 @@ public final class UrinthHomeController {
 
         TextView label = new TextView(context);
         label.setText(text);
-        label.setTextColor(highlighted ? GREEN : 0xFFF2F8FA);
+        label.setTextColor(highlighted ? 0xFF0F8A52 : 0xFF1B2733);
         label.setTextSize(14f);
         LinearLayout.LayoutParams labelParams = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
         row.addView(label, labelParams);

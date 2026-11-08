@@ -12,6 +12,7 @@
         <item name="preferenceTheme">@style/PreferenceThemeOverlay.v14.Material</item>
         <item name="android:textSize">@dimen/_12ssp</item>
         <item name="dialogCornerRadius">16dp</item>
+        <item name="alertDialogTheme">@style/UrinthAlertDialog</item>
         <item name="android:seekBarStyle">@style/MojoLauncher.SeekBar</item>
         <item name="seekBarStyle">@style/MojoLauncher.SeekBar</item>
         <item name="android:switchStyle">@style/MojoLauncher.Switch</item>
@@ -67,6 +68,7 @@
         <item name="android:layout_height">wrap_content</item>
         <item name="android:layout_marginTop">10dp</item>
         <item name="android:background">@drawable/urinth_profile_card_bg</item>
+        <item name="android:stateListAnimator">@animator/urinth_card_press</item>
         <item name="android:clickable">true</item>
         <item name="android:focusable">true</item>
         <item name="android:gravity">center_vertical</item>
@@ -100,7 +102,7 @@
     <style name="UrinthProfileCardTitle">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
-        <item name="android:textColor">#F2F8FA</item>
+        <item name="android:textColor">#1B2733</item>
         <item name="android:textSize">14sp</item>
         <item name="android:textStyle">bold</item>
     </style>
@@ -109,8 +111,17 @@
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:layout_marginTop">2dp</item>
-        <item name="android:textColor">#ABC0CB</item>
+        <item name="android:textColor">#6B7A87</item>
         <item name="android:textSize">11sp</item>
+    </style>
+
+    <style name="UrinthProfileIcon">
+        <item name="android:layout_width">42dp</item>
+        <item name="android:layout_height">42dp</item>
+        <item name="android:background">@drawable/urinth_icon_tile</item>
+        <item name="android:contentDescription">@null</item>
+        <item name="android:padding">6dp</item>
+        <item name="android:scaleType">fitCenter</item>
     </style>
 
     <style name="UrinthProfileChevron">
@@ -126,6 +137,38 @@
         <item name="android:background">?android:attr/listDivider</item>
     </style>
 
+    <!-- Popups (spinner dropdowns): fade + grow in, fade out. -->
+    <style name="UrinthPopupAnim">
+        <item name="android:windowEnterAnimation">@anim/urinth_pop_in</item>
+        <item name="android:windowExitAnimation">@anim/urinth_pop_out</item>
+    </style>
+
+    <style name="UrinthListPopup" parent="Widget.AppCompat.ListPopupWindow">
+        <item name="android:popupAnimationStyle">@style/UrinthPopupAnim</item>
+        <item name="android:popupBackground">@drawable/urinth_popup_bg</item>
+    </style>
+
+    <style name="UrinthSpinnerPopupTheme" parent="ThemeOverlay.AppCompat.Light">
+        <item name="listPopupWindowStyle">@style/UrinthListPopup</item>
+        <item name="android:listDivider">@null</item>
+    </style>
+
+    <!-- Dialogs: the same soft pop-in instead of the default slide. -->
+    <style name="UrinthDialogAnim">
+        <item name="android:windowEnterAnimation">@anim/urinth_pop_in</item>
+        <item name="android:windowExitAnimation">@anim/urinth_pop_out</item>
+    </style>
+
+    <style name="UrinthAlertDialog" parent="Theme.AppCompat.Light.Dialog.Alert">
+        <item name="android:windowBackground">@drawable/urinth_dialog_bg</item>
+        <item name="android:windowAnimationStyle">@style/UrinthDialogAnim</item>
+        <item name="android:backgroundDimAmount">0.32</item>
+        <item name="colorAccent">#14A765</item>
+        <item name="android:colorAccent">#14A765</item>
+        <item name="android:textColorPrimary">#1B2733</item>
+        <item name="android:textColorSecondary">#6B7A87</item>
+    </style>
+
     <item name="dimension_tracker" type="id" />
     <style name="DimensionTracker">
         <item name="android:id">@id/dimension_tracker</item>
@@ -133,8 +176,8 @@
         <item name="android:layout_height">match_parent</item>
     </style>
 
-    <!-- The game screen: the window behind its first frame is the loading screen's colour, so
-         the hand-over from the Play animation does not flash black. -->
+    <!-- The game screen: the window behind its first frame is the loading screen's colour (white),
+         so the hand-over from the Play animation does not flash dark. -->
     <style name="MojoLauncher.Game" parent="MojoLauncher.AppTheme">
         <item name="android:windowBackground">@color/urinth_loading_bg</item>
     </style>

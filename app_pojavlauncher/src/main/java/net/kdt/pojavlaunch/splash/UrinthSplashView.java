@@ -21,8 +21,9 @@ import git.artdeell.mojo.R;
 /**
  * The UrinthUltra intro, drawn from one clock value ({@link #setTime}) so every part of it stays in
  * step: a faint grid and scan line, the logo spinning in inside a set of turning HUD rings, the
- * name "UrinthUltra" popping in letter by letter (Urinth in white, Ultra in red), and a segmented
- * loading bar with a status line. Everything is original artwork made of plain shapes and the
+ * name "UrinthUltra" popping in letter by letter (Urinth in dark ink, Ultra in red), and a segmented
+ * loading bar with a status line. It is drawn on a clean white background in the same greens and
+ * greys as the launcher's light theme. Everything is original artwork made of plain shapes and the
  * launcher's own logo.
  *
  * Timeline, in milliseconds:
@@ -41,16 +42,23 @@ public final class UrinthSplashView extends View {
     /** The animation below is written for this many milliseconds and is stretched to DURATION_MS. */
     private static final float DESIGN_MS = 3000f;
 
-    private static final String NAME_WHITE = "Urinth";
+    private static final String NAME_INK = "Urinth";
     private static final String NAME_RED = "Ultra";
 
-    private static final int COLOR_BG_TOP = 0xFF060E14;
-    private static final int COLOR_BG_BOTTOM = 0xFF0C1C27;
-    private static final int COLOR_TEAL = 0xFF3CE6C0;
+    // The launcher's light theme: white page, ink text, green accents, a pale grey for lines.
+    private static final int COLOR_BG_TOP = 0xFFFFFFFF;
+    private static final int COLOR_BG_BOTTOM = 0xFFF1F5FA;
     private static final int COLOR_GREEN = 0xFF1FC77A;
-    private static final int COLOR_RED = 0xFFFF2D3F;
+    private static final int COLOR_GREEN_DEEP = 0xFF14A765;
+    private static final int COLOR_RED = 0xFFF0283A;
     private static final int COLOR_PURPLE = 0xFF9B3DFF;
-    private static final int COLOR_TEXT_DIM = 0xFF8FA9B6;
+    private static final int COLOR_INK = 0xFF1B2733;
+    private static final int COLOR_TEXT_DIM = 0xFF6B7A87;
+    private static final int COLOR_GRID = 0xFFB9C7D2;
+    private static final int COLOR_TRACK = 0xFFDCE5EC;
+    private static final int COLOR_TICK = 0xFF9FB3C0;
+    /** The launcher's page colour: the intro fades into it, so the hand-over shows no step. */
+    private static final int COLOR_FADE_OUT = 0xFFF3F6FB;
 
     private static final int BAR_SEGMENTS = 44;
     private static final int PARTICLES = 30;
@@ -60,7 +68,6 @@ public final class UrinthSplashView extends View {
 
     private final Paint bgPaint = new Paint();
     private final Paint gridPaint = new Paint();
-    private final Paint vignettePaint = new Paint();
     private final Paint scanPaint = new Paint();
     private final Paint glowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint ringPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -79,8 +86,8 @@ public final class UrinthSplashView extends View {
     private final float[] particleSize = new float[PARTICLES];
     private final float[] particlePhase = new float[PARTICLES];
 
-    private final float[] charWidths = new float[NAME_WHITE.length() + NAME_RED.length()];
-    private final String name = NAME_WHITE + NAME_RED;
+    private final float[] charWidths = new float[NAME_INK.length() + NAME_RED.length()];
+    private final String name = NAME_INK + NAME_RED;
 
     private float time;
     /** Real elapsed milliseconds of the intro (time is the same moment on the 3000 ms design scale). */
@@ -134,10 +141,9 @@ public final class UrinthSplashView extends View {
         logoSize = Math.min(h * 0.22f, w * 0.16f);
 
         bgPaint.setShader(new LinearGradient(0, 0, 0, h, COLOR_BG_TOP, COLOR_BG_BOTTOM, Shader.TileMode.CLAMP));
-        vignettePaint.setShader(new RadialGradient(centerX, h * 0.45f, Math.max(w, h) * 0.75f,
-                new int[]{0x00060E14, 0x00060E14, 0xFF060E14}, new float[]{0f, 0.45f, 1f}, Shader.TileMode.CLAMP));
+        // A soft lavender halo behind the logo; on white it has to be much fainter than on dark.
         glowPaint.setShader(new RadialGradient(centerX, centerY, logoSize * 1.25f,
-                new int[]{withAlpha(COLOR_PURPLE, 1f), withAlpha(COLOR_PURPLE, 0.4f), withAlpha(COLOR_PURPLE, 0f)},
+                new int[]{withAlpha(COLOR_PURPLE, 0.30f), withAlpha(COLOR_PURPLE, 0.12f), withAlpha(COLOR_PURPLE, 0f)},
                 new float[]{0f, 0.45f, 1f}, Shader.TileMode.CLAMP));
 
         // Name layout: measured once so letters can be placed and animated one by one.
@@ -194,7 +200,6 @@ public final class UrinthSplashView extends View {
         drawGrid(canvas, w, h);
         drawParticles(canvas, w, h);
         drawScanLine(canvas, w, h);
-        canvas.drawRect(0, 0, w, h, vignettePaint);
         drawBrackets(canvas, w, h);
         drawLogoGlow(canvas);
         drawRings(canvas);
@@ -210,7 +215,7 @@ public final class UrinthSplashView extends View {
         if (appear <= 0f) return;
         float step = density * 30f;
         float drift = (time * 0.012f * density) % step;
-        gridPaint.setColor(withAlpha(COLOR_TEAL, 0.07f * appear));
+        gridPaint.setColor(withAlpha(COLOR_GRID, 0.22f * appear));
         for (float x = centerX % step - step; x < w; x += step) {
             canvas.drawLine(x, 0, x, h, gridPaint);
         }
@@ -226,8 +231,8 @@ public final class UrinthSplashView extends View {
             float y = (particleY[i] - time / 1000f * particleSpeed[i]) % 1f;
             if (y < 0f) y += 1f;
             float twinkle = 0.35f + 0.65f * (0.5f + 0.5f * (float) Math.sin(time / 260f + particlePhase[i]));
-            int color = (i % 5 == 0) ? COLOR_RED : COLOR_TEAL;
-            particlePaint.setColor(withAlpha(color, 0.55f * twinkle * appear));
+            int color = (i % 5 == 0) ? COLOR_RED : COLOR_GREEN;
+            particlePaint.setColor(withAlpha(color, 0.30f * twinkle * appear));
             canvas.drawCircle(particleX[i] * w, y * h, particleSize[i] * density, particlePaint);
         }
     }
@@ -238,10 +243,10 @@ public final class UrinthSplashView extends View {
         float y = -h * 0.1f + (h * 1.2f) * smooth(p);
         float band = density * 70f;
         scanPaint.setShader(new LinearGradient(0, y - band, 0, y,
-                withAlpha(COLOR_TEAL, 0f), withAlpha(COLOR_TEAL, 0.16f), Shader.TileMode.CLAMP));
+                withAlpha(COLOR_GREEN, 0f), withAlpha(COLOR_GREEN, 0.10f), Shader.TileMode.CLAMP));
         canvas.drawRect(0, y - band, w, y, scanPaint);
         scanPaint.setShader(null);
-        scanPaint.setColor(withAlpha(COLOR_TEAL, 0.55f));
+        scanPaint.setColor(withAlpha(COLOR_GREEN, 0.4f));
         canvas.drawRect(0, y - density * 0.5f, w, y + density * 0.5f, scanPaint);
     }
 
@@ -252,7 +257,7 @@ public final class UrinthSplashView extends View {
         float len = density * 18f * p;
         ringPaint.setShader(null);
         ringPaint.setStrokeWidth(density * 1.6f);
-        ringPaint.setColor(withAlpha(COLOR_TEAL, 0.75f));
+        ringPaint.setColor(withAlpha(COLOR_GREEN_DEEP, 0.8f));
         // top-left, top-right, bottom-left, bottom-right
         canvas.drawLine(inset, inset, inset + len, inset, ringPaint);
         canvas.drawLine(inset, inset, inset, inset + len, ringPaint);
@@ -281,7 +286,7 @@ public final class UrinthSplashView extends View {
         // Ring 1: three arcs turning clockwise.
         float r1 = logoSize * 0.64f;
         ringPaint.setStrokeWidth(density * 1.6f);
-        ringPaint.setColor(withAlpha(COLOR_TEAL, 0.95f * fade));
+        ringPaint.setColor(withAlpha(COLOR_GREEN, 0.95f * fade));
         rect.set(centerX - r1, centerY - r1, centerX + r1, centerY + r1);
         float a1 = time * 0.24f;
         for (int i = 0; i < 3; i++) {
@@ -310,7 +315,7 @@ public final class UrinthSplashView extends View {
             float dist = Math.abs(((angle - comet + 540f) % 360f) - 180f); // 0 at the comet head
             float near = Math.max(0f, 1f - dist / 70f);
             float len = rOut + near * logoSize * 0.05f;
-            tickPaint.setColor(withAlpha(near > 0.55f ? Color.WHITE : COLOR_TEAL, (0.16f + 0.84f * near) * fade));
+            tickPaint.setColor(withAlpha(near > 0.55f ? COLOR_INK : COLOR_TICK, (0.5f + 0.5f * near) * fade));
             double rad = Math.toRadians(angle);
             float cos = (float) Math.cos(rad);
             float sin = (float) Math.sin(rad);
@@ -340,7 +345,7 @@ public final class UrinthSplashView extends View {
         float radius = logoSize * (0.5f + 1.3f * easeOutCubic(p));
         ringPaint.setShader(null);
         ringPaint.setStrokeWidth(density * (3f * (1f - p) + 0.6f));
-        ringPaint.setColor(withAlpha(COLOR_TEAL, 0.8f * (1f - p)));
+        ringPaint.setColor(withAlpha(COLOR_GREEN, 0.7f * (1f - p)));
         canvas.drawCircle(centerX, centerY, radius, ringPaint);
     }
 
@@ -362,7 +367,7 @@ public final class UrinthSplashView extends View {
             float half = (charsTotal() / 2f) * line;
             float y = nameBaseline + textPaint.getTextSize() * 0.32f;
             barPaint.setShader(new LinearGradient(centerX - half, 0, centerX + half, 0,
-                    new int[]{withAlpha(COLOR_TEAL, 0f), withAlpha(COLOR_TEAL, 0.9f * exit),
+                    new int[]{withAlpha(COLOR_GREEN, 0f), withAlpha(COLOR_GREEN, 0.9f * exit),
                             withAlpha(COLOR_RED, 0.9f * exit), withAlpha(COLOR_RED, 0f)},
                     new float[]{0f, 0.35f, 0.65f, 1f}, Shader.TileMode.CLAMP));
             canvas.drawRect(centerX - half, y, centerX + half, y + density * 1.4f, barPaint);
@@ -389,25 +394,19 @@ public final class UrinthSplashView extends View {
     private void drawNameLayer(Canvas canvas, float dx, float dy, float alphaMul, boolean ghost, float exit) {
         float x = nameLeft + dx;
         float size = textPaint.getTextSize();
-        int whiteLength = NAME_WHITE.length();
+        int inkLength = NAME_INK.length();
         for (int i = 0; i < name.length(); i++) {
             float p = window(900 + i * 55f, 380f);
             if (p > 0f) {
                 float pop = easeOutBack(p);
                 float scale = 1f + (1f - clamp01(p)) * 0.7f;
                 float rise = (1f - pop) * size * 0.55f;
-                boolean red = i >= whiteLength;
+                boolean red = i >= inkLength;
                 int color;
-                if (ghost) color = (dx < 0) ? COLOR_TEAL : COLOR_RED;
-                else color = red ? COLOR_RED : Color.WHITE;
+                if (ghost) color = (dx < 0) ? COLOR_GREEN : COLOR_RED;
+                else color = red ? COLOR_RED : COLOR_INK;
+                // No glow around the letters: on a white page the name is clean, flat colour.
                 textPaint.setColor(withAlpha(color, clamp01(p * 1.6f) * alphaMul * exit));
-                if (!ghost && red) {
-                    textPaint.setShadowLayer(size * 0.35f, 0, 0, withAlpha(COLOR_RED, 0.75f * clamp01(p) * exit));
-                } else if (!ghost) {
-                    textPaint.setShadowLayer(size * 0.18f, 0, 0, withAlpha(Color.WHITE, 0.25f * clamp01(p) * exit));
-                } else {
-                    textPaint.clearShadowLayer();
-                }
                 int save = canvas.save();
                 canvas.translate(x + charWidths[i] / 2f, nameBaseline + dy + rise);
                 canvas.scale(scale, scale);
@@ -416,7 +415,6 @@ public final class UrinthSplashView extends View {
             }
             x += charWidths[i];
         }
-        textPaint.clearShadowLayer();
     }
 
     private void drawProgress(Canvas canvas, int w, int h) {
@@ -439,11 +437,11 @@ public final class UrinthSplashView extends View {
             rect.set(x, top, x + segWidth, top + barHeight);
             if (i + 1 <= filled) {
                 float mix = i / (float) (BAR_SEGMENTS - 1);
-                barPaint.setColor(withAlpha(blend(COLOR_TEAL, COLOR_GREEN, mix), appear * exit));
+                barPaint.setColor(withAlpha(blend(COLOR_GREEN, COLOR_GREEN_DEEP, mix), appear * exit));
             } else if (i < filled) {
-                barPaint.setColor(withAlpha(Color.WHITE, appear * exit * (0.25f + 0.75f * (filled - i))));
+                barPaint.setColor(withAlpha(COLOR_GREEN, appear * exit * (0.25f + 0.75f * (filled - i))));
             } else {
-                barPaint.setColor(withAlpha(0xFF2A4452, 0.8f * appear * exit));
+                barPaint.setColor(withAlpha(COLOR_TRACK, appear * exit));
             }
             canvas.drawRoundRect(rect, density, density, barPaint);
         }
@@ -451,7 +449,7 @@ public final class UrinthSplashView extends View {
         if (progress > 0f && progress < 1f) {
             float x = left + Math.min(filled, BAR_SEGMENTS - 1) * (segWidth + gap);
             rect.set(x - gap, top - density * 3f, x + segWidth + gap, top + barHeight + density * 3f);
-            barPaint.setColor(withAlpha(Color.WHITE, 0.9f * appear * exit));
+            barPaint.setColor(withAlpha(COLOR_GREEN_DEEP, 0.9f * appear * exit));
             canvas.drawRoundRect(rect, density * 1.5f, density * 1.5f, barPaint);
         }
 
@@ -463,7 +461,7 @@ public final class UrinthSplashView extends View {
         canvas.drawText(statusFor(progress), left, top - density * 9f, smallPaint);
 
         smallPaint.setTextAlign(Paint.Align.RIGHT);
-        smallPaint.setColor(withAlpha(Color.WHITE, appear * exit));
+        smallPaint.setColor(withAlpha(COLOR_INK, appear * exit));
         canvas.drawText(String.format(Locale.US, "%d%%", Math.round(progress * 100f)),
                 left + barWidth, top - density * 9f, smallPaint);
     }
@@ -486,7 +484,7 @@ public final class UrinthSplashView extends View {
     private void drawFadeOut(Canvas canvas, int w, int h) {
         float p = window(2800, 200);
         if (p <= 0f) return;
-        overlayPaint.setColor(withAlpha(0xFF0A151D, smooth(p)));
+        overlayPaint.setColor(withAlpha(COLOR_FADE_OUT, smooth(p)));
         canvas.drawRect(0, 0, w, h, overlayPaint);
     }
 }

@@ -31,7 +31,7 @@ import git.artdeell.mojo.R;
 
 /**
  * Gives every row of the settings list the launcher's card look, without changing what the rows
- * do: a dark glass card (lit green for a switch that is on), an icon in a tinted rounded chip, a
+ * do: a white card (tinted for a switch that is on), an icon in a tinted rounded chip, a
  * coloured section header, a pill around slider values, an entrance slide-in the first time a
  * row appears, a small press effect and a pulse when a switch is turned on.
  *
@@ -41,16 +41,16 @@ import git.artdeell.mojo.R;
  */
 @SuppressLint("RestrictedApi")
 final class UrinthPreferenceAdapter extends PreferenceGroupAdapter {
-    private static final int DEFAULT_ACCENT = 0xFF1FE0B4;
+    private static final int DEFAULT_ACCENT = 0xFF14A765;
     private static final int[] SECTION_COLORS = {
-            0xFF1FE0B4, // teal
-            0xFF4FD8FF, // cyan
-            0xFFFFC83C, // amber
-            0xFFB58CFF, // violet
-            0xFFFF6B8A, // coral
+            0xFF14A765, // green
+            0xFF2E8BFF, // blue
+            0xFFE8A317, // amber
+            0xFF8B5CF6, // violet
+            0xFFF0506E, // coral
     };
-    private static final int TITLE_COLOR = 0xFFF2F8FA;
-    private static final int SUMMARY_COLOR = 0xFF8FA6B3;
+    private static final int TITLE_COLOR = 0xFF1B2733;
+    private static final int SUMMARY_COLOR = 0xFF6B7A87;
     private static final int MAX_STAGGER_STEPS = 8;
 
     private final Map<Preference, Integer> accents = new HashMap<>();
@@ -122,7 +122,7 @@ final class UrinthPreferenceAdapter extends PreferenceGroupAdapter {
             line.setScaleX(1f);
             if (entered.add(holderKey(holder))) {
                 line.setScaleX(0f);
-                line.animate().scaleX(1f).setStartDelay(120).setDuration(520)
+                line.animate().scaleX(1f).setStartDelay(160).setDuration(700)
                         .setInterpolator(new DecelerateInterpolator(1.8f)).start();
             }
         }
@@ -132,7 +132,7 @@ final class UrinthPreferenceAdapter extends PreferenceGroupAdapter {
             if (!headersPulsed.contains(holderKey(holder))) {
                 headersPulsed.add(holderKey(holder));
                 bar.setScaleY(0.2f);
-                bar.animate().scaleY(1f).setDuration(420).setInterpolator(new OvershootInterpolator(2.2f)).start();
+                bar.animate().scaleY(1f).setDuration(520).setInterpolator(new DecelerateInterpolator(1.8f)).start();
             }
         }
     }
@@ -157,9 +157,9 @@ final class UrinthPreferenceAdapter extends PreferenceGroupAdapter {
         if (icon != null && icon.getDrawable() != null) {
             float density = item.getResources().getDisplayMetrics().density;
             GradientDrawable chip = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
-                    new int[]{withAlpha(accent, on ? 0x66 : 0x48), withAlpha(accent, 0x14)});
+                    new int[]{withAlpha(accent, on ? 0x2E : 0x1F), withAlpha(accent, on ? 0x2E : 0x1F)});
             chip.setCornerRadius(10f * density);
-            chip.setStroke(Math.max(1, Math.round(density)), withAlpha(accent, on ? 0xB0 : 0x70));
+            
             icon.setBackground(chip);
             int pad = Math.round(7f * density);
             icon.setPadding(pad, pad, pad, pad);
@@ -190,14 +190,14 @@ final class UrinthPreferenceAdapter extends PreferenceGroupAdapter {
      */
     private static RippleDrawable cardFor(View item, int accent, boolean on) {
         float density = item.getResources().getDisplayMetrics().density;
-        GradientDrawable shape = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
-                new int[]{blend(0xFF12293A, accent, on ? 0.30f : 0.10f), blend(0xFF0A1B27, accent, on ? 0.12f : 0.02f)});
-        shape.setCornerRadius(14f * density);
-        shape.setStroke(Math.max(1, Math.round(density * (on ? 1.5f : 1f))), withAlpha(accent, on ? 0xC8 : 0x4A));
+        GradientDrawable shape = new GradientDrawable();
+        shape.setColor(on ? blend(0xFFFFFFFF, accent, 0.07f) : 0xFFFFFFFF);
+        shape.setCornerRadius(16f * density);
+        shape.setStroke(Math.max(1, Math.round(density)), on ? withAlpha(accent, 0x70) : 0xFFE6ECF2);
         GradientDrawable mask = new GradientDrawable();
         mask.setColor(Color.WHITE);
-        mask.setCornerRadius(14f * density);
-        return new RippleDrawable(ColorStateList.valueOf(withAlpha(accent, 0x44)), shape, mask);
+        mask.setCornerRadius(16f * density);
+        return new RippleDrawable(ColorStateList.valueOf(withAlpha(accent, 0x30)), shape, mask);
     }
 
     private static int blend(int base, int tint, float amount) {
@@ -213,8 +213,8 @@ final class UrinthPreferenceAdapter extends PreferenceGroupAdapter {
         boolean was = lastOn.contains(preference);
         if (on) lastOn.add(preference); else lastOn.remove(preference);
         if (on && !was && entered.contains(preference)) {
-            item.animate().scaleX(1.04f).scaleY(1.04f).setDuration(120)
-                    .withEndAction(() -> item.animate().scaleX(1f).scaleY(1f).setDuration(170).start())
+            item.animate().scaleX(1.02f).scaleY(1.02f).setDuration(180)
+                    .withEndAction(() -> item.animate().scaleX(1f).scaleY(1f).setDuration(280).start())
                     .start();
         }
     }
@@ -223,13 +223,13 @@ final class UrinthPreferenceAdapter extends PreferenceGroupAdapter {
         if (!entered.add(preference)) return;
         float density = item.getResources().getDisplayMetrics().density;
         item.setAlpha(0f);
-        item.setTranslationY(26f * density);
-        item.setScaleX(0.95f);
-        item.setScaleY(0.95f);
+        item.setTranslationY(22f * density);
+        item.setScaleX(0.96f);
+        item.setScaleY(0.96f);
         item.animate().alpha(1f).translationY(0f).scaleX(1f).scaleY(1f)
-                .setStartDelay((position % MAX_STAGGER_STEPS) * 34L)
-                .setDuration(420)
-                .setInterpolator(new OvershootInterpolator(0.8f))
+                .setStartDelay(60L + (position % MAX_STAGGER_STEPS) * 55L)
+                .setDuration(600)
+                .setInterpolator(new android.view.animation.PathInterpolator(0.05f, 0.7f, 0.1f, 1f))
                 .start();
     }
 
@@ -238,11 +238,11 @@ final class UrinthPreferenceAdapter extends PreferenceGroupAdapter {
         item.setOnTouchListener((view, event) -> {
             switch (event.getActionMasked()) {
                 case MotionEvent.ACTION_DOWN:
-                    view.animate().scaleX(0.985f).scaleY(0.985f).setDuration(90).start();
+                    view.animate().scaleX(0.985f).scaleY(0.985f).setDuration(140).start();
                     break;
                 case MotionEvent.ACTION_UP:
                 case MotionEvent.ACTION_CANCEL:
-                    view.animate().scaleX(1f).scaleY(1f).setDuration(150).start();
+                    view.animate().scaleX(1f).scaleY(1f).setDuration(300).setInterpolator(new android.view.animation.PathInterpolator(0.05f, 0.7f, 0.1f, 1f)).start();
                     break;
                 default:
                     break;
