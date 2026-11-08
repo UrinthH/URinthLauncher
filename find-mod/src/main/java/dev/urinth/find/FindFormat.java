@@ -85,6 +85,23 @@ public final class FindFormat {
         return id.indexOf(':') < 0 || id.startsWith("minecraft:");
     }
 
+    /**
+     * How long ago, in words: "a few seconds", "42 seconds", "4 minutes", "1 hour 5 min", "3 days". Negative
+     * times count as zero.
+     */
+    public static String age(long milliseconds) {
+        long seconds = Math.max(0, milliseconds) / 1000;
+        if (seconds < 10) return "a few seconds";
+        if (seconds < 60) return seconds + " seconds";
+        long minutes = seconds / 60;
+        if (minutes < 60) return minutes == 1 ? "1 minute" : minutes + " minutes";
+        long hours = minutes / 60;
+        long rest = minutes % 60;
+        if (hours < 24) return hours + (hours == 1 ? " hour" : " hours") + (rest == 0 ? "" : " " + rest + " min");
+        long days = hours / 24;
+        return days == 1 ? "1 day" : days + " days";
+    }
+
     /** At most {@code max} characters, so a string can never be too long for the network packet it goes in. */
     public static String cut(String text, int max) {
         if (text == null) return "";

@@ -155,4 +155,46 @@ class FindPlanTest {
             }
         }
     }
+
+    // ---- last seen: nobody to ask, but the game saw the player earlier
+
+    private static final java.util.List<Sightings.Remembered> EARLIER = java.util.List.of(
+            new Sightings.Remembered(new Located("FarAway", 700, 70, -300, "minecraft:overworld"), 120_000));
+
+    @Test
+    void aPlayerSeenEarlierIsShownWhereTheyWereWhenNobodyCanBeAsked() {
+        FindPlan plan = FindPlan.decide("faraway", SEEN, TAB, false, false, EARLIER);
+        assertNull(plan.ask());
+        assertNull(plan.command());
+        assertEquals(FindReply.LAST_SEEN, plan.show().status());
+        assertEquals("XYZ: x700 y70 z-300\nOverworld < FarAway (last seen 2 minutes ago)", plan.show().plainText());
+    }
+
+    @Test
+    void theServerModAndTheCommandAreStillPreferredToWhatWasSeenEarlier() {
+        assertEquals("FarAway", FindPlan.decide("faraway", SEEN, TAB, true, false, EARLIER).ask());
+        assertEquals("FarAway", FindPlan.decide("faraway", SEEN, TAB, false, true, EARLIER).command());
+    }
+
+    @Test
+    void whatIsSeenNowBeatsWhatWasSeenEarlier() {
+        java.util.List<Sightings.Remembered> old = java.util.List.of(
+                new Sightings.Remembered(new Located("Notkiahh", 1, 2, 3, "minecraft:overworld"), 5_000));
+        assertEquals("XYZ: x128.30 y63 z-1073\nOverworld < Notkiahh",
+                FindPlan.decide("notkiahh", SEEN, TAB, false, false, old).show().plainText());
+    }
+
+    @Test
+    void aPlayerNeverSeenIsStillToldTheGameCannotKnow() {
+        FindPlan plan = FindPlan.decide("faraway", SEEN, TAB, false, false, java.util.List.of());
+        assertEquals(FindReply.TOO_FAR, plan.show().status());
+        assertEquals(FindReply.TOO_FAR, FindPlan.decide("faraway", SEEN, TAB, false, false, null).show().status());
+    }
+
+    @Test
+    void someoneElseSeenEarlierDoesNotCount() {
+        java.util.List<Sightings.Remembered> other = java.util.List.of(
+                new Sightings.Remembered(new Located("Someone", 1, 2, 3, "minecraft:overworld"), 5_000));
+        assertEquals(FindReply.TOO_FAR, FindPlan.decide("faraway", SEEN, TAB, false, false, other).show().status());
+    }
 }

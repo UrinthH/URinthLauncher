@@ -31,5 +31,5 @@ jobs:
           sha256sum build/libs/urinth-find-*.jar
           unzip -l build/libs/urinth-find-*.jar
           echo "JAR-BEGIN"
-          base64 -w 100 build/libs/urinth-find-1.1.0.jar
+          base64 -w 100 build/libs/urinth-find-1.2.0.jar
           echo "JAR-END"

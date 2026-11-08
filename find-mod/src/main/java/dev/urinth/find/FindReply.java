@@ -27,6 +27,11 @@ public record FindReply(int status, String name, double x, double y, double z, S
     public static final int TOO_FAR = 4;
     /** The server was asked with /data, as an operator may, and sent nothing usable back. Only made on the client. */
     public static final int NO_ANSWER = 5;
+    /**
+     * Out of the game's sight and nobody to ask, but the player was seen earlier: this is where, and how long ago.
+     * Only made on the client. {@code others} holds the age in words.
+     */
+    public static final int LAST_SEEN = 6;
 
     /** Most names listed when several players fit; the rest are counted. */
     static final int MAX_LISTED = 8;
@@ -75,6 +80,11 @@ public record FindReply(int status, String name, double x, double y, double z, S
         return new FindReply(NO_ANSWER, name, 0, 0, 0, "", "");
     }
 
+    public static FindReply lastSeen(Located player, long ageMs) {
+        return new FindReply(LAST_SEEN, player.name(), player.x(), player.y(), player.z(), player.dimension(),
+                FindFormat.age(ageMs));
+    }
+
     public boolean isSuccess() {
         return status == OK;
     }
@@ -97,6 +107,15 @@ public record FindReply(int status, String name, double x, double y, double z, S
                 out.add(new Part(FindFormat.dimensionName(dimension), dimensionTint(dimension)));
                 out.add(new Part(" < ", Tint.GRAY));
                 out.add(new Part(name, Tint.WHITE));
+                break;
+            case LAST_SEEN:
+                out.add(new Part("XYZ: ", Tint.GOLD));
+                out.add(new Part(FindFormat.position(x, y, z), Tint.WHITE));
+                out.add(new Part("\n", Tint.WHITE));
+                out.add(new Part(FindFormat.dimensionName(dimension), dimensionTint(dimension)));
+                out.add(new Part(" < ", Tint.GRAY));
+                out.add(new Part(name, Tint.WHITE));
+                out.add(new Part(" (last seen " + others + " ago)", Tint.YELLOW));
                 break;
             case NOT_ONLINE:
                 out.add(new Part("No player called \"" + name + "\" is online.", Tint.RED));
