@@ -57,6 +57,9 @@ class ProbeTest {
         "net/minecraft/Util",
         "net/minecraft/world/entity/Mob",
         "net/minecraft/world/level/NaturalSpawner",
+        "net/minecraft/server/level/ParticleStatus",
+        "net/minecraft/server/level/ChunkTrackingView",
+        "net/minecraft/client/DeltaTracker",
     };
 
     /** {owner, method}: which game code calls it. */
@@ -70,6 +73,10 @@ class ProbeTest {
         {"net/minecraft/client/renderer/ViewArea", "isInViewDistance"},
         {"net/minecraft/client/renderer/SectionOcclusionGraph", "getRelativeFrom"},
         {"net/minecraft/Util", "backgroundExecutor"},
+        {"net/minecraft/client/renderer/LevelRenderer", "needsUpdate"},
+        {"net/minecraft/client/renderer/LevelRenderer", "calculateParticleLevel"},
+        {"net/minecraft/client/renderer/chunk/SectionRenderDispatcher", "uploadAllPendingUploads"},
+        {"net/minecraft/client/renderer/ViewArea", "getViewDistance"},
     };
 
     private static final String[] SEARCH = {
@@ -79,12 +86,13 @@ class ProbeTest {
 
     /** Bytecode of whole small classes or chosen methods: {class, method-name regex}. */
     private static final String[][] BYTECODE = {
-        {"net/minecraft/client/renderer/ViewArea", ".*"},
-        {"net/minecraft/client/renderer/SectionOcclusionGraph", "(?!lambda).*"},
-        {"net/minecraft/client/renderer/GameRenderer", "getRenderDistance|getDepthFar|getProjectionMatrix|getBasicProjectionMatrix"},
-        {"net/minecraft/server/players/PlayerList", "setSimulationDistance|setViewDistance|getSimulationDistance|getViewDistance"},
-        {"net/minecraft/client/server/IntegratedServer", "tickServer"},
-        {"net/minecraft/client/renderer/entity/EntityRenderDispatcher", "shouldRender"},
+        {"net/minecraft/client/renderer/LevelRenderer", "renderLevel|needsUpdate|calculateParticleLevel|setupRender|allChanged|addParticleInternal"},
+        {"net/minecraft/client/renderer/FogRenderer", "setupFog"},
+        {"net/minecraft/client/renderer/GameRenderer", "renderLevel"},
+        {"net/minecraft/client/renderer/chunk/SectionRenderDispatcher", "uploadAllPendingUploads"},
+        {"net/minecraft/Util", "getMaxThreads|maxAllowedExecutorThreads|makeExecutor"},
+        {"net/minecraft/server/level/ChunkTrackingView", "isInViewDistance|isWithinDistance"},
+        {"net/minecraft/client/Options", "getEffectiveRenderDistance"},
     };
 
     @Test
@@ -153,7 +161,10 @@ class ProbeTest {
             .append(" implements ").append(node.interfaces).append("\n");
         for (FieldNode f : node.fields) {
             if ((f.access & 0x1000) != 0) continue;
-            text.append("  F ").append(access(f.access)).append(Type.getType(f.desc).getClassName()).append(' ').append(f.name).append("\n");
+            text.append("  F ").append(access(f.access)).append(Type.getType(f.desc).getClassName()).append(' ').append(f.name);
+            if (f.signature != null) text.append("   sig ").append(f.signature);
+            if (f.value != null) text.append("   = ").append(f.value);
+            text.append("\n");
         }
         for (MethodNode m : node.methods) {
             if ((m.access & 0x1000) != 0 || m.name.startsWith("lambda$") || m.name.startsWith("access$")) continue;

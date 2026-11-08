@@ -2,9 +2,8 @@ package dev.urinth.optimizer;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
 import java.net.URL;
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -34,7 +33,8 @@ final class ClassFiles {
             if (url == null) continue;
             String text = url.toString();
             if (!text.startsWith("jar:file:") || !text.contains("!/")) continue;
-            Path jar = Path.of(URLDecoder.decode(text.substring("jar:file:".length(), text.indexOf("!/")), StandardCharsets.UTF_8));
+            // a URI, not URLDecoder: the loom cache path has a '+' in it, which URLDecoder would turn into a space
+            Path jar = Path.of(URI.create(text.substring("jar:".length(), text.indexOf("!/"))));
             if (!jars.contains(jar)) jars.add(jar);
         }
         return jars;
