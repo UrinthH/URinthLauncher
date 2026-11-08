@@ -95,4 +95,21 @@ class FindFormatTest {
         assertEquals("abcde", FindFormat.cut("abcdefgh", 5));
         assertEquals("", FindFormat.cut("abc", 0));
     }
+
+    @Test
+    void anAgeIsToldInWords() {
+        assertEquals("a few seconds", FindFormat.age(0));
+        assertEquals("a few seconds", FindFormat.age(-5_000));
+        assertEquals("a few seconds", FindFormat.age(9_999));
+        assertEquals("10 seconds", FindFormat.age(10_000));
+        assertEquals("59 seconds", FindFormat.age(59_999));
+        assertEquals("1 minute", FindFormat.age(60_000));
+        assertEquals("4 minutes", FindFormat.age(252_000));
+        assertEquals("59 minutes", FindFormat.age(3_599_999));
+        assertEquals("1 hour", FindFormat.age(3_600_000));
+        assertEquals("1 hour 5 min", FindFormat.age(3_900_000));
+        assertEquals("2 hours", FindFormat.age(7_200_000));
+        assertEquals("1 day", FindFormat.age(86_400_000));
+        assertEquals("3 days", FindFormat.age(259_200_000));
+    }
 }

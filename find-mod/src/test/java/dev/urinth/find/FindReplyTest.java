@@ -119,4 +119,12 @@ class FindReplyTest {
         assertEquals("XYZ: x12345678.50 y64 z-98765432.25\nOverworld < Far",
                 FindReply.found(new Located("Far", 12345678.5, 64, -98765432.25, "minecraft:overworld")).plainText());
     }
+
+    @Test
+    void aPlayerSeenEarlierIsShownWithWhereAndHowLongAgo() {
+        FindReply reply = FindReply.lastSeen(new Located("Notkiahh", 500.25, 64, -20, "minecraft:the_nether"), 252_000);
+        assertFalse(reply.isSuccess());
+        assertEquals(FindReply.LAST_SEEN, reply.status());
+        assertEquals("XYZ: x500.25 y64 z-20\nNether < Notkiahh (last seen 4 minutes ago)", reply.plainText());
+    }
 }

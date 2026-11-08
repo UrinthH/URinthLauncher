@@ -16,6 +16,7 @@ import java.util.List;
  * knows everybody, at any distance;</li>
  * <li>failing that, when the player using /find is an operator, the server is asked with the vanilla command
  * /data get entity, which an operator may use on anybody, at any distance, in any dimension;</li>
+ * <li>failing that, if the game saw the player earlier, it shows where they were then and how long ago;</li>
  * <li>otherwise the player is told honestly that the game cannot know, and what would change that.</li>
  * </ol>
  */
@@ -62,15 +63,22 @@ public final class FindPlan {
         return decide(typed, seen, online, serverHelps, false);
     }
 
+    /** Same as the longer form when nobody has been seen before. */
+    public static FindPlan decide(String typed, List<Located> seen, Collection<String> online, boolean serverHelps,
+                                  boolean operator) {
+        return decide(typed, seen, online, serverHelps, operator, null);
+    }
+
     /**
      * @param typed       what was typed after /find
      * @param seen        the players the game has in the world around it right now, with their positions
      * @param online      the names the server lists as online (the tab list)
      * @param serverHelps true when the server has this mod, so it can be asked about players out of sight
      * @param operator    true when the player using /find may use /data on this server (operator level 2)
+     * @param remembered  players seen earlier and how long ago, used only when there is nobody to ask
      */
     public static FindPlan decide(String typed, List<Located> seen, Collection<String> online, boolean serverHelps,
-                                  boolean operator) {
+                                  boolean operator, List<Sightings.Remembered> remembered) {
         List<String> names = new ArrayList<>();
         if (online != null) names.addAll(online);
         if (seen != null) {
@@ -89,6 +97,11 @@ public final class FindPlan {
             }
             if (serverHelps) return asking(match.name());
             if (operator) return commanding(match.name());
+            if (remembered != null) {
+                for (Sightings.Remembered last : remembered) {
+                    if (last.at().name().equals(match.name())) return showing(FindReply.lastSeen(last.at(), last.ageMs()));
+                }
+            }
             return showing(FindReply.tooFar(match.name()));
         }
         if (match.kind() == PlayerMatcher.Kind.AMBIGUOUS) return showing(FindReply.ambiguous(clean, match.names()));
