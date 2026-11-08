@@ -7,6 +7,8 @@ import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.Minecraft;
 import net.minecraft.commands.SharedSuggestionProvider;
@@ -19,8 +21,9 @@ import net.minecraft.world.entity.player.Player;
  * <ul>
  * <li>In a world you host (single player or opened to LAN) the game itself knows where everybody is.</li>
  * <li>On a server, the game only knows the players near it. Those are answered at once. A player further away
- * is asked about at the server, if the server has this mod. If it does not, the player is told the game cannot
- * know.</li>
+ * (any distance, any dimension) is asked about at the server, if the server has this mod. If it does not, an
+ * operator is answered by the server's own /data command (see {@link FindOperator}). Anybody else is told the
+ * game cannot know.</li>
  * </ul>
  */
 public final class FindClient implements ClientModInitializer {
@@ -47,6 +50,10 @@ public final class FindClient implements ClientModInitializer {
         // The server's answer to a request sent by find().
         ClientPlayNetworking.registerGlobalReceiver(FindReplyPayload.TYPE,
                 (payload, context) -> context.player().displayClientMessage(FindMessages.of(payload.reply()), false));
+
+        // Operator mode: keep the two /data answers out of the chat and show the /find result instead.
+        ClientReceiveMessageEvents.ALLOW_GAME.register(FindOperator::allow);
+        ClientTickEvents.END_CLIENT_TICK.register(FindOperator::tick);
     }
 
     private static void find(FabricClientCommandSource source, String typed) {
@@ -69,12 +76,16 @@ public final class FindClient implements ClientModInitializer {
             seen.add(new Located(player.getGameProfile().getName(), player.getX(), player.getY(), player.getZ(), dimension));
         }
 
+        // An operator (level 2) may use /data on the server, and that works at any distance.
+        boolean operator = minecraft.player != null && minecraft.player.hasPermissions(2);
         FindPlan plan = FindPlan.decide(typed, seen, source.getOnlinePlayerNames(),
-                ClientPlayNetworking.canSend(FindRequestPayload.TYPE));
+                ClientPlayNetworking.canSend(FindRequestPayload.TYPE), operator);
         if (plan.show() != null) {
             source.sendFeedback(FindMessages.of(plan.show()));
-        } else {
+        } else if (plan.ask() != null) {
             ClientPlayNetworking.send(new FindRequestPayload(plan.ask()));
+        } else {
+            FindOperator.start(minecraft, plan.command());
         }
     }
 }

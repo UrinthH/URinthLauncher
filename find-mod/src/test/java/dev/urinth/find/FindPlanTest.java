@@ -81,4 +81,78 @@ class FindPlanTest {
         assertTrue(plan.show() != null && plan.ask() == null);
         assertEquals(FindReply.NOT_ONLINE, plan.show().status());
     }
+
+    // ---- operator mode: with no mod on the server, an operator is answered by the server's own /data command
+
+    @Test
+    void anOperatorIsAnsweredByTheServersOwnCommandWhenTheServerHasNoMod() {
+        FindPlan plan = FindPlan.decide("faraway", SEEN, TAB, false, true);
+        assertNull(plan.show());
+        assertNull(plan.ask());
+        assertEquals("FarAway", plan.command());
+    }
+
+    @Test
+    void theServerModComesBeforeTheCommand() {
+        FindPlan plan = FindPlan.decide("faraway", SEEN, TAB, true, true);
+        assertNull(plan.show());
+        assertNull(plan.command());
+        assertEquals("FarAway", plan.ask());
+    }
+
+    @Test
+    void aPlayerWhoIsNotAnOperatorIsToldWhatWouldHelp() {
+        FindPlan plan = FindPlan.decide("faraway", SEEN, TAB, false, false);
+        assertNull(plan.ask());
+        assertNull(plan.command());
+        assertEquals(FindReply.TOO_FAR, plan.show().status());
+        assertTrue(plan.show().plainText().contains("URinth Find mod"));
+        assertTrue(plan.show().plainText().contains("operator"));
+    }
+
+    @Test
+    void aPlayerTheGameSeesIsAnsweredAtOnceEvenForAnOperator() {
+        FindPlan plan = FindPlan.decide("notkiahh", SEEN, TAB, false, true);
+        assertNull(plan.ask());
+        assertNull(plan.command());
+        assertEquals("XYZ: x128.30 y63 z-1073\nOverworld < Notkiahh", plan.show().plainText());
+    }
+
+    @Test
+    void severalMatchesAreNeverLookedUpEvenForAnOperator() {
+        FindPlan plan = FindPlan.decide("far", SEEN, TAB, false, true);
+        assertNull(plan.ask());
+        assertNull(plan.command());
+        assertEquals(FindReply.AMBIGUOUS, plan.show().status());
+    }
+
+    @Test
+    void aNameNobodyHasIsNotLookedUpByCommandEvenForAnOperator() {
+        FindPlan plan = FindPlan.decide("Hidden", SEEN, TAB, false, true);
+        assertNull(plan.ask());
+        assertNull(plan.command());
+        assertEquals(FindReply.NOT_ONLINE, plan.show().status());
+    }
+
+    @Test
+    void theShortFormMeansNotAnOperator() {
+        FindPlan plan = FindPlan.decide("faraway", SEEN, TAB, false);
+        assertNull(plan.command());
+        assertEquals(FindReply.TOO_FAR, plan.show().status());
+    }
+
+    @Test
+    void exactlyOneOfTheThreeIsSetWhateverIsTyped() {
+        String[] typed = {"notkiahh", "faraway", "far", "Hidden", "  ", "", null};
+        boolean[] both = {false, true};
+        for (String text : typed) {
+            for (boolean serverHelps : both) {
+                for (boolean operator : both) {
+                    FindPlan plan = FindPlan.decide(text, SEEN, TAB, serverHelps, operator);
+                    int set = (plan.show() != null ? 1 : 0) + (plan.ask() != null ? 1 : 0) + (plan.command() != null ? 1 : 0);
+                    assertEquals(1, set, text + " " + serverHelps + " " + operator);
+                }
+            }
+        }
+    }
 }
