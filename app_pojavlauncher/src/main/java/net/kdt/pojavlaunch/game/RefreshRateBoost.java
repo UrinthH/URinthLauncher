@@ -30,16 +30,23 @@ import java.lang.ref.WeakReference;
  * simply stays as it is: the request can never raise the rate above what the hardware offers.
  *
  * In Performance Mode {@link #start} also keeps the request in place. Phones with smart or adaptive
- * refresh often lower the rate again after a while, and the frame rate then drops with it. Two
- * things are done about that, both ideas other launchers use: the game surface itself votes for the
+ * refresh often lower the rate again after a while, and the frame rate then drops with it. Three
+ * things are done about that, all ideas other launchers use: the game surface itself votes for the
  * rate (Android 12 and later, which also works on screens that cannot switch modes without a
- * flicker), and the request is repeated when the system lowers the rate. {@link RefreshRatePolicy}
- * decides when: never while the phone is hot, and with a longer wait after each request that did not
- * help, so a phone that insists on a lower rate is not asked over and over.
+ * flicker), the request is repeated as soon as Android reports the system lowered the rate, and it
+ * is also checked on a plain timer. The timer is the one that matters most: once the screen settles
+ * at the lower rate, Android has nothing further to report and stops sending that event, so without
+ * the timer nothing would ever ask again and the game would stay at the lower rate, and the lower
+ * frame rate that comes with it, until it is closed and reopened. {@link RefreshRatePolicy} decides
+ * whether to actually ask on any given check: never while the phone is hot, and with a longer wait
+ * after each request that did not help, so a phone that insists on a lower rate is not asked over
+ * and over.
  */
 public final class RefreshRateBoost {
     private static final String TAG = "RefreshRateBoost";
     private static final float WANTED_MAX_HZ = 120f;
+    /** How often the rate is checked even without an Android event saying it changed. */
+    private static final long POLL_MS = 2_000L;
 
     private static volatile float sTarget;
     /** The display mode asked for by {@link #apply}, or 0 when no particular mode was. */
@@ -57,6 +64,10 @@ public final class RefreshRateBoost {
     private static WeakReference<GameView> sGameView;
     private static long sLastRequestAt = -1;
     private static int sFailedRequests;
+    @Nullable
+    private static Handler sPollHandler;
+    @Nullable
+    private static Runnable sPollTask;
 
     private RefreshRateBoost() {}
 
@@ -132,6 +143,20 @@ public final class RefreshRateBoost {
             sListener = listener;
             sWatching = true;
             if (gameView != null) voteForSurface(gameView.getCurrentSurface());
+            Handler pollHandler = new Handler(Looper.getMainLooper());
+            Runnable pollTask = new Runnable() {
+                @Override
+                public void run() {
+                    if (!sWatching) return;
+                    // Catches the case the display listener cannot: the screen has already settled at
+                    // the lower rate, so Android has nothing new to report and sends no further event.
+                    onScreenChanged(display(activity).getDisplayId());
+                    pollHandler.postDelayed(this, POLL_MS);
+                }
+            };
+            sPollHandler = pollHandler;
+            sPollTask = pollTask;
+            pollHandler.postDelayed(pollTask, POLL_MS);
             log("keeping the " + sTarget + " Hz request in place; it is repeated if the system lowers the rate");
         } catch (RuntimeException error) {
             // An extra: if it cannot run, the one-time request from apply() still stands.
@@ -143,6 +168,9 @@ public final class RefreshRateBoost {
     /** Stop watching. Safe to call when nothing is running. */
     public static synchronized void stop() {
         sWatching = false;
+        if (sPollHandler != null && sPollTask != null) sPollHandler.removeCallbacks(sPollTask);
+        sPollHandler = null;
+        sPollTask = null;
         DisplayManager manager = sDisplayManager;
         DisplayManager.DisplayListener listener = sListener;
         sDisplayManager = null;
@@ -176,11 +204,16 @@ public final class RefreshRateBoost {
     }
 
     @SuppressWarnings("deprecation")
+    private static Display display(Activity activity) {
+        return activity.getWindowManager().getDefaultDisplay();
+    }
+
+    @SuppressWarnings("deprecation")
     private static void onScreenChanged(int displayId) {
         try {
             Activity activity = sActivity == null ? null : sActivity.get();
             if (!sWatching || activity == null) return;
-            Display display = activity.getWindowManager().getDefaultDisplay();
+            Display display = display(activity);
             if (display.getDisplayId() != displayId) return;
             float current = display.getRefreshRate();
             if (!RefreshRatePolicy.isBelowTarget(sTarget, current)) {
