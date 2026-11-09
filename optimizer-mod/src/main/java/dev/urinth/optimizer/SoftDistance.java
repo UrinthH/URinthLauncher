@@ -96,7 +96,8 @@ public final class SoftDistance {
      * limiting anything.
      */
     public static int cullLimit() {
-        if (!cullOn) return Integer.MAX_VALUE;
+        // the culling only ever goes with the fog: if the fog hook has been switched off, so is this
+        if (!cullOn || !Hooks.usable("fog")) return Integer.MAX_VALUE;
         float t = target;
         if (t <= 0f) return Integer.MAX_VALUE;
         float c = current;

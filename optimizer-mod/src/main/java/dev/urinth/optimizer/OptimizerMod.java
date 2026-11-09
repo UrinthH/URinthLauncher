@@ -27,19 +27,24 @@ public final class OptimizerMod implements ModInitializer {
 
     @Override
     public void onInitialize() {
-        boolean dedicated = FabricLoader.getInstance().getEnvironmentType() == EnvType.SERVER;
-        configFile = FabricLoader.getInstance().getConfigDir().resolve(OptimizerConfig.FILE_NAME);
-        OptimizerConfig config = ConfigStore.load(configFile, dedicated);
-        OptimizerConfig.setCurrent(config);
-        startWorld(config);
         try {
-            ServerTickEvents.END_SERVER_TICK.register(OptimizerMod::onServerTick);
-            ServerLifecycleEvents.SERVER_STARTING.register(server -> startWorld(OptimizerConfig.current()));
+            boolean dedicated = FabricLoader.getInstance().getEnvironmentType() == EnvType.SERVER;
+            configFile = FabricLoader.getInstance().getConfigDir().resolve(OptimizerConfig.FILE_NAME);
+            OptimizerConfig config = ConfigStore.load(configFile, dedicated);
+            OptimizerConfig.setCurrent(config);
+            startWorld(config);
+            try {
+                ServerTickEvents.END_SERVER_TICK.register(OptimizerMod::onServerTick);
+                ServerLifecycleEvents.SERVER_STARTING.register(server -> startWorld(OptimizerConfig.current()));
+            } catch (Throwable t) {
+                LOG.warn("[Optimizer] could not register the server hooks", t);
+            }
+            LOG.info("[Optimizer] loaded: adaptive distance {}, target {} FPS, simulation limit {}", config.adaptive() ? "on" : "off",
+                config.targetFps(), config.simulationCap() == 0 ? "off" : config.simulationCap() + " chunks");
         } catch (Throwable t) {
-            LOG.warn("[Optimizer] could not register the server hooks", t);
+            // the settings are built in (OptimizerConfig has defaults), so the mod still runs with them
+            LOG.warn("[Optimizer] could not start properly, the defaults are used", t);
         }
-        LOG.info("[Optimizer] loaded: adaptive distance {}, target {} FPS, simulation limit {}", config.adaptive() ? "on" : "off",
-            config.targetFps(), config.simulationCap() == 0 ? "off" : config.simulationCap() + " chunks");
     }
 
     /** Saves the settings (called by the screen, the command and the key). */
@@ -55,7 +60,7 @@ public final class OptimizerMod implements ModInitializer {
     }
 
     private static void onServerTick(MinecraftServer server) {
-        if (++serverTicks % SAMPLE_TICKS != 0) return;
+        if (++serverTicks % SAMPLE_TICKS != 0 || !Hooks.usable("server governor")) return;
         try {
             OptimizerConfig config = OptimizerConfig.current();
             int configured = config.simulationCap();

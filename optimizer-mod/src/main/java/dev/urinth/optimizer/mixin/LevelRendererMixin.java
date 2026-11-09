@@ -17,6 +17,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public abstract class LevelRendererMixin {
     @Inject(method = "calculateParticleLevel", at = @At("RETURN"), cancellable = true)
     private void urinth$fewerParticles(boolean decreased, CallbackInfoReturnable<ParticleStatus> cir) {
+        if (!Hooks.usable("particles")) return;
         try {
             Hooks.particlesSeen();
             if (cir.getReturnValue() == ParticleStatus.ALL && ParticleGate.reduce()) {

@@ -59,6 +59,18 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       - name: Build and test the optimizer mod
         run: ./gradlew build --no-daemon --stacktrace
+      - name: Show what is in the optimizer mod jar
+        if: always()
+        run: |
+          for jar in build/libs/urinth-optimizer-*.jar; do
+            echo "::group::$jar"
+            unzip -l "$jar"
+            echo "::endgroup::"
+            echo "::group::mixin configuration and refmap (the names the game has outside the dev environment)"
+            unzip -p "$jar" urinth_optimizer.mixins.json || true
+            for r in $(unzip -Z1 "$jar" | grep -i refmap); do echo "--- $r"; unzip -p "$jar" "$r"; done
+            echo "::endgroup::"
+          done
       - uses: actions/upload-artifact@v4
         with:
           name: urinth-optimizer-jar

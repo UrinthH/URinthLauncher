@@ -24,6 +24,7 @@ public abstract class SectionRenderDispatcherMixin {
 
     @Inject(method = "uploadAllPendingUploads", at = @At("HEAD"), cancellable = true)
     private void urinth$budgetedUploads(CallbackInfo ci) {
+        if (!Hooks.usable("uploads")) return;
         long budget;
         try {
             Hooks.uploadsSeen();

@@ -52,16 +52,34 @@ public final class OptimizerClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         instance = this;
-        ClientTickEvents.END_CLIENT_TICK.register(this::onTick);
-        registerScreenButton();
-        registerCommand();
-        registerKey();
+        // each part is registered on its own: one that cannot be (another mod in the way, a changed API) must not stop the game
+        try {
+            ClientTickEvents.END_CLIENT_TICK.register(this::onTick);
+        } catch (Throwable t) {
+            LOG.warn("[Optimizer] could not start the controller", t);
+        }
+        try {
+            registerScreenButton();
+        } catch (Throwable t) {
+            LOG.warn("[Optimizer] could not add the settings button", t);
+        }
+        try {
+            registerCommand();
+        } catch (Throwable t) {
+            LOG.warn("[Optimizer] could not add /urinthopt", t);
+        }
+        try {
+            registerKey();
+        } catch (Throwable t) {
+            LOG.warn("[Optimizer] could not add the key", t);
+        }
         LOG.info("[Optimizer] client ready");
     }
 
     // ---- once a tick -------------------------------------------------------------------------------------------------------
 
     private void onTick(Minecraft mc) {
+        if (!Hooks.usable("controller")) return;
         try {
             if (openSettingsNext && mc.screen == null) {
                 openSettingsNext = false;
@@ -109,6 +127,11 @@ public final class OptimizerClient implements ClientModInitializer {
             }
         } catch (Throwable t) {
             Hooks.failed("controller", t);
+            if (!Hooks.usable("controller")) {
+                // it keeps failing: stop, and put the game's own distance and particles back
+                SoftDistance.reset();
+                ParticleGate.setLow(false);
+            }
         }
     }
 

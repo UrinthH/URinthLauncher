@@ -1,5 +1,6 @@
 package dev.urinth.optimizer;
 
+import java.util.concurrent.atomic.AtomicIntegerArray;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,10 +56,42 @@ public final class Hooks {
         }
     }
 
+    /** After this many failures a hook is switched off for the rest of the session and the game's own behaviour is left. */
+    static final int MAX_FAILURES = 20;
+    /** The failures that are written to the log in full; the rest are only counted (a hook can run every frame). */
+    static final int LOGGED_FAILURES = 3;
+
+    private static final String[] NAMES = {"fog", "culling", "particles", "uploads", "simulation distance", "controller", "server governor"};
+    private static final AtomicIntegerArray FAILURES = new AtomicIntegerArray(NAMES.length + 1);
+
+    private static int slot(String hook) {
+        for (int i = 0; i < NAMES.length; i++) {
+            if (NAMES[i].equals(hook)) return i;
+        }
+        return NAMES.length;
+    }
+
+    /** False once the hook has failed {@link #MAX_FAILURES} times: it then does nothing and the game runs its own code. */
+    public static boolean usable(String hook) {
+        return FAILURES.get(slot(hook)) < MAX_FAILURES;
+    }
+
     /** A hook threw: the game goes on with its own behaviour, this is only remembered for the status. */
     public static void failed(String hook, Throwable t) {
+        int count = FAILURES.incrementAndGet(slot(hook));
         failure = hook + ": " + t;
-        LOG.warn("[Optimizer] the {} hook failed and was skipped", hook, t);
+        if (count <= LOGGED_FAILURES) {
+            LOG.warn("[Optimizer] the {} hook failed and was skipped", hook, t);
+        }
+        if (count == MAX_FAILURES) {
+            LOG.warn("[Optimizer] the {} hook failed {} times: it is switched off for this session", hook, count);
+        }
+    }
+
+    /** For tests: forget every failure. */
+    static void forgetFailures() {
+        for (int i = 0; i < FAILURES.length(); i++) FAILURES.set(i, 0);
+        failure = "";
     }
 
     public static String failure() {

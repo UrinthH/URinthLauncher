@@ -17,6 +17,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public abstract class GameRendererMixin {
     @Inject(method = "getRenderDistance", at = @At("RETURN"), cancellable = true)
     private void urinth$softFog(CallbackInfoReturnable<Float> cir) {
+        if (!Hooks.usable("fog")) return;
         try {
             Hooks.fogSeen();
             float vanilla = cir.getReturnValueF();

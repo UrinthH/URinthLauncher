@@ -16,10 +16,10 @@ import org.spongepowered.asm.mixin.injection.ModifyVariable;
 public abstract class PlayerListMixin {
     @ModifyVariable(method = "setSimulationDistance", at = @At("HEAD"), argsOnly = true)
     private int urinth$capSimulation(int asked) {
+        if (!Hooks.usable("simulation distance")) return asked;
         try {
-            int used = ServerCap.apply(asked);
-            if (used != asked) Hooks.simulationSeen();
-            return used;
+            Hooks.simulationSeen();
+            return ServerCap.apply(asked);
         } catch (Throwable t) {
             Hooks.failed("simulation distance", t);
             return asked;

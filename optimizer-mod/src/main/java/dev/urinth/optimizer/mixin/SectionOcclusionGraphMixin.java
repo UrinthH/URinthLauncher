@@ -22,6 +22,7 @@ public abstract class SectionOcclusionGraphMixin {
         require = 0)
     private int urinth$softCull(ViewArea area) {
         int real = area.getViewDistance();
+        if (!Hooks.usable("culling")) return real;
         try {
             Hooks.cullSeen();
             int limit = SoftDistance.cullLimit();
