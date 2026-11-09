@@ -57,19 +57,18 @@ jobs:
           distribution: temurin
           java-version: '25'
       - uses: gradle/actions/setup-gradle@v4
-      - name: DIAG how the mixin annotation processor is set up
+      - name: DIAG baseline, the jar built with the legacy mixin processor off
         continue-on-error: true
         run: |
-          ./gradlew compileJava --no-daemon --rerun-tasks -I ci/diag.init.gradle 2>&1 | grep -E "DIAG|warning|Note:|refmap|mixin" || true
-          echo "--- refmap files after the compile:"
-          find build -iname '*refmap*' || true
-          echo "--- loom cache mixin files:"
-          find ~/.gradle/caches -ipath '*loom*' -iname '*mixin*' 2>/dev/null | head -20 || true
+          ./gradlew jar remapJar --no-daemon -Plegacy_ap=false 2>&1 | tail -4
+          bash ci/show-mixin-strings.sh
+          ./gradlew clean --no-daemon -q
       - name: Build and test the optimizer mod
         run: ./gradlew build --no-daemon --stacktrace
       - name: Show what is in the optimizer mod jar
         if: always()
         run: |
+          bash ci/show-mixin-strings.sh
           for jar in build/libs/urinth-optimizer-*.jar; do
             echo "::group::$jar"
             unzip -l "$jar"

@@ -22,6 +22,15 @@ dependencies {
 	testImplementation 'org.ow2.asm:asm-tree:9.7.1'
 }
 
+loom {
+	mixin {
+		// Off by default in this Loom: then the jar has no refmap and outside the dev environment (where the game's classes
+		// have other names than the ones in the source) the mixins cannot find what they hook. -Plegacy_ap=false is only
+		// for the CI comparison of the two.
+		useLegacyMixinAp = project.findProperty('legacy_ap') != 'false'
+	}
+}
+
 test {
 	useJUnitPlatform()
 	maxHeapSize = '1g'
