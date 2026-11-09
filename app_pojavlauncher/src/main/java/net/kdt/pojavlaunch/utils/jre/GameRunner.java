@@ -15,6 +15,7 @@ import net.kdt.pojavlaunch.Tools;
 import net.kdt.pojavlaunch.authenticator.accounts.Account;
 import net.kdt.pojavlaunch.game.StartupTimeline;
 import net.kdt.pojavlaunch.game.FindModInstaller;
+import net.kdt.pojavlaunch.game.OptimizerModInstaller;
 import net.kdt.pojavlaunch.game.SunFlareInstaller;
 import net.kdt.pojavlaunch.game.VoiceChatAudio;
 import net.kdt.pojavlaunch.game.renderer.def.Renderers;
@@ -242,6 +243,21 @@ public class GameRunner {
         }
     }
 
+    /**
+     * Puts the URinth Optimizer mod (adaptive render distance, rendering, client and server tuning) into Fabric
+     * 1.21.4 instances, once. Like the Find mod it is an ordinary mod in the Mods list: deleting or switching it off
+     * there is respected and it is never put back.
+     */
+    private static void prepareOptimizerMod(AppCompatActivity activity, Instance instance, String versionId) {
+        try {
+            OptimizerModInstaller.Result result = OptimizerModInstaller.sync(instance.getGameDirectory(), versionId,
+                    () -> activity.getAssets().open(OptimizerModInstaller.ASSET_PATH));
+            Logger.appendToLog("[Optimizer] " + result);
+        } catch (Throwable t) {
+            Logger.appendToLog("[Optimizer] skipped: " + t);
+        }
+    }
+
     public static void launchGame(final AppCompatActivity activity, Account account,
                                   Instance instance, String versionId, File[] classpath, GameRenderer gameRenderer) throws Throwable {
         int freeDeviceMemory = Tools.getFreeDeviceMemory(activity);
@@ -466,6 +482,7 @@ public class GameRunner {
         VoiceChatAudio.detect(instance.getGameDirectory(), LauncherPreferences.PREF_VOICE_CHAT_CLEANUP);
         prepareSunFlare(activity, instance, versionId);
         prepareFindMod(activity, instance, versionId);
+        prepareOptimizerMod(activity, instance, versionId);
         JREUtils.setGameEnvironment(activity);
         JREUtils.chdir(instance.getGameDirectory().getAbsolutePath());
 

@@ -59,23 +59,13 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       - name: Build and test the optimizer mod
         run: ./gradlew build --no-daemon --stacktrace
-      - name: Show what the game looks like to the mod
-        if: always()
-        run: |
-          for f in log classes callers search bytecode; do
-            if [ -f "build/probe/$f.txt" ]; then
-              echo "::group::probe $f"
-              cat "build/probe/$f.txt"
-              echo "::endgroup::"
-            fi
-          done
       - uses: actions/upload-artifact@v4
         with:
           name: urinth-optimizer-jar
           path: optimizer-mod/build/libs/urinth-optimizer-*.jar
 
   build:
-    needs: [sunflare-mod, find-mod]
+    needs: [sunflare-mod, find-mod, optimizer-mod]
     if: ${{ !cancelled() }}
     runs-on: ubuntu-22.04
     env:
@@ -113,6 +103,19 @@ jobs:
         run: |
           mkdir -p app_pojavlauncher/src/main/assets/mods
           cp find-jar/urinth-find-*.jar app_pojavlauncher/src/main/assets/mods/urinth-find.jar
+
+      # The optimizer mod (adaptive render distance, client and server tuning) is bundled the same way.
+      - name: Get the optimizer mod
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: urinth-optimizer-jar
+          path: optimizer-jar
+      - name: Bundle the optimizer mod
+        continue-on-error: true
+        run: |
+          mkdir -p app_pojavlauncher/src/main/assets/mods
+          cp optimizer-jar/urinth-optimizer-*.jar app_pojavlauncher/src/main/assets/mods/urinth-optimizer.jar
 
       - name: Get LTW
         uses: dawidd6/action-download-artifact@v6

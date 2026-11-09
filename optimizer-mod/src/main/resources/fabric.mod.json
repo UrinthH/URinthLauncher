@@ -3,12 +3,15 @@
 	"id": "urinth_optimizer",
 	"version": "${version}",
 	"name": "URinth Optimizer",
-	"description": "Keeps the game smooth at a long render distance. The view distance adapts to your frame rate (fog and culling move with it, nothing reloads), plus client, rendering and server optimizations. Settings: Options > Video Settings, or /urinthopt.",
+	"description": "Keeps the game smooth at a long render distance. The view distance adapts to your frame rate (fog and culling move with it, nothing reloads), plus rendering, client and server optimizations. Settings: Options > Video Settings, or /urinthopt.",
 	"authors": ["URinth"],
 	"license": "MIT",
 	"environment": "*",
+	"mixins": ["urinth_optimizer.mixins.json"],
 	"entrypoints": {
-		"main": ["dev.urinth.optimizer.OptimizerMod"]
+		"preLaunch": ["dev.urinth.optimizer.OptimizerPreLaunch"],
+		"main": ["dev.urinth.optimizer.OptimizerMod"],
+		"client": ["dev.urinth.optimizer.OptimizerClient"]
 	},
 	"depends": {
 		"fabricloader": ">=0.16.0",

@@ -1,0 +1,18 @@
+{
+	"required": false,
+	"minVersion": "0.8",
+	"package": "dev.urinth.optimizer.mixin",
+	"compatibilityLevel": "JAVA_21",
+	"mixins": [
+		"PlayerListMixin"
+	],
+	"client": [
+		"GameRendererMixin",
+		"LevelRendererMixin",
+		"SectionOcclusionGraphMixin",
+		"SectionRenderDispatcherMixin"
+	],
+	"injectors": {
+		"defaultRequire": 0
+	}
+}
