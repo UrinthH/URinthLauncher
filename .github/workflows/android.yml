@@ -1,35 +1,109 @@
-name: Find jar dump
+name: Probe
 
-# Scratch run: builds only the find mod and prints the jar into the log, because the sandbox that wrote the
-# mod cannot download from the artifact store. This branch can be deleted.
+# Scratch run. It does two things so that a game mod can be written against what is really in Minecraft 1.21.4:
+#   1. prints the method signatures of the game classes a mod would hook (javap),
+#   2. starts the real game client headless (virtual screen + software OpenGL) to find out whether that works here,
+#      so a later run can prove that a mod's hooks apply without crashing the game.
+# Nothing here is part of the launcher. This branch can be deleted.
 on:
   push:
     branches:
       - claude/find-jar-dump
 
 jobs:
-  dump:
+  probe:
     runs-on: ubuntu-22.04
-    defaults:
-      run:
-        working-directory: find-mod
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '25'
+          java-version: '21'
       - uses: gradle/actions/setup-gradle@v4
-      - name: Build the jar and run every test
-        run: ./gradlew build --no-daemon --stacktrace
-      - name: Test results
+
+      - name: Build the find mod (this fills the Loom cache with the mapped game jar)
+        working-directory: find-mod
+        run: ./gradlew build -x test --no-daemon --stacktrace
+
+      - name: Locate the mapped game jar
+        id: jar
         run: |
-          grep -h "<testsuite " build/test-results/test/*.xml | sed -E 's/ timestamp=.*//'
-      - name: Print the jar
+          set -u
+          JAR=""
+          for j in $(find "$HOME/.gradle" "$GITHUB_WORKSPACE/find-mod/.gradle" -name '*.jar' -size +5M 2>/dev/null); do
+            if unzip -l "$j" 2>/dev/null | grep -q 'net/minecraft/client/particle/ParticleEngine.class'; then
+              echo "FOUND $j"
+              JAR="$j"
+              break
+            fi
+          done
+          echo "jar=$JAR" >> "$GITHUB_OUTPUT"
+          ls -l "$JAR"
+
+      - name: Signatures of the classes a mod would hook
         run: |
-          ls -l build/libs
-          sha256sum build/libs/urinth-find-*.jar
-          unzip -l build/libs/urinth-find-*.jar
-          echo "JAR-BEGIN"
-          base64 -w 100 build/libs/urinth-find-1.2.0.jar
-          echo "JAR-END"
+          set -u
+          JAR='${{ steps.jar.outputs.jar }}'
+          SIG="net.minecraft.client.particle.ParticleEngine net.minecraft.client.particle.Particle net.minecraft.client.particle.ParticleRenderType net.minecraft.client.particle.TrackingEmitter net.minecraft.client.renderer.entity.EntityRenderDispatcher net.minecraft.client.renderer.entity.EntityRenderer net.minecraft.client.renderer.entity.LivingEntityRenderer net.minecraft.client.renderer.entity.state.EntityRenderState net.minecraft.client.renderer.entity.state.LivingEntityRenderState net.minecraft.client.renderer.entity.layers.RenderLayer net.minecraft.client.Camera net.minecraft.client.renderer.culling.Frustum net.minecraft.client.DeltaTracker"
+          for c in $SIG; do
+            echo "=================== $c"
+            javap -p -s -cp "$JAR" "$c" || echo "javap failed for $c"
+          done
+          echo "=================== Minecraft (selected)"
+          javap -p -s -cp "$JAR" net.minecraft.client.Minecraft | grep -i -B1 -A1 -E "fps|frame|particleEngine|entityRenderDispatcher|getInstance|isPaused|levelRenderer|gameRenderer"
+          echo "=================== Entity (selected)"
+          javap -p -s -cp "$JAR" net.minecraft.world.entity.Entity | grep -i -B1 -A1 -E "shouldRender|getViewScale|noCulling|isCurrentlyGlowing|getX\(|getY\(|getZ\(|isInvisible|getBoundingBoxForCulling"
+          echo "=================== LevelRenderer (selected)"
+          javap -p -s -cp "$JAR" net.minecraft.client.renderer.LevelRenderer | grep -i -B1 -A1 -E "particle|shouldRender|renderEntit|collectVisible|extractVisible|cloud|weather"
+          echo "=================== ClientLevel (selected)"
+          javap -p -s -cp "$JAR" net.minecraft.client.multiplayer.ClientLevel | grep -i -B1 -A1 -E "particle|entitiesForRendering"
+          echo "=================== GameRenderer (selected)"
+          javap -p -s -cp "$JAR" net.minecraft.client.renderer.GameRenderer | grep -i -B1 -A1 -E "getMainCamera|mainCamera"
+
+      - name: Bytecode of the methods that matter
+        run: |
+          set -u
+          JAR='${{ steps.jar.outputs.jar }}'
+          show() {
+            echo "=================== code: $1 ($2)"
+            javap -p -c -cp "$JAR" "$1" | PAT="$2" awk '
+              /^  [^ ].*\(.*\);$/ { inm = ($0 ~ ENVIRON["PAT"]) }
+              inm { print }'
+          }
+          show net.minecraft.client.renderer.entity.EntityRenderDispatcher '(render|shouldRender|renderShadow)\('
+          show net.minecraft.client.particle.ParticleEngine ' (add|tick|createParticle|hasSpaceInParticleLimit)\('
+          show net.minecraft.client.renderer.entity.LivingEntityRenderer ' render\('
+          show net.minecraft.client.renderer.entity.EntityRenderer '(shouldRender|render|renderNameTag)\('
+
+      - name: Install a virtual screen and software OpenGL
+        continue-on-error: true
+        run: |
+          sudo apt-get update -y > /dev/null
+          sudo apt-get install -y xvfb libxrandr2 libxinerama1 libxcursor1 libxi6 libxxf86vm1 libxrender1 libgl1-mesa-dri libglx-mesa0 libglu1-mesa libopenal1 > /dev/null
+          xvfb-run --help | head -3
+
+      - name: Start the real game client headless
+        continue-on-error: true
+        working-directory: find-mod
+        run: |
+          set +e
+          export LIBGL_ALWAYS_SOFTWARE=1 GALLIUM_DRIVER=llvmpipe MESA_GL_VERSION_OVERRIDE=4.5 MESA_GLSL_VERSION_OVERRIDE=450
+          export JAVA_TOOL_OPTIONS="-Dmixin.debug.export=true"
+          ( xvfb-run -a -s "-screen 0 1280x720x24 +extension GLX +render -noreset" ./gradlew runClient --no-daemon > /tmp/client.log 2>&1 ) &
+          RESULT="TIMEOUT"
+          for i in $(seq 1 100); do
+            sleep 5
+            if grep -q "particles.png-atlas" /tmp/client.log; then RESULT="REACHED-PARTICLE-ATLAS"; break; fi
+            if grep -qE "Minecraft Crash Report|BUILD FAILED|GLFW error" /tmp/client.log; then RESULT="FAILURE-MARKER"; break; fi
+          done
+          sleep 15
+          echo "RESULT=$RESULT after about $((i*5)) s"
+          pkill -f devlaunchinjector
+          pkill -f java
+          sleep 2
+          echo "---------- interesting lines"
+          grep -n -i -E "GLFW|OpenGL|LWJGL|Backend|Mixin|Crash|Exception|atlas|Sound engine|OpenAL|Narrator|Reloading" /tmp/client.log | head -80
+          echo "---------- tail"
+          tail -60 /tmp/client.log
+          echo "---------- exported mixin classes (count)"
+          find run/.mixin.out -name '*.class' 2>/dev/null | wc -l
