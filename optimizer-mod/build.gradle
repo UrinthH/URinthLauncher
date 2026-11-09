@@ -24,10 +24,9 @@ dependencies {
 
 loom {
 	mixin {
-		// Off by default in this Loom: then the jar has no refmap and outside the dev environment (where the game's classes
-		// have other names than the ones in the source) the mixins cannot find what they hook. -Plegacy_ap=false is only
-		// for the CI comparison of the two.
-		useLegacyMixinAp = project.findProperty('legacy_ap') != 'false'
+		// Off by default in this Loom. With it on the jar gets a refmap, the table that tells the game, outside the dev
+		// environment (where its classes have other names than in the source), what each hook is aimed at.
+		useLegacyMixinAp = true
 	}
 }
 

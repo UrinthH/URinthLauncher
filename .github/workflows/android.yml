@@ -57,12 +57,6 @@ jobs:
           distribution: temurin
           java-version: '25'
       - uses: gradle/actions/setup-gradle@v4
-      - name: DIAG baseline, the jar built with the legacy mixin processor off
-        continue-on-error: true
-        run: |
-          ./gradlew jar remapJar --no-daemon -Plegacy_ap=false 2>&1 | tail -4
-          bash ci/show-mixin-strings.sh
-          ./gradlew clean --no-daemon -q
       - name: Build and test the optimizer mod
         run: ./gradlew build --no-daemon --stacktrace
       - name: Show what is in the optimizer mod jar
@@ -82,6 +76,64 @@ jobs:
         with:
           name: urinth-optimizer-jar
           path: optimizer-mod/build/libs/urinth-optimizer-*.jar
+      - name: Check the jar carries the mapping table the game needs
+        run: |
+          jar=$(ls build/libs/urinth-optimizer-*.jar | head -1)
+          unzip -p "$jar" urinth_optimizer.mixins.json | grep -q '"refmap"' || { echo "the mixin configuration has no refmap entry"; exit 1; }
+          refmap=$(unzip -p "$jar" urinth-optimizer-refmap.json) || { echo "the jar has no refmap"; exit 1; }
+          for m in GameRendererMixin LevelRendererMixin PlayerListMixin SectionOcclusionGraphMixin SectionRenderDispatcherMixin; do
+            echo "$refmap" | grep -q "dev/urinth/optimizer/mixin/$m" || { echo "the refmap has no entry for $m"; exit 1; }
+          done
+          echo "refmap ok"
+
+  # Starts a real Fabric 1.21.4 server (the game as the launcher runs it, not the dev environment) with the built mod and
+  # looks for the mod's own log lines. It is only a report: the app does not wait for it.
+  optimizer-smoke:
+    needs: optimizer-mod
+    runs-on: ubuntu-22.04
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: urinth-optimizer-jar
+          path: mod-jar
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Start a Fabric server with the mod
+        run: |
+          set -e
+          MC=$(grep '^minecraft_version=' optimizer-mod/gradle.properties | cut -d= -f2)
+          LOADER=$(grep '^loader_version=' optimizer-mod/gradle.properties | cut -d= -f2)
+          API=$(grep '^fabric_api_version=' optimizer-mod/gradle.properties | cut -d= -f2)
+          INSTALLER=$(curl -fsSL https://meta.fabricmc.net/v2/versions/installer | python3 -c "import sys,json; print([v['version'] for v in json.load(sys.stdin) if v['stable']][0])")
+          echo "Minecraft $MC, loader $LOADER, installer $INSTALLER, Fabric API $API"
+          mkdir -p server/mods
+          cd server
+          curl -fsSL -o fabric-server.jar "https://meta.fabricmc.net/v2/versions/loader/$MC/$LOADER/$INSTALLER/server/jar"
+          curl -fsSL -o mods/fabric-api.jar "https://maven.fabricmc.net/net/fabricmc/fabric-api/fabric-api/$API/fabric-api-$API.jar"
+          cp ../mod-jar/urinth-optimizer-*.jar mods/
+          echo "eula=true" > eula.txt
+          printf 'online-mode=false\nlevel-type=flat\nview-distance=10\nsimulation-distance=10\n' > server.properties
+          set +e
+          printf 'stop\n' | timeout 420 java -Xmx2g -jar fabric-server.jar nogui > ../server.log 2>&1
+          echo "server exit code: $?"
+      - name: What the mod said
+        if: always()
+        run: |
+          echo "::group::mod, mixin and error lines"
+          grep -n -i -E "optimizer|mixin|urinth|exception|error|Done \(" server.log | head -80 || true
+          echo "::endgroup::"
+          echo "::group::whole log"
+          cat server.log
+          echo "::endgroup::"
+      - name: Check the mod loaded and its server hook is running
+        run: |
+          grep -q "\[Optimizer\] loaded" server.log || { echo "the mod did not report that it loaded"; exit 1; }
+          grep -q "simulation distance hook is running" server.log || { echo "the simulation distance hook never ran: the mixin was not applied"; exit 1; }
+          echo "mod loaded and its hook is running"
 
   build:
     needs: [sunflare-mod, find-mod, optimizer-mod]
