@@ -10,6 +10,8 @@ import java.nio.file.StandardCopyOption;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Locale;
+import java.util.Set;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
@@ -27,9 +29,12 @@ import java.util.zip.ZipFile;
  * what the launcher put there. A file the player replaced or changed is never touched.</li>
  * <li>If the player has the mod under another file name, nothing is installed (two copies of one mod make the
  * game stop at start), and a copy the launcher installed earlier is removed when the player adds another.</li>
+ * <li>One exception to "never touched": a build that is known to stop the game at start (version 1.0.0, see
+ * {@link #BROKEN_VERSIONS}) is moved aside, as "&lt;name&gt;.broken" so nothing is lost, and the bundled version is installed in
+ * its place, whoever put the old file there. Leaving it would only mean the game stops again at every start.</li>
  * </ul>
- * The only files this class creates or deletes are mods/urinth-optimizer.jar and the marker. Plain Java, so it is
- * covered by JVM unit tests.
+ * The only files this class creates or deletes are mods/urinth-optimizer.jar and the marker; it also renames a known-broken
+ * copy to "&lt;name&gt;.broken". Plain Java, so it is covered by JVM unit tests.
  */
 public final class OptimizerModInstaller {
     private OptimizerModInstaller() {}
@@ -40,8 +45,19 @@ public final class OptimizerModInstaller {
     static final String MARKER_NAME = ".urinth-optimizer.installed";
     static final String MOD_ID = "urinth_optimizer";
 
+    /**
+     * Versions of the mod that stop the game at start: 1.0.0 was built against a newer Mixin than the one the game runs with,
+     * and the MixinExtras that comes with Fabric Loader 0.17.3 throws on that ("Mixin transformation of ... failed").
+     */
+    static final Set<String> BROKEN_VERSIONS = Set.of("1.0.0");
+    /** What a known-broken copy is renamed to (the loader and the Mods list ignore it, the player can still find it). */
+    static final String BROKEN_SUFFIX = ".broken";
+    /** The mod is small; larger jars are never opened to look for it. */
+    private static final long BROKEN_MAX_BYTES = 512 * 1024;
+
     private static final String DISABLED_SUFFIX = ".disabled";
     private static final Pattern MOD_ID_IN_JSON = Pattern.compile("\"id\"\\s*:\\s*\"" + MOD_ID + "\"");
+    private static final Pattern VERSION_IN_JSON = Pattern.compile("\"version\"\\s*:\\s*\"([^\"]*)\"");
 
     public interface Source {
         InputStream open() throws IOException;
@@ -58,6 +74,8 @@ public final class OptimizerModInstaller {
         LEFT_ALONE,
         /** The player added another copy, so the launcher's own copy was removed to avoid a duplicate. */
         REMOVED_DUPLICATE,
+        /** A copy with a known startup crash was moved aside (as .broken) and the bundled mod put in its place. */
+        REPLACED_BROKEN,
         WRONG_VERSION,
         NOT_BUNDLED,
         FAILED
@@ -90,10 +108,19 @@ public final class OptimizerModInstaller {
         try {
             String bundledHash = sha256(jar);
             String installedHash = readMarker(marker);
+            String targetHash = target.isFile() ? sha256(Files.readAllBytes(target.toPath())) : null;
+            boolean launchersCopy = targetHash != null && targetHash.equals(installedHash);
+
+            // A copy that stops the game at start is not "the player's choice" worth keeping. The launcher's own unchanged copy
+            // is not looked at here: it is brought up to date by the ordinary rule below.
+            int retired = retireBrokenBuilds(modsDir, launchersCopy ? target : null);
+            if (retired > 0 && !target.isFile() && !hasOtherCopy(modsDir, false, true)) {
+                write(modsDir, target, jar);
+                writeMarker(marker, bundledHash);
+                return Result.REPLACED_BROKEN;
+            }
 
             if (target.isFile()) {
-                String targetHash = sha256(Files.readAllBytes(target.toPath()));
-                boolean launchersCopy = targetHash.equals(installedHash);
                 if (launchersCopy && hasOtherCopy(modsDir, false, false)) {
                     return target.delete() ? Result.REMOVED_DUPLICATE : Result.FAILED;
                 }
@@ -118,6 +145,45 @@ public final class OptimizerModInstaller {
             return Result.INSTALLED;
         } catch (IOException | RuntimeException e) {
             return Result.FAILED;
+        }
+    }
+
+    /**
+     * Moves every active copy of this mod whose version is in {@link #BROKEN_VERSIONS} aside (to "&lt;name&gt;.broken"), except
+     * {@code keep}. Only small .jar files are opened. Returns how many were moved. Switched-off copies are not touched.
+     */
+    static int retireBrokenBuilds(File modsDir, File keep) {
+        File[] files = modsDir.listFiles();
+        if (files == null) return 0;
+        int retired = 0;
+        for (File file : files) {
+            if (!file.isFile() || file.equals(keep)) continue;
+            if (!file.getName().toLowerCase(Locale.ROOT).endsWith(".jar") || file.length() > BROKEN_MAX_BYTES) continue;
+            String version = modVersion(file);
+            if (version == null || !BROKEN_VERSIONS.contains(version)) continue;
+            try {
+                Files.move(file.toPath(), new File(modsDir, file.getName() + BROKEN_SUFFIX).toPath(), StandardCopyOption.REPLACE_EXISTING);
+                retired++;
+            } catch (IOException | RuntimeException e) {
+                // It stays where it is; the game will tell what is wrong with it.
+            }
+        }
+        return retired;
+    }
+
+    /** The version in the jar's fabric.mod.json when the jar is this mod, otherwise null. */
+    static String modVersion(File jar) {
+        try (ZipFile zip = new ZipFile(jar)) {
+            ZipEntry entry = zip.getEntry("fabric.mod.json");
+            if (entry == null || entry.getSize() > 1024 * 1024) return null;
+            try (InputStream in = zip.getInputStream(entry)) {
+                String json = new String(readAll(in), StandardCharsets.UTF_8);
+                if (!MOD_ID_IN_JSON.matcher(json).find()) return null;
+                Matcher version = VERSION_IN_JSON.matcher(json);
+                return version.find() ? version.group(1) : null;
+            }
+        } catch (IOException | RuntimeException e) {
+            return null;
         }
     }
 

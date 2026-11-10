@@ -13,4 +13,6 @@ for f in "$tmp"/dev/urinth/optimizer/mixin/*.class; do
   javap -v -p -cp "$tmp" "dev.urinth.optimizer.mixin.$name" 2>/dev/null \
     | grep -E "= Utf8 +(.*(method_|field_|class_)[0-9]+.*|getRenderDistance|calculateParticleLevel|setSimulationDistance|uploadAllPendingUploads|getViewDistance|isInViewDistance|getRelativeFrom|initializeQueueForFullUpdate|toUpload|.*net/minecraft/.*)$" \
     | sed -E 's/^ +#[0-9]+ = Utf8 +/   /' | sort -u
+  echo "   -- annotations as written in the class (a single value 'at=@...' or a list 'at=[@...')"
+  javap -v -p -cp "$tmp" "dev.urinth.optimizer.mixin.$name" 2>/dev/null | sed -n -E '/Runtime(In)?[Vv]isibleAnnotations:/,/^$/p' | grep -vE "^ *[0-9]+: #" | sed 's/^/   /'
 done

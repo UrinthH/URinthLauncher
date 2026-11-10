@@ -49,14 +49,22 @@ public class OptimizerModInstallerTest {
     }
 
     private static byte[] jarWithModId(String id) throws IOException {
+        return modJar(id, "1");
+    }
+
+    private static byte[] modJar(String id, String version) throws IOException {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         try (ZipOutputStream zip = new ZipOutputStream(out)) {
             zip.putNextEntry(new ZipEntry("fabric.mod.json"));
-            zip.write(("{\n\t\"schemaVersion\": 1,\n\t\"id\": \"" + id + "\",\n\t\"version\": \"1\"\n}")
+            zip.write(("{\n\t\"schemaVersion\": 1,\n\t\"id\": \"" + id + "\",\n\t\"version\": \"" + version + "\"\n}")
                     .getBytes(StandardCharsets.UTF_8));
             zip.closeEntry();
         }
         return out.toByteArray();
+    }
+
+    private static File broken(File dir, String name) {
+        return new File(mods(dir), name + OptimizerModInstaller.BROKEN_SUFFIX);
     }
 
     @Test
@@ -213,6 +221,117 @@ public class OptimizerModInstallerTest {
         assertEquals(OptimizerModInstaller.Result.WRONG_VERSION, OptimizerModInstaller.sync(dir, "fabric-loader-0.16.10-1.20.1", jar(V2)));
         assertFalse(installed(dir).exists());
         assertFalse(marker(dir).exists());
+    }
+
+
+    // ---- a build that stops the game at start --------------------------------------------------------------------------------
+
+    @Test
+    public void replacesAKnownBrokenBuildThePlayerPutThereUnderAnotherName() throws IOException {
+        File dir = gameDir();
+        byte[] old = modJar("urinth_optimizer", "1.0.0");
+        put(dir, "urinth-optimizer-1.0.0.jar", old);
+        assertEquals(OptimizerModInstaller.Result.REPLACED_BROKEN, OptimizerModInstaller.sync(dir, FABRIC, jar(V2)));
+        assertArrayEquals(V2, Files.readAllBytes(installed(dir).toPath()));
+        assertTrue(marker(dir).isFile());
+        // the old file is out of the loader's way but not lost
+        assertFalse(new File(mods(dir), "urinth-optimizer-1.0.0.jar").exists());
+        assertArrayEquals(old, Files.readAllBytes(broken(dir, "urinth-optimizer-1.0.0.jar").toPath()));
+        // and the next start has nothing left to do
+        assertEquals(OptimizerModInstaller.Result.ALREADY_PRESENT, OptimizerModInstaller.sync(dir, FABRIC, jar(V2)));
+    }
+
+    @Test
+    public void replacesAKnownBrokenBuildUnderAnyFileName() throws IOException {
+        File dir = gameDir();
+        put(dir, "OptimizerMod-renamed.jar", modJar("urinth_optimizer", "1.0.0"));
+        assertEquals(OptimizerModInstaller.Result.REPLACED_BROKEN, OptimizerModInstaller.sync(dir, FABRIC, jar(V2)));
+        assertArrayEquals(V2, Files.readAllBytes(installed(dir).toPath()));
+        assertFalse(new File(mods(dir), "OptimizerMod-renamed.jar").exists());
+    }
+
+    @Test
+    public void replacesAKnownBrokenBuildAtTheInstalledNameThatNoMarkerVouchesFor() throws IOException {
+        File dir = gameDir();
+        put(dir, OptimizerModInstaller.FILE_NAME, modJar("urinth_optimizer", "1.0.0"));
+        assertEquals(OptimizerModInstaller.Result.REPLACED_BROKEN, OptimizerModInstaller.sync(dir, FABRIC, jar(V2)));
+        assertArrayEquals(V2, Files.readAllBytes(installed(dir).toPath()));
+        assertTrue(broken(dir, OptimizerModInstaller.FILE_NAME).isFile());
+    }
+
+    @Test
+    public void replacesAKnownBrokenBuildThePlayerSwappedInAfterTheLauncherInstalledItsOwn() throws IOException {
+        File dir = gameDir();
+        OptimizerModInstaller.sync(dir, FABRIC, jar(V1));
+        Files.write(installed(dir).toPath(), modJar("urinth_optimizer", "1.0.0"));
+        assertEquals(OptimizerModInstaller.Result.REPLACED_BROKEN, OptimizerModInstaller.sync(dir, FABRIC, jar(V2)));
+        assertArrayEquals(V2, Files.readAllBytes(installed(dir).toPath()));
+    }
+
+    @Test
+    public void aLaunchersOwnCopyIsStillJustUpdated() throws IOException {
+        File dir = gameDir();
+        // even if the launcher's own earlier copy happens to be a known-broken version, the ordinary update rule applies
+        OptimizerModInstaller.sync(dir, FABRIC, jar(modJar("urinth_optimizer", "1.0.0")));
+        assertEquals(OptimizerModInstaller.Result.UPDATED, OptimizerModInstaller.sync(dir, FABRIC, jar(V2)));
+        assertArrayEquals(V2, Files.readAllBytes(installed(dir).toPath()));
+        assertFalse(broken(dir, OptimizerModInstaller.FILE_NAME).exists());
+    }
+
+    @Test
+    public void aHealthyCopyUnderAnotherNameIsNotTouched() throws IOException {
+        File dir = gameDir();
+        byte[] newer = modJar("urinth_optimizer", "1.1.0");
+        put(dir, "urinth-optimizer-1.1.0.jar", newer);
+        assertEquals(OptimizerModInstaller.Result.LEFT_ALONE, OptimizerModInstaller.sync(dir, FABRIC, jar(V2)));
+        assertArrayEquals(newer, Files.readAllBytes(new File(mods(dir), "urinth-optimizer-1.1.0.jar").toPath()));
+        assertFalse(installed(dir).exists());
+    }
+
+    @Test
+    public void aBrokenBuildBesideAHealthyOneIsMovedAsideAndNothingIsInstalled() throws IOException {
+        File dir = gameDir();
+        byte[] newer = modJar("urinth_optimizer", "1.1.0");
+        put(dir, "urinth-optimizer-1.1.0.jar", newer);
+        put(dir, "urinth-optimizer-1.0.0.jar", modJar("urinth_optimizer", "1.0.0"));
+        assertEquals(OptimizerModInstaller.Result.LEFT_ALONE, OptimizerModInstaller.sync(dir, FABRIC, jar(V2)));
+        assertFalse(new File(mods(dir), "urinth-optimizer-1.0.0.jar").exists());
+        assertTrue(broken(dir, "urinth-optimizer-1.0.0.jar").isFile());
+        assertArrayEquals(newer, Files.readAllBytes(new File(mods(dir), "urinth-optimizer-1.1.0.jar").toPath()));
+        assertFalse(installed(dir).exists());
+    }
+
+    @Test
+    public void aSwitchedOffBrokenBuildStaysSwitchedOff() throws IOException {
+        File dir = gameDir();
+        byte[] old = modJar("urinth_optimizer", "1.0.0");
+        put(dir, OptimizerModInstaller.FILE_NAME + ".disabled", old);
+        assertEquals(OptimizerModInstaller.Result.LEFT_ALONE, OptimizerModInstaller.sync(dir, FABRIC, jar(V2)));
+        assertFalse(installed(dir).exists());
+        assertArrayEquals(old, Files.readAllBytes(new File(mods(dir), OptimizerModInstaller.FILE_NAME + ".disabled").toPath()));
+    }
+
+    @Test
+    public void otherModsAreNeverTakenForABrokenBuild() throws IOException {
+        File dir = gameDir();
+        byte[] sodium = modJar("sodium", "1.0.0");
+        put(dir, "sodium.jar", sodium);
+        put(dir, "not-a-zip.jar", V1);
+        assertEquals(OptimizerModInstaller.Result.INSTALLED, OptimizerModInstaller.sync(dir, FABRIC, jar(V2)));
+        assertArrayEquals(sodium, Files.readAllBytes(new File(mods(dir), "sodium.jar").toPath()));
+        assertArrayEquals(V1, Files.readAllBytes(new File(mods(dir), "not-a-zip.jar").toPath()));
+        assertFalse(broken(dir, "sodium.jar").exists());
+    }
+
+    @Test
+    public void readsTheVersionOfTheModOnly() throws IOException {
+        File dir = gameDir();
+        put(dir, "a.jar", modJar("urinth_optimizer", "1.0.0"));
+        put(dir, "b.jar", modJar("sodium", "0.6.13"));
+        put(dir, "c.jar", V1);
+        assertEquals("1.0.0", OptimizerModInstaller.modVersion(new File(mods(dir), "a.jar")));
+        assertEquals(null, OptimizerModInstaller.modVersion(new File(mods(dir), "b.jar")));
+        assertEquals(null, OptimizerModInstaller.modVersion(new File(mods(dir), "c.jar")));
     }
 
     @Test

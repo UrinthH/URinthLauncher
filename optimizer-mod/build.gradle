@@ -10,6 +10,10 @@ repositories {
 	mavenCentral()
 }
 
+configurations {
+	mixinExtrasCheck
+}
+
 dependencies {
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
 	mappings loom.officialMojangMappings()
@@ -20,7 +24,9 @@ dependencies {
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.10.2'
 	// Reads class files (not loading them) so the tests can check every mixin target against the real game.
 	testImplementation 'org.ow2.asm:asm-tree:9.7.1'
-	testImplementation 'org.ow2.asm:asm-util:9.7.1'
+
+	// Only for the checkMixinExtras task: the MixinExtras that ships with Fabric Loader 0.17.3 (the loader the game runs with).
+	mixinExtrasCheck 'io.github.llamalad7:mixinextras-common:0.5.0'
 }
 
 loom {
@@ -38,6 +44,32 @@ test {
 	testLogging {
 		events 'failed'
 		exceptionFormat 'full'
+	}
+	// MixinShapeTest also reads the finished jar (after remapping), so the jar is built first.
+	dependsOn tasks.named('remapJar')
+	doFirst {
+		systemProperty 'urinth.jar', tasks.named('remapJar').get().archiveFile.get().asFile.absolutePath
+	}
+}
+
+// Runs the real MixinExtras 0.5.0 transformer, the code that stopped the game at start, over the mod's mixin classes.
+// Not part of build: it needs one more download, so CI runs it as its own step.
+tasks.register('checkMixinExtras', Test) {
+	group = 'verification'
+	description = 'Runs MixinExtras 0.5.0 over the mixin classes of the finished jar'
+	dependsOn tasks.named('remapJar')
+	testClassesDirs = sourceSets.test.output.classesDirs
+	classpath = sourceSets.test.runtimeClasspath + configurations.mixinExtrasCheck
+	useJUnitPlatform()
+	filter {
+		includeTestsMatching 'dev.urinth.optimizer.MixinShapeTest'
+	}
+	testLogging {
+		events 'failed'
+		exceptionFormat 'full'
+	}
+	doFirst {
+		systemProperty 'urinth.jar', tasks.named('remapJar').get().archiveFile.get().asFile.absolutePath
 	}
 }
 
