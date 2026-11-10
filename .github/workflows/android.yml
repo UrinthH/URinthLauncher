@@ -1,7 +1,6 @@
-name: API probe
+name: API probe 2
 
-# Scratch run: prints the real method signatures of the Minecraft 1.21.4 classes (Mojang names) into the CI log,
-# because the sandbox that writes the mods cannot download Minecraft. This branch can be deleted.
+# Scratch run: a few more questions about the Minecraft 1.21.4 classes (Mojang names). This branch can be deleted.
 on:
   push:
     branches:
@@ -20,39 +19,31 @@ jobs:
       - name: Prepare the mapped Minecraft jar
         working-directory: find-mod
         run: ./gradlew build --no-daemon -x test
-      - name: Find the jar with Mojang names
+      - name: Questions
         run: |
-          for j in $(find "$HOME/.gradle" find-mod/.gradle -name '*.jar' 2>/dev/null | grep -v -E 'sources|javadoc'); do
-            if unzip -l "$j" 2>/dev/null | grep -q 'net/minecraft/client/particle/ParticleEngine.class'; then
-              echo "NAMED-JAR $j"
-            fi
-          done | tee /tmp/named.txt
-          test -s /tmp/named.txt
-      - name: Dump the signatures
-        run: |
-          J=$(head -1 /tmp/named.txt | sed 's/^NAMED-JAR //')
-          echo "USING $J"
-          dump() { echo "=== $1"; javap -p -s -cp "$J" "$1" 2>&1; }
-          for c in \
-            net.minecraft.client.particle.ParticleEngine \
-            net.minecraft.client.particle.Particle \
-            net.minecraft.client.renderer.entity.EntityRenderDispatcher \
-            net.minecraft.client.renderer.entity.EntityRenderer \
-            net.minecraft.client.renderer.entity.LivingEntityRenderer \
-            net.minecraft.client.renderer.entity.state.EntityRenderState \
-            net.minecraft.client.renderer.entity.state.LivingEntityRenderState \
-            net.minecraft.client.renderer.entity.layers.RenderLayer \
-            net.minecraft.client.Camera \
-            net.minecraft.client.gui.Gui \
-            net.minecraft.client.renderer.blockentity.BlockEntityRenderDispatcher ; do dump "$c"; done > /tmp/sigs.txt
-          echo "=== Minecraft (filtered)"; javap -p -s -cp "$J" net.minecraft.client.Minecraft | grep -i -E -A1 'fps|frame|getInstance|isPaused|runTick|particleEngine|levelRenderer|gameRenderer|getTimer|getDeltaTracker|player;|level;' >> /tmp/sigs.txt
-          echo "=== Entity (filtered)"; javap -p -s -cp "$J" net.minecraft.world.entity.Entity | grep -E -A1 'shouldRender|getViewScale|noCulling|getBoundingBoxForCulling|distanceToSqr|isInvisible|getType\(|isAlwaysTicking|getEyePosition|position\(' >> /tmp/sigs.txt
-          echo "=== LevelRenderer (filtered)"; javap -p -s -cp "$J" net.minecraft.client.renderer.LevelRenderer | grep -E -A1 'ntit|Cloud|Particle|Weather|Shadow|renderLevel|shouldRender' >> /tmp/sigs.txt
-          echo "=== ClientLevel (filtered)"; javap -p -s -cp "$J" net.minecraft.client.multiplayer.ClientLevel | grep -E -A1 'addParticle|entitiesForRendering|players\(\)' >> /tmp/sigs.txt
-          echo "=== bytecode of EntityRenderDispatcher"; javap -p -c -cp "$J" net.minecraft.client.renderer.entity.EntityRenderDispatcher >> /tmp/sigs.txt
-          echo "=== bytecode of ParticleEngine.add and tick"; javap -p -c -cp "$J" net.minecraft.client.particle.ParticleEngine | awk '/public void add\(|public void tick\(|private void tickParticleList|public void render\(/{p=1} p{print} /^$/{p=0}' >> /tmp/sigs.txt
-          echo "=== class presence"; for n in net/minecraft/world/entity/item/ItemEntity net/minecraft/world/entity/ExperienceOrb net/minecraft/world/entity/decoration/ArmorStand net/minecraft/world/entity/player/Player net/minecraft/world/entity/LivingEntity net/minecraft/world/entity/Mob net/minecraft/world/entity/projectile/Projectile net/minecraft/client/player/AbstractClientPlayer net/minecraft/client/particle/ParticleRenderType net/minecraft/client/ParticleStatus net/minecraft/world/entity/decoration/ItemFrame net/minecraft/client/renderer/culling/Frustum; do if unzip -l "$J" | grep -q "$n.class"; then echo "yes $n"; else echo "NO  $n"; fi; done >> /tmp/sigs.txt
-          echo "=== Fabric API: HUD callback and client commands"; for p in HudRenderCallback ClientCommandRegistrationCallback ClientTickEvents; do for f in $(find "$HOME/.gradle" find-mod/.gradle -name '*.jar' | grep -v -E 'sources|javadoc' | grep -i fabric); do if unzip -l "$f" | grep -q "/$p.class"; then echo "$p in $f"; fi; done; done >> /tmp/sigs.txt
-          echo "SIGS-BEGIN"
-          cat /tmp/sigs.txt
-          echo "SIGS-END"
+          set +e
+          J=""
+          for j in $(find "$HOME/.gradle" "$GITHUB_WORKSPACE/find-mod/.gradle" -name '*.jar' -size +5M 2>/dev/null); do
+            if unzip -l "$j" 2>/dev/null | grep -q 'net/minecraft/client/particle/ParticleEngine.class'; then J="$j"; break; fi
+          done
+          echo "JAR $J"
+          for n in net/minecraft/client/renderer/entity/state/HumanoidRenderState net/minecraft/client/renderer/entity/state/PlayerRenderState net/minecraft/client/renderer/entity/state/ArmorStandRenderState net/minecraft/world/entity/item/ItemEntity net/minecraft/world/entity/ExperienceOrb net/minecraft/world/entity/decoration/ArmorStand net/minecraft/world/entity/player/Player net/minecraft/world/entity/LivingEntity net/minecraft/client/gui/Gui net/minecraft/core/particles/ParticleGroup; do
+            if unzip -l "$J" | grep -q "$n.class"; then echo "yes $n"; else echo "NO  $n"; fi
+          done
+          echo "--- classes under client/renderer/entity that mention shouldRenderLayers"
+          unzip -Z1 "$J" | grep -E '^net/minecraft/client/renderer/entity/[A-Za-z0-9_$]*\.class$' | sed 's/\.class$//; s#/#.#g' | while read c; do
+            javap -p -cp "$J" "$c" 2>/dev/null | grep -q 'shouldRenderLayers' && echo "  $c"
+          done
+          echo "--- HumanoidRenderState"
+          javap -p -s -cp "$J" net.minecraft.client.renderer.entity.state.HumanoidRenderState | head -40
+          echo "--- Entity.distanceToSqr and getBoundingBox"
+          javap -p -s -cp "$J" net.minecraft.world.entity.Entity | grep -A1 -E 'distanceToSqr|getBoundingBox\(|isPassenger|getVehicle'
+          echo "--- Minecraft: screen, level, player, camera entity, gui"
+          javap -p -s -cp "$J" net.minecraft.client.Minecraft | grep -A1 -E ' screen;| level;| player;|getCameraEntity|cameraEntity| gui;|isSingleplayer|getCurrentServer|hasSingleplayerServer'
+          echo "--- Gui overlay message"
+          javap -p -s -cp "$J" net.minecraft.client.gui.Gui | grep -A1 -E 'setOverlayMessage|overlayMessage'
+          echo "--- AABB fields"
+          javap -p -cp "$J" net.minecraft.world.phys.AABB | grep -E 'minX|maxX|getSize|getCenter|getXsize'
+          echo "--- bytecode of shouldRenderLayers in LivingEntityRenderer"
+          javap -p -c -cp "$J" net.minecraft.client.renderer.entity.LivingEntityRenderer | awk '/protected boolean shouldRenderLayers/{p=1} p{print} /ireturn/{if(p){exit}}'
+          echo "PROBE2-DONE"
