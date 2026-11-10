@@ -1,16 +1,20 @@
 name: Boost probe
 
-# Scratch run: (1) prints the real Minecraft 1.21.4 class signatures that the Boost mod will hook, so no hook is
-# written from memory, and (2) checks whether the game can be started headless in CI, so mixins can later be
-# checked against the real game. This branch can be deleted.
+# Scratch run, can be deleted. It does two things the sandbox that writes the mods cannot do:
+#  1. api:   prints the exact method signatures of the Minecraft 1.21.4 classes a mod wants to hook, so no hook is guessed.
+#  2. smoke: starts the real Minecraft client headless (virtual screen, software OpenGL) with a known-good mod,
+#            to find out whether a headless start-up check works in CI.
 on:
   push:
     branches:
       - claude/find-jar-dump
 
 jobs:
-  dump:
+  api:
     runs-on: ubuntu-22.04
+    defaults:
+      run:
+        working-directory: find-mod
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -18,95 +22,74 @@ jobs:
           distribution: temurin
           java-version: '25'
       - uses: gradle/actions/setup-gradle@v4
-      - name: Compile so the mapped Minecraft jar exists
-        working-directory: find-mod
+      - name: Compile (this creates the mapped Minecraft jar)
         run: ./gradlew compileJava --no-daemon
-      - name: Print the real signatures
+      - name: Dump the signatures
         run: |
           JAR=""
-          for j in $(find "$HOME/.gradle" "$GITHUB_WORKSPACE" -name '*.jar' -size +5M 2>/dev/null); do
+          for j in $(find "$HOME/.gradle" "$GITHUB_WORKSPACE/find-mod/.gradle" -name '*.jar' -path '*inecraft*' 2>/dev/null); do
             if unzip -l "$j" 2>/dev/null | grep -q 'net/minecraft/client/particle/ParticleEngine.class'; then JAR="$j"; break; fi
           done
-          echo "JAR=$JAR"
-          ls -l "$JAR"
-          dump() { echo; echo "=== CLASS $1"; javap -cp "$JAR" -p -s "$1" 2>&1 || echo "(missing $1)"; }
-          part() { echo; echo "=== CLASS $1 (only: $2)"; javap -cp "$JAR" -p -s "$1" 2>&1 | grep -E -A1 "$2" | grep -v '^--$' || true; }
-          for c in \
-            net.minecraft.client.particle.ParticleEngine \
-            net.minecraft.client.particle.Particle \
-            net.minecraft.client.particle.TextureSheetParticle \
-            net.minecraft.client.particle.TrackingEmitter \
-            net.minecraft.client.renderer.entity.EntityRenderDispatcher \
-            net.minecraft.client.renderer.entity.EntityRenderer \
-            net.minecraft.client.renderer.entity.LivingEntityRenderer \
-            net.minecraft.client.renderer.entity.ItemEntityRenderer \
-            net.minecraft.client.renderer.entity.state.EntityRenderState \
-            net.minecraft.client.renderer.entity.state.LivingEntityRenderState \
-            net.minecraft.client.renderer.entity.state.HumanoidRenderState \
-            net.minecraft.client.renderer.entity.state.PlayerRenderState \
-            net.minecraft.client.renderer.entity.layers.RenderLayer \
-            net.minecraft.client.renderer.entity.layers.HumanoidArmorLayer \
-            net.minecraft.client.renderer.entity.layers.ItemInHandLayer \
-            net.minecraft.client.renderer.entity.layers.CapeLayer \
-            net.minecraft.client.ParticleStatus \
-            net.minecraft.client.Camera \
-            net.minecraft.client.renderer.culling.Frustum ; do dump "$c"; done
-          part net.minecraft.client.Minecraft 'getFps|fps|FrameTime|frameTime|getInstance|particleEngine|levelRenderer|gameRenderer|options;|player;|level;|isPaused|getTimer|timer|DeltaTracker|getMainRenderTarget|runTick|getWindow|screen;|stop\('
-          part net.minecraft.world.entity.Entity 'shouldRender|CullingBox|noCulling|getViewScale|distanceToSqr|AABB getBoundingBox\(|isInvisible|isCurrentlyGlowing'
-          part net.minecraft.client.Options 'particles|entityShadows|entityDistanceScaling|renderDistance|cloudStatus|graphicsMode|ambientOcclusion|biomeBlendRadius|mipmapLevels|framerateLimit|enableVsync|hideGui|getCloudsType|fancyGraphics'
-          part net.minecraft.client.renderer.LevelRenderer 'ntity|article|hadow|loud|eather|Pass|renderLevel|Frustum'
-          part net.minecraft.client.multiplayer.ClientLevel 'article|ntitiesForRendering|players\('
-          echo; echo "=== layer classes"; unzip -l "$JAR" | awk '{print $4}' | grep 'client/renderer/entity/layers/' | grep -v '\$' | sed 's#.*/##' | tr '\n' ' '
-          echo; echo "=== BYTECODE EntityRenderDispatcher"; javap -cp "$JAR" -p -c net.minecraft.client.renderer.entity.EntityRenderDispatcher
-          echo; echo "=== BYTECODE ParticleEngine"; javap -cp "$JAR" -p -c net.minecraft.client.particle.ParticleEngine
-          echo; echo "=== BYTECODE EntityRenderer (shouldRender)"; javap -cp "$JAR" -p -c net.minecraft.client.renderer.entity.EntityRenderer | grep -n -E '^  [a-z].*\(|shouldRender|distanceToSqr|getViewScale'
-          echo; echo "=== LevelRenderer callers"; javap -cp "$JAR" -p -c net.minecraft.client.renderer.LevelRenderer | grep -n -E '^  [a-z].*\(|EntityRenderDispatcher.shouldRender|ParticleEngine|EntityRenderDispatcher.render'
+          echo "MAPPED-JAR $JAR"
+          test -n "$JAR"
+          echo "=== CLASS-LIST particle"
+          unzip -Z1 "$JAR" | grep -E '^net/minecraft/client/particle/[A-Za-z0-9]+\.class$' | sed 's/\.class$//' | tr '\n' ' ' | fold -w 200
+          echo
+          echo "=== CLASS-LIST renderer/entity"
+          unzip -Z1 "$JAR" | grep -E '^net/minecraft/client/renderer/entity/(state/|layers/)?[A-Za-z0-9]+\.class$' | sed 's/\.class$//' | tr '\n' ' ' | fold -w 200
+          echo
+          FULL="net.minecraft.client.particle.ParticleEngine net.minecraft.client.particle.Particle net.minecraft.client.particle.ParticleRenderType net.minecraft.client.renderer.entity.EntityRenderDispatcher net.minecraft.client.renderer.entity.EntityRenderer net.minecraft.client.renderer.entity.LivingEntityRenderer net.minecraft.client.renderer.entity.state.EntityRenderState net.minecraft.client.renderer.entity.state.LivingEntityRenderState net.minecraft.client.renderer.entity.layers.RenderLayer net.minecraft.client.renderer.entity.layers.HumanoidArmorLayer net.minecraft.client.renderer.entity.layers.ItemInHandLayer net.minecraft.client.renderer.entity.layers.CapeLayer net.minecraft.client.Camera net.minecraft.client.DeltaTracker net.minecraft.client.ParticleStatus net.minecraft.client.renderer.culling.Frustum net.minecraft.client.renderer.entity.ItemEntityRenderer net.minecraft.client.renderer.entity.ArmorStandRenderer net.minecraft.client.renderer.entity.ExperienceOrbRenderer"
+          for c in $FULL; do
+            echo "=== CLASS $c"
+            javap -p -s -cp "$JAR" "$c" || echo "MISSING $c"
+          done
+          filtered() {
+            echo "=== FILTERED $1 /$2/"
+            javap -p -s -cp "$JAR" "$1" | grep -E -A1 "$2" | grep -v '^--$' || echo "MISSING $1"
+          }
+          filtered net.minecraft.client.Minecraft 'fps|Fps|[Ff]rame|runTick|getInstance|particleEngine|levelRenderer|entityRenderDispatcher|stop\(|isPaused|getTimer|getDeltaTracker|getWindow|gameRenderer'
+          filtered net.minecraft.client.renderer.LevelRenderer 'addParticle|renderEntities|renderEntity|collect|shouldRender|extractVisible|renderLevel|addMainPass|addCloudsPass|renderClouds|entityRenderDispatcher|visibleEntities|renderSnowAndRain|addWeatherPass|renderSky|addSkyPass|renderParticles|addParticlesPass'
+          filtered net.minecraft.world.entity.Entity 'shouldRender|noCulling|getBoundingBox|distanceToSqr|getViewScale|setViewScale|getBoundingBoxForCulling|isInvisible|getType\('
+          filtered net.minecraft.client.renderer.GameRenderer 'render\(|renderLevel|getMainCamera|getRenderDistance|isPanoramaMode'
+          echo "=== DONE"
 
   smoke:
     runs-on: ubuntu-22.04
-    strategy:
-      fail-fast: false
-      matrix:
-        java: ['25', '21']
+    defaults:
+      run:
+        working-directory: find-mod
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: ${{ matrix.java }}
+          java-version: '25'
       - uses: gradle/actions/setup-gradle@v4
-      - name: Install a headless display and software OpenGL
+      - name: Packages for a headless client
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends xvfb x11-utils mesa-utils libgl1 libgl1-mesa-dri libglx-mesa0 libegl1 libxrandr2 libxinerama1 libxcursor1 libxi6 libxxf86vm1 libxrender1 libxext6 libxtst6 libasound2
-      - name: Start the game headless
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends xvfb libgl1 libgl1-mesa-dri libglx-mesa0 libglu1-mesa libegl1 libxrandr2 libxinerama1 libxcursor1 libxi6 libxxf86vm1 libxrender1 libxext6 libx11-6 mesa-utils x11-utils
+      - name: Start the real client on a virtual screen
         run: |
-          set +e
-          export LIBGL_ALWAYS_SOFTWARE=1
-          export MESA_GL_VERSION_OVERRIDE=4.5
-          export MESA_GLSL_VERSION_OVERRIDE=450
+          export LIBGL_ALWAYS_SOFTWARE=1 GALLIUM_DRIVER=llvmpipe MESA_GL_VERSION_OVERRIDE=4.5 MESA_GLSL_VERSION_OVERRIDE=450
           Xvfb :99 -screen 0 1280x720x24 +extension GLX +render -noreset > xvfb.log 2>&1 &
-          sleep 3
           export DISPLAY=:99
-          java -version 2>&1 | head -2
-          glxinfo -B 2>&1 | grep -E "renderer string|core profile version|OpenGL version" || echo "glxinfo gave nothing"
-          START=$(date +%s)
-          (cd find-mod && ./gradlew runClient --no-daemon > ../run.log 2>&1) &
-          READY=0
-          for i in $(seq 1 100); do
+          sleep 3
+          glxinfo -B 2>&1 | head -25 || true
+          (./gradlew runClient --no-daemon --console=plain > run.log 2>&1; echo "GRADLE-EXIT $?" >> run.log) &
+          RESULT="TIMEOUT"
+          for i in $(seq 1 150); do
             sleep 5
-            if grep -q 'particles.png-atlas' run.log; then READY=1; break; fi
-            if grep -q -E 'Minecraft Crash Report|BUILD FAILED|FAILURE: Build failed' run.log; then break; fi
+            if grep -q "GRADLE-EXIT" run.log; then RESULT="EXITED"; break; fi
+            if grep -q "Minecraft Crash Report" run.log; then RESULT="CRASH"; break; fi
+            if grep -q "particles.png-atlas" run.log; then sleep 20; RESULT="REACHED-ATLAS-STAGE"; break; fi
           done
-          echo "READY=$READY after $(( $(date +%s) - START )) s"
-          sleep 20
-          echo "=== mixin and error lines"
-          grep -n -E 'Mixin|mixin|ERROR|Exception|Crash' run.log | head -60
-          echo "=== render thread lines"
-          grep -n 'Render thread' run.log | head -60
-          echo "=== tail"
-          tail -n 60 run.log
-          echo "=== xvfb"
-          tail -n 5 xvfb.log
-          pkill -f KnotClient; sleep 2; pkill -f GradleDaemon; pkill Xvfb
-          if [ "$READY" = "1" ]; then echo "SMOKE-READY"; else echo "SMOKE-NOT-READY"; fi
+          echo "SMOKE-RESULT $RESULT after about $((i*5)) s"
+          echo "=== run.log tail"
+          tail -n 80 run.log | cut -c1-300
+          echo "=== game log (selected)"
+          grep -n -E "Mixin|mixin|Backend library|OpenGL|Reloading ResourceManager|Created:|Loading [0-9]+ mods|urinth|ERROR|FATAL|Exception" run/logs/latest.log 2>/dev/null | cut -c1-300 | head -80
+          pkill -f KnotClient || true
+          pkill -f gradle || true
+          pkill Xvfb || true
+          test "$RESULT" = "REACHED-ATLAS-STAGE"
