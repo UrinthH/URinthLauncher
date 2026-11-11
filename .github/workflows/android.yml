@@ -1,20 +1,18 @@
-name: Boost probe
+name: Boost check
 
-# Scratch run, can be deleted. It does two things the sandbox that writes the mods cannot do:
-#  1. api:   prints the exact method signatures of the Minecraft 1.21.4 classes a mod wants to hook, so no hook is guessed.
-#  2. smoke: starts the real Minecraft client headless (virtual screen, software OpenGL) with a known-good mod,
-#            to find out whether a headless start-up check works in CI.
+# Scratch run, can be deleted. Builds the Boost mod and starts the real Minecraft client with it on a virtual screen,
+# with the mixin settings made strict, so a hook that does not apply stops the game and fails this check.
 on:
   push:
     branches:
       - claude/find-jar-dump
 
 jobs:
-  api:
+  build:
     runs-on: ubuntu-22.04
     defaults:
       run:
-        working-directory: find-mod
+        working-directory: boost-mod
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -22,42 +20,33 @@ jobs:
           distribution: temurin
           java-version: '25'
       - uses: gradle/actions/setup-gradle@v4
-      - name: Compile (this creates the mapped Minecraft jar)
-        run: ./gradlew compileJava --no-daemon
-      - name: Dump the signatures
+      - name: Build the jar and run every test
+        run: ./gradlew build --no-daemon --stacktrace 2>&1 | tee build.log
+      - name: Mixin warnings from the compiler
         run: |
-          JAR=""
-          for j in $(find "$HOME/.gradle" "$GITHUB_WORKSPACE/find-mod/.gradle" -name '*.jar' -path '*inecraft*' 2>/dev/null); do
-            if unzip -l "$j" 2>/dev/null | grep -q 'net/minecraft/client/particle/ParticleEngine.class'; then JAR="$j"; break; fi
-          done
-          echo "MAPPED-JAR $JAR"
-          test -n "$JAR"
-          echo "=== CLASS-LIST particle"
-          unzip -Z1 "$JAR" | grep -E '^net/minecraft/client/particle/[A-Za-z0-9]+\.class$' | sed 's/\.class$//' | tr '\n' ' ' | fold -w 200
-          echo
-          echo "=== CLASS-LIST renderer/entity"
-          unzip -Z1 "$JAR" | grep -E '^net/minecraft/client/renderer/entity/(state/|layers/)?[A-Za-z0-9]+\.class$' | sed 's/\.class$//' | tr '\n' ' ' | fold -w 200
-          echo
-          FULL="net.minecraft.client.particle.ParticleEngine net.minecraft.client.particle.Particle net.minecraft.client.particle.ParticleRenderType net.minecraft.client.renderer.entity.EntityRenderDispatcher net.minecraft.client.renderer.entity.EntityRenderer net.minecraft.client.renderer.entity.LivingEntityRenderer net.minecraft.client.renderer.entity.state.EntityRenderState net.minecraft.client.renderer.entity.state.LivingEntityRenderState net.minecraft.client.renderer.entity.layers.RenderLayer net.minecraft.client.renderer.entity.layers.HumanoidArmorLayer net.minecraft.client.renderer.entity.layers.ItemInHandLayer net.minecraft.client.renderer.entity.layers.CapeLayer net.minecraft.client.Camera net.minecraft.client.DeltaTracker net.minecraft.client.ParticleStatus net.minecraft.client.renderer.culling.Frustum net.minecraft.client.renderer.entity.ItemEntityRenderer net.minecraft.client.renderer.entity.ArmorStandRenderer net.minecraft.client.renderer.entity.ExperienceOrbRenderer"
-          for c in $FULL; do
-            echo "=== CLASS $c"
-            javap -p -s -cp "$JAR" "$c" || echo "MISSING $c"
-          done
-          filtered() {
-            echo "=== FILTERED $1 /$2/"
-            javap -p -s -cp "$JAR" "$1" | grep -E -A1 "$2" | grep -v '^--$' || echo "MISSING $1"
-          }
-          filtered net.minecraft.client.Minecraft 'fps|Fps|[Ff]rame|runTick|getInstance|particleEngine|levelRenderer|entityRenderDispatcher|stop\(|isPaused|getTimer|getDeltaTracker|getWindow|gameRenderer'
-          filtered net.minecraft.client.renderer.LevelRenderer 'addParticle|renderEntities|renderEntity|collect|shouldRender|extractVisible|renderLevel|addMainPass|addCloudsPass|renderClouds|entityRenderDispatcher|visibleEntities|renderSnowAndRain|addWeatherPass|renderSky|addSkyPass|renderParticles|addParticlesPass'
-          filtered net.minecraft.world.entity.Entity 'shouldRender|noCulling|getBoundingBox|distanceToSqr|getViewScale|setViewScale|getBoundingBoxForCulling|isInvisible|getType\('
-          filtered net.minecraft.client.renderer.GameRenderer 'render\(|renderLevel|getMainCamera|getRenderDistance|isPanoramaMode'
-          echo "=== DONE"
+          grep -n -i -E "Unable to locate|obfuscation mapping|warning: .*(mixin|inject)" build.log || echo "NO-MIXIN-WARNINGS"
+      - name: Test results
+        run: grep -h "<testsuite " build/test-results/test/*.xml | sed -E 's/ timestamp=.*//'
+      - name: Jar contents and refmap
+        run: |
+          ls -l build/libs
+          sha256sum build/libs/urinth-boost-*.jar
+          unzip -l build/libs/urinth-boost-*.jar | grep -v "/$"
+          echo "=== mixins.json in the jar"
+          unzip -p build/libs/urinth-boost-1.0.0.jar urinth_boost.mixins.json
+          echo "=== refmap in the jar"
+          unzip -p build/libs/urinth-boost-1.0.0.jar urinth_boost-refmap.json || echo "NO-REFMAP"
+      - name: Print the jar
+        run: |
+          echo "JAR-BEGIN"
+          base64 -w 100 build/libs/urinth-boost-1.0.0.jar
+          echo "JAR-END"
 
   smoke:
     runs-on: ubuntu-22.04
     defaults:
       run:
-        working-directory: find-mod
+        working-directory: boost-mod
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -69,27 +58,45 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq --no-install-recommends xvfb libgl1 libgl1-mesa-dri libglx-mesa0 libglu1-mesa libegl1 libxrandr2 libxinerama1 libxcursor1 libxi6 libxxf86vm1 libxrender1 libxext6 libx11-6 mesa-utils x11-utils
-      - name: Start the real client on a virtual screen
+      - name: Make every hook mandatory (only in this check, never in the real jar)
+        run: |
+          sed -i 's/require = 0/require = 1/' src/main/java/dev/urinth/boost/mixin/*.java
+          sed -i 's/"required": false/"required": true/; s/"defaultRequire": 0/"defaultRequire": 1/' src/main/resources/urinth_boost.mixins.json
+          grep -c "require = 1" src/main/java/dev/urinth/boost/mixin/*.java
+          cat src/main/resources/urinth_boost.mixins.json
+      - name: Start the real client with the mod
         run: |
           export LIBGL_ALWAYS_SOFTWARE=1 GALLIUM_DRIVER=llvmpipe MESA_GL_VERSION_OVERRIDE=4.5 MESA_GLSL_VERSION_OVERRIDE=450
+          export JAVA_TOOL_OPTIONS="-Dmixin.debug.export=true"
           Xvfb :99 -screen 0 1280x720x24 +extension GLX +render -noreset > xvfb.log 2>&1 &
           export DISPLAY=:99
           sleep 3
-          glxinfo -B 2>&1 | head -25 || true
           (./gradlew runClient --no-daemon --console=plain > run.log 2>&1; echo "GRADLE-EXIT $?" >> run.log) &
           RESULT="TIMEOUT"
-          for i in $(seq 1 150); do
+          for i in $(seq 1 160); do
             sleep 5
             if grep -q "GRADLE-EXIT" run.log; then RESULT="EXITED"; break; fi
             if grep -q "Minecraft Crash Report" run.log; then RESULT="CRASH"; break; fi
-            if grep -q "particles.png-atlas" run.log; then sleep 20; RESULT="REACHED-ATLAS-STAGE"; break; fi
+            if grep -q "URinth Boost\] ready" run.log; then sleep 15; RESULT="READY"; break; fi
           done
           echo "SMOKE-RESULT $RESULT after about $((i*5)) s"
-          echo "=== run.log tail"
-          tail -n 80 run.log | cut -c1-300
-          echo "=== game log (selected)"
-          grep -n -E "Mixin|mixin|Backend library|OpenGL|Reloading ResourceManager|Created:|Loading [0-9]+ mods|urinth|ERROR|FATAL|Exception" run/logs/latest.log 2>/dev/null | cut -c1-300 | head -80
+          echo "=== failures in the log"
+          grep -n -E "FAILED during|InvalidInjection|Critical injection|MixinApplyError|MixinTransformerError|Mixin transformation|InjectionError|was not injected|Minecraft Crash Report" run.log | cut -c1-300 | head -30 || true
+          echo "=== Boost lines"
+          grep -n "URinth Boost" run.log | cut -c1-300 | head -20 || true
+          echo "=== exported (transformed) classes"
+          find run/.mixin.out -name '*.class' 2>/dev/null | sed 's|.*/.mixin.out/||' | head -80
           pkill -f KnotClient || true
           pkill -f gradle || true
           pkill Xvfb || true
-          test "$RESULT" = "REACHED-ATLAS-STAGE"
+          FOUND=0
+          for h in 'urinth\$limitParticles' 'urinth\$limitEntities' 'urinth\$limitNameTags' 'urinth\$limitLayers'; do
+            if find run/.mixin.out -name '*.class' 2>/dev/null | while read f; do javap -p "$f" 2>/dev/null; done | grep -q "$h"; then
+              echo "APPLIED $h"; FOUND=$((FOUND+1))
+            else
+              echo "NOT-APPLIED $h"
+            fi
+          done
+          echo "APPLIED-COUNT $FOUND of 4"
+          test "$RESULT" = "READY"
+          test "$FOUND" = "4"
