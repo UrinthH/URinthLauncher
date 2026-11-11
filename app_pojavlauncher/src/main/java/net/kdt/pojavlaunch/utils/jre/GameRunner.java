@@ -14,6 +14,7 @@ import net.kdt.pojavlaunch.JVersionList;
 import net.kdt.pojavlaunch.Tools;
 import net.kdt.pojavlaunch.authenticator.accounts.Account;
 import net.kdt.pojavlaunch.game.StartupTimeline;
+import net.kdt.pojavlaunch.game.BoostModInstaller;
 import net.kdt.pojavlaunch.game.FindModInstaller;
 import net.kdt.pojavlaunch.game.SunFlareInstaller;
 import net.kdt.pojavlaunch.game.VoiceChatAudio;
@@ -242,6 +243,20 @@ public class GameRunner {
         }
     }
 
+    /**
+     * Puts the URinth Boost mod (/uboost, frame rate help for crowds) into Fabric 1.21.4 instances, once. It is an
+     * ordinary mod in the Mods list: deleting or switching it off there is respected and it is never put back.
+     */
+    private static void prepareBoostMod(AppCompatActivity activity, Instance instance, String versionId) {
+        try {
+            BoostModInstaller.Result result = BoostModInstaller.sync(instance.getGameDirectory(), versionId,
+                    () -> activity.getAssets().open(BoostModInstaller.ASSET_PATH));
+            Logger.appendToLog("[Boost] " + result);
+        } catch (Throwable t) {
+            Logger.appendToLog("[Boost] skipped: " + t);
+        }
+    }
+
     public static void launchGame(final AppCompatActivity activity, Account account,
                                   Instance instance, String versionId, File[] classpath, GameRenderer gameRenderer) throws Throwable {
         int freeDeviceMemory = Tools.getFreeDeviceMemory(activity);
@@ -466,6 +481,7 @@ public class GameRunner {
         VoiceChatAudio.detect(instance.getGameDirectory(), LauncherPreferences.PREF_VOICE_CHAT_CLEANUP);
         prepareSunFlare(activity, instance, versionId);
         prepareFindMod(activity, instance, versionId);
+        prepareBoostMod(activity, instance, versionId);
         JREUtils.setGameEnvironment(activity);
         JREUtils.chdir(instance.getGameDirectory().getAbsolutePath());
 

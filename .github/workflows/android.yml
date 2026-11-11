@@ -45,8 +45,27 @@ jobs:
           name: urinth-find-jar
           path: find-mod/build/libs/urinth-find-*.jar
 
+  boost-mod:
+    runs-on: ubuntu-22.04
+    defaults:
+      run:
+        working-directory: boost-mod
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Build and test the boost mod
+        run: ./gradlew build --no-daemon --stacktrace
+      - uses: actions/upload-artifact@v4
+        with:
+          name: urinth-boost-jar
+          path: boost-mod/build/libs/urinth-boost-*.jar
+
   build:
-    needs: [sunflare-mod, find-mod]
+    needs: [sunflare-mod, find-mod, boost-mod]
     if: ${{ !cancelled() }}
     runs-on: ubuntu-22.04
     env:
@@ -84,6 +103,19 @@ jobs:
         run: |
           mkdir -p app_pojavlauncher/src/main/assets/mods
           cp find-jar/urinth-find-*.jar app_pojavlauncher/src/main/assets/mods/urinth-find.jar
+
+      # The frame rate helper mod (/uboost) built above is bundled too and put into Fabric 1.21.4 instances once.
+      - name: Get the boost mod
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: urinth-boost-jar
+          path: boost-jar
+      - name: Bundle the boost mod
+        continue-on-error: true
+        run: |
+          mkdir -p app_pojavlauncher/src/main/assets/mods
+          cp boost-jar/urinth-boost-*.jar app_pojavlauncher/src/main/assets/mods/urinth-boost.jar
 
       - name: Get LTW
         uses: dawidd6/action-download-artifact@v6

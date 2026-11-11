@@ -1,0 +1,15 @@
+{
+  "required": false,
+  "minVersion": "0.8",
+  "package": "dev.urinth.boost.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "client": [
+    "EntityRenderDispatcherMixin",
+    "EntityRendererMixin",
+    "LivingEntityRendererMixin",
+    "ParticleEngineMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 0
+  }
+}
