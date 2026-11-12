@@ -8,6 +8,7 @@
 #include <string.h>
 #include <errno.h>
 #include <stdlib.h>
+#include <time.h>
 
 //
 // Created by maks on 17.02.21.
@@ -18,13 +19,28 @@ static pthread_t logger;
 static jmethodID logger_onEventLogged;
 static volatile jobject logListener = NULL;
 static int latestlog_fd = -1;
+// When the log was last flushed to the storage chip. Only the logger thread touches it.
+static struct timespec last_log_sync;
 
+// Once per second at most. A flush after every chunk made this thread wait for the flash chip each time; when the
+// game prints a lot (servers do) the pipe then fills up and the game itself waits on every line it prints. Text that
+// was written is kept by the system even when the app dies, so only a power loss in the last second can lose lines.
+static void sync_log_if_due(void) {
+    struct timespec now;
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    long long ms = (long long)(now.tv_sec - last_log_sync.tv_sec) * 1000LL
+            + (now.tv_nsec - last_log_sync.tv_nsec) / 1000000LL;
+    if(ms >= 1000) {
+        fdatasync(latestlog_fd);
+        last_log_sync = now;
+    }
+}
 
 static bool recordBuffer(char* buf, ssize_t len) {
     if(strstr(buf, "Session ID is")) return false;
     if(latestlog_fd != -1) {
         write(latestlog_fd, buf, len);
-        fdatasync(latestlog_fd);
+        sync_log_if_due();
     }
     return true;
 }
@@ -48,6 +64,7 @@ static void *logger_thread(void* param) {
             (*env)->DeleteLocalRef(env, writeString);
         }
     }
+    if(latestlog_fd != -1) fdatasync(latestlog_fd);
     (*dvm)->DetachCurrentThread(dvm);
     return NULL;
 }
