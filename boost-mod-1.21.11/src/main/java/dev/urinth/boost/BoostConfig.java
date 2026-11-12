@@ -15,8 +15,8 @@ public final class BoostConfig {
     public static final String FILE_NAME = "urinth_boost.properties";
 
     public static final BoostMode DEFAULT_MODE = BoostMode.AUTO;
-    /** The frame rate below which the automatic mode starts to help. */
-    public static final int DEFAULT_TARGET = 50;
+    /** The frame rate below which the automatic mode starts to help (a 90 Hz screen is the goal, so it starts early). */
+    public static final int DEFAULT_TARGET = 75;
     public static final int MIN_TARGET = 15;
     public static final int MAX_TARGET = 240;
 
