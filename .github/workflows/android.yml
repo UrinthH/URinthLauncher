@@ -1,14 +1,14 @@
-name: Boost 1.21.11 probe
+name: Boost 1.21.11 check
 
-# Scratch run, can be deleted. Finds the Fabric API version for Minecraft 1.21.11, shows what no longer compiles
-# against 1.21.11, and prints the real method signatures of the classes the mod hooks.
+# Scratch run, can be deleted. Builds the Boost mod and starts the real Minecraft client with it on a virtual screen,
+# with the mixin settings made strict, so a hook that does not apply stops the game and fails this check.
 on:
   push:
     branches:
       - claude/find-jar-dump
 
 jobs:
-  probe:
+  build:
     runs-on: ubuntu-22.04
     defaults:
       run:
@@ -20,42 +20,83 @@ jobs:
           distribution: temurin
           java-version: '25'
       - uses: gradle/actions/setup-gradle@v4
-      - name: Which Fabric API versions exist for 1.21.11
+      - name: Build the jar and run every test
+        run: ./gradlew build --no-daemon --stacktrace 2>&1 | tee build.log
+      - name: Mixin warnings from the compiler
         run: |
-          curl -fsS https://maven.fabricmc.net/net/fabricmc/fabric-api/fabric-api/maven-metadata.xml -o fapi.xml
-          grep -o '<version>[^<]*</version>' fapi.xml | sed 's/<[^>]*>//g' | grep -E '\+1\.21\.11$' | sort -V | tail -4
-          echo "FAPI-PICK $(grep -o '<version>[^<]*</version>' fapi.xml | sed 's/<[^>]*>//g' | grep -E '\+1\.21\.11$' | sort -V | tail -1)"
-          curl -fsS "https://meta.fabricmc.net/v2/versions/loader/1.21.11" | head -c 400; echo
-      - name: Compile against 1.21.11 (errors are expected; they show what changed)
+          grep -n -i -E "Unable to locate|obfuscation mapping|warning: .*(mixin|inject)" build.log || echo "NO-MIXIN-WARNINGS"
+      - name: Test results
+        run: grep -h "<testsuite " build/test-results/test/*.xml | sed -E 's/ timestamp=.*//'
+      - name: Jar contents and refmap
         run: |
-          FAPI=$(grep -o '<version>[^<]*</version>' fapi.xml | sed 's/<[^>]*>//g' | grep -E '\+1\.21\.11$' | sort -V | tail -1)
-          ./gradlew compileJava --no-daemon -Pfabric_api_version=$FAPI 2>&1 | tee compile.log || true
-          echo "=== COMPILE-ERRORS"
-          grep -E "error:|warning: \[" compile.log | cut -c1-260 | head -60 || true
-          echo "=== COMPILE-TAIL"
-          tail -n 12 compile.log | cut -c1-260
-      - name: Dump the signatures
+          ls -l build/libs
+          sha256sum build/libs/urinth-boost-1.21.11-*.jar
+          unzip -l build/libs/urinth-boost-1.21.11-*.jar | grep -v "/$"
+          echo "=== mixins.json in the jar"
+          unzip -p build/libs/urinth-boost-1.21.11-1.0.0.jar urinth_boost.mixins.json
+          echo "=== refmap in the jar"
+          unzip -p build/libs/urinth-boost-1.21.11-1.0.0.jar urinth_boost-refmap.json || echo "NO-REFMAP"
+      - name: Print the jar
         run: |
-          JAR=""
-          for j in $(find "$HOME/.gradle" "$GITHUB_WORKSPACE/boost-mod-1.21.11/.gradle" -name '*.jar' -path '*inecraft*' 2>/dev/null); do
-            if unzip -l "$j" 2>/dev/null | grep -q 'net/minecraft/client/particle/ParticleEngine.class'; then JAR="$j"; break; fi
+          echo "JAR-BEGIN"
+          base64 -w 100 build/libs/urinth-boost-1.21.11-1.0.0.jar
+          echo "JAR-END"
+
+  smoke:
+    runs-on: ubuntu-22.04
+    defaults:
+      run:
+        working-directory: boost-mod-1.21.11
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Packages for a headless client
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends xvfb libgl1 libgl1-mesa-dri libglx-mesa0 libglu1-mesa libegl1 libxrandr2 libxinerama1 libxcursor1 libxi6 libxxf86vm1 libxrender1 libxext6 libx11-6 mesa-utils x11-utils
+      - name: Make every hook mandatory (only in this check, never in the real jar)
+        run: |
+          sed -i 's/require = 0/require = 1/' src/main/java/dev/urinth/boost/mixin/*.java
+          sed -i 's/"required": false/"required": true/; s/"defaultRequire": 0/"defaultRequire": 1/' src/main/resources/urinth_boost.mixins.json
+          grep -c "require = 1" src/main/java/dev/urinth/boost/mixin/*.java
+          cat src/main/resources/urinth_boost.mixins.json
+      - name: Start the real client with the mod
+        run: |
+          export LIBGL_ALWAYS_SOFTWARE=1 GALLIUM_DRIVER=llvmpipe MESA_GL_VERSION_OVERRIDE=4.5 MESA_GLSL_VERSION_OVERRIDE=450
+          export JAVA_TOOL_OPTIONS="-Dmixin.debug.export=true"
+          Xvfb :99 -screen 0 1280x720x24 +extension GLX +render -noreset > xvfb.log 2>&1 &
+          export DISPLAY=:99
+          sleep 3
+          (./gradlew runClient --no-daemon --console=plain > run.log 2>&1; echo "GRADLE-EXIT $?" >> run.log) &
+          RESULT="TIMEOUT"
+          for i in $(seq 1 160); do
+            sleep 5
+            if grep -q "GRADLE-EXIT" run.log; then RESULT="EXITED"; break; fi
+            if grep -q "Minecraft Crash Report" run.log; then RESULT="CRASH"; break; fi
+            if grep -q "URinth Boost\] ready" run.log; then sleep 15; RESULT="READY"; break; fi
           done
-          echo "MAPPED-JAR $JAR"
-          test -n "$JAR"
-          for d in 'client/particle' 'client/renderer/entity' 'client/renderer/entity/state' 'client/renderer/entity/layers' 'client/renderer/state' 'client/renderer/feature' 'client/renderer'; do
-            echo "=== CLASS-LIST $d"
-            unzip -Z1 "$JAR" | grep -E "^net/minecraft/$d/[A-Za-z0-9]+\.class$" | sed 's/\.class$//; s|.*/||' | tr '\n' ' ' | fold -w 220
-            echo
+          echo "SMOKE-RESULT $RESULT after about $((i*5)) s"
+          echo "=== failures in the log"
+          grep -n -E "FAILED during|InvalidInjection|Critical injection|MixinApplyError|MixinTransformerError|Mixin transformation|InjectionError|was not injected|Minecraft Crash Report" run.log | cut -c1-300 | head -30 || true
+          echo "=== Boost lines"
+          grep -n "URinth Boost" run.log | cut -c1-300 | head -20 || true
+          echo "=== exported (transformed) classes"
+          find run/.mixin.out -name '*.class' 2>/dev/null | sed 's|.*/.mixin.out/||' | head -80
+          pkill -f KnotClient || true
+          pkill -f gradle || true
+          pkill Xvfb || true
+          FOUND=0
+          for h in 'urinth\$limitParticles' 'urinth\$limitEntities' 'urinth\$limitNameTags' 'urinth\$limitLayers'; do
+            if find run/.mixin.out -name '*.class' 2>/dev/null | while read f; do javap -p "$f" 2>/dev/null; done | grep -q "$h"; then
+              echo "APPLIED $h"; FOUND=$((FOUND+1))
+            else
+              echo "NOT-APPLIED $h"
+            fi
           done
-          FULL="net.minecraft.client.particle.ParticleEngine net.minecraft.client.particle.Particle net.minecraft.client.renderer.entity.EntityRenderDispatcher net.minecraft.client.renderer.entity.EntityRenderer net.minecraft.client.renderer.entity.LivingEntityRenderer net.minecraft.client.renderer.entity.state.EntityRenderState net.minecraft.client.renderer.entity.state.LivingEntityRenderState net.minecraft.client.renderer.entity.state.HumanoidRenderState net.minecraft.client.renderer.entity.layers.RenderLayer net.minecraft.client.renderer.entity.layers.HumanoidArmorLayer net.minecraft.client.renderer.entity.layers.ItemInHandLayer net.minecraft.client.renderer.entity.layers.CapeLayer net.minecraft.client.renderer.SubmitNodeCollector net.minecraft.client.renderer.state.CameraRenderState net.minecraft.client.DeltaTracker"
-          for c in $FULL; do
-            echo "=== CLASS $c"
-            javap -p -s -cp "$JAR" "$c" || echo "MISSING $c"
-          done
-          filtered() {
-            echo "=== FILTERED $1 /$2/"
-            javap -p -s -cp "$JAR" "$1" | grep -E -A1 "$2" | grep -v '^--$' || echo "MISSING $1"
-          }
-          filtered net.minecraft.client.Minecraft 'fps|Fps|[Ff]rame|getInstance|particleEngine|levelRenderer|entityRenderDispatcher|stop\(|isPaused|getWindow'
-          filtered net.minecraft.world.entity.Entity 'shouldRender|getBoundingBox\(|distanceToSqr|getViewScale|isInvisible'
-          echo "=== DONE"
+          echo "APPLIED-COUNT $FOUND of 4"
+          test "$RESULT" = "READY"
+          test "$FOUND" = "4"
