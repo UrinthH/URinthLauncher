@@ -56,6 +56,81 @@ class ServerGovernorTest {
         assertTrue(samples <= 6 * 4 + 4, "took " + samples + " samples");
     }
 
+    private static void slow(ServerGovernor g, int samples) {
+        for (int i = 0; i < samples; i++) g.sample(50f, 8, 4);
+    }
+
+    private static void room(ServerGovernor g, int samples) {
+        for (int i = 0; i < samples; i++) g.sample(10f, 8, 4);
+    }
+
+    @Test
+    void aRaiseThatDoesNotHoldMakesTheNextOneWaitTwiceAsLong() {
+        ServerGovernor g = new ServerGovernor();
+        g.reset(8);
+        slow(g, ServerGovernor.SLOW_SAMPLES);
+        assertEquals(7, g.cap());
+        assertEquals(ServerGovernor.ROOM_SAMPLES, g.hold());
+        room(g, ServerGovernor.ROOM_SAMPLES);
+        assertEquals(8, g.cap());
+        // the chunks that came back woke up and the server is slow again: down at once, and the wait doubles
+        slow(g, ServerGovernor.SLOW_SAMPLES);
+        assertEquals(7, g.cap());
+        assertEquals(2 * ServerGovernor.ROOM_SAMPLES, g.hold());
+        room(g, 2 * ServerGovernor.ROOM_SAMPLES - 1);
+        assertEquals(7, g.cap());
+        room(g, 1);
+        assertEquals(8, g.cap());
+    }
+
+    @Test
+    void aRaiseThatHoldsMakesTheNextWaitShorterAgain() {
+        ServerGovernor g = new ServerGovernor();
+        g.reset(8);
+        slow(g, 2);
+        room(g, ServerGovernor.ROOM_SAMPLES);
+        slow(g, 2); // one failed raise: the wait is 12 now
+        assertEquals(2 * ServerGovernor.ROOM_SAMPLES, g.hold());
+        room(g, 2 * ServerGovernor.ROOM_SAMPLES);
+        assertEquals(8, g.cap());
+        // it holds for longer than the trial: the wait goes back down
+        room(g, ServerGovernor.TRIAL_SAMPLES + 2);
+        assertEquals(8, g.cap());
+        assertEquals(ServerGovernor.ROOM_SAMPLES, g.hold());
+    }
+
+    @Test
+    void theWaitIsNeverLongerThanTenMinutes() {
+        ServerGovernor g = new ServerGovernor();
+        g.reset(8);
+        slow(g, 2);
+        for (int round = 0; round < 12; round++) {
+            room(g, g.hold());
+            assertEquals(8, g.cap(), "round " + round);
+            slow(g, 2);
+            assertEquals(7, g.cap(), "round " + round);
+            assertTrue(g.hold() <= ServerGovernor.ROOM_SAMPLES_MAX, "wait " + g.hold());
+        }
+        assertEquals(ServerGovernor.ROOM_SAMPLES_MAX, g.hold());
+        // a sample is taken every five seconds: 120 of them are ten minutes
+        assertEquals(10 * 60, ServerGovernor.ROOM_SAMPLES_MAX * SAMPLE_SECONDS);
+    }
+
+    @Test
+    void aFreshStartForgetsTheLongWait() {
+        ServerGovernor g = new ServerGovernor();
+        g.reset(8);
+        slow(g, 2);
+        room(g, ServerGovernor.ROOM_SAMPLES);
+        slow(g, 2);
+        assertTrue(g.hold() > ServerGovernor.ROOM_SAMPLES);
+        g.reset(8);
+        assertEquals(ServerGovernor.ROOM_SAMPLES, g.hold());
+    }
+
+    /** One server governor sample is taken every 100 server ticks, which is five seconds (see OptimizerMod.SAMPLE_TICKS). */
+    private static final int SAMPLE_SECONDS = 5;
+
     @Test
     void theBandInBetweenChangesNothing() {
         ServerGovernor g = new ServerGovernor();

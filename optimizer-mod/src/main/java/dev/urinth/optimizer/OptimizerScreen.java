@@ -13,7 +13,11 @@ import net.minecraft.network.chat.Component;
  * screen (vanilla or Sodium), with /urinthopt settings, or with the key in Controls.
  */
 public final class OptimizerScreen extends Screen {
+    private static final String HINT = "Your render distance in Video Settings is never changed. Only a memory emergency (Memory guard: Full)"
+        + " shortens the world around you for a while.";
+
     private final Screen parent;
+    private int contentBottom;
     private final List<Supplier<String>> labels = new ArrayList<>();
     private final List<Runnable> actions = new ArrayList<>();
     private final List<Button> buttons = new ArrayList<>();
@@ -38,10 +42,13 @@ public final class OptimizerScreen extends Screen {
         add(() -> "Sim. limit: " + (c.simulationCap() == 0 ? "Off" : c.simulationCap() + " chunks"), c::cycleSimulationCap);
         add(() -> "Server auto-adjust: " + onOff(c.serverGovernor()), () -> c.setServerGovernor(!c.serverGovernor()));
         add(() -> "Threads: " + capital(OptimizerConfig.threadsName(c.workerThreads())), c::cycleThreads);
+        add(() -> "Memory guard: " + capital(OptimizerConfig.memoryGuardName(c.memoryGuard())), c::cycleMemoryGuard);
 
         int[][] cells = OptimizerScreens.grid(this.width, this.height, labels.size());
+        contentBottom = 0;
         for (int i = 0; i < labels.size(); i++) {
             int[] cell = cells[i];
+            contentBottom = Math.max(contentBottom, cell[1] + cell[3]);
             Supplier<String> label = labels.get(i);
             Runnable action = actions.get(i);
             Button button = Button.builder(Component.literal(label.get()), b -> {
@@ -80,8 +87,15 @@ public final class OptimizerScreen extends Screen {
             graphics.drawCenteredString(this.font, Component.literal(lines.get(i)), this.width / 2, y, 0xB8B8B8);
             y += 10;
         }
-        graphics.drawCenteredString(this.font, Component.literal("Your render distance in Video Settings is never changed."),
-            this.width / 2, this.height - 42, 0x909090);
+        // the promise, wrapped to the screen; left out where it would not fit between the buttons and the Done button
+        List<String> hint = OptimizerScreens.wrap(HINT, this.width - 24, this.font::width);
+        int hintY = this.height - 30 - hint.size() * 10;
+        if (hintY >= contentBottom + 2) {
+            for (String line : hint) {
+                graphics.drawCenteredString(this.font, Component.literal(line), this.width / 2, hintY, 0x909090);
+                hintY += 10;
+            }
+        }
     }
 
     @Override

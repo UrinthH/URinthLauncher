@@ -59,8 +59,8 @@ class OptimizerScreensTest {
     void theSettingsScreenFitsEveryButtonInsideTheScreenAboveTheDoneButton() {
         int[][] sizes = {{320, 200}, {400, 225}, {480, 270}, {640, 360}, {854, 480}, {1280, 720}, {220, 260}};
         for (int[] size : sizes) {
-            int[][] cells = OptimizerScreens.grid(size[0], size[1], 9);
-            assertEquals(9, cells.length);
+            int[][] cells = OptimizerScreens.grid(size[0], size[1], 10);
+            assertEquals(10, cells.length);
             for (int i = 0; i < cells.length; i++) {
                 int[] c = cells[i];
                 assertTrue(c[0] >= 0 && c[0] + c[2] <= size[0], size[0] + "x" + size[1] + " cell " + i + " is inside sideways");
@@ -72,6 +72,33 @@ class OptimizerScreensTest {
                     assertTrue(apart, "cells " + i + " and " + j + " overlap at " + size[0] + "x" + size[1]);
                 }
             }
+        }
+    }
+
+    @Test
+    void aLongTextIsWrappedAtSpacesToTheWidth() {
+        assertEquals(java.util.List.of("one two", "three", "four"), OptimizerScreens.wrap("one two three four", 9, String::length));
+        assertEquals(java.util.List.of("one two three four"), OptimizerScreens.wrap("one two three four", 100, String::length));
+        assertEquals(java.util.List.of(), OptimizerScreens.wrap("", 20, String::length));
+        assertEquals(java.util.List.of(), OptimizerScreens.wrap("   ", 20, String::length));
+        assertEquals(java.util.List.of("a b", "c"), OptimizerScreens.wrap("a   b  c", 4, String::length));
+    }
+
+    @Test
+    void aWordWiderThanTheLineStaysWhole() {
+        assertEquals(java.util.List.of("supercalifragilistic", "is", "long"),
+            OptimizerScreens.wrap("supercalifragilistic is long", 5, String::length));
+    }
+
+    @Test
+    void wrappedLinesNeverGoOverTheWidthExceptSingleWords() {
+        String text = "Your render distance in Video Settings is never changed. Only a memory emergency (Memory guard: Full)"
+            + " shortens the world around you for a while.";
+        for (int width : new int[] {40, 80, 150, 300, 600}) {
+            for (String line : OptimizerScreens.wrap(text, width, s -> s.length() * 6)) {
+                assertTrue(line.length() * 6 <= width || !line.contains(" "), "'" + line + "' at " + width);
+            }
+            assertEquals(text, String.join(" ", OptimizerScreens.wrap(text, width, s -> s.length() * 6)));
         }
     }
 

@@ -19,6 +19,7 @@ public final class Hooks {
     public static volatile boolean particles;
     public static volatile boolean uploads;
     public static volatile boolean simulation;
+    public static volatile boolean view;
     private static volatile String failure = "";
 
     public static void fogSeen() {
@@ -56,12 +57,20 @@ public final class Hooks {
         }
     }
 
+    public static void viewSeen() {
+        if (!view) {
+            view = true;
+            LOG.info("[Optimizer] view distance guard hook is running");
+        }
+    }
+
     /** After this many failures a hook is switched off for the rest of the session and the game's own behaviour is left. */
     static final int MAX_FAILURES = 20;
     /** The failures that are written to the log in full; the rest are only counted (a hook can run every frame). */
     static final int LOGGED_FAILURES = 3;
 
-    private static final String[] NAMES = {"fog", "culling", "particles", "uploads", "simulation distance", "controller", "server governor"};
+    private static final String[] NAMES = {"fog", "culling", "particles", "uploads", "simulation distance", "controller", "server governor",
+        "view distance", "monitor", "memory guard"};
     private static final AtomicIntegerArray FAILURES = new AtomicIntegerArray(NAMES.length + 1);
 
     private static int slot(String hook) {

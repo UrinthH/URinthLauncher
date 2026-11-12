@@ -1,6 +1,9 @@
 package dev.urinth.optimizer;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
+import java.util.function.ToIntFunction;
 
 /**
  * Which screens get the Optimizer button, and where, and how the settings screen lays out its buttons. Pure logic (no game
@@ -52,6 +55,29 @@ final class OptimizerScreens {
     /** The text of the button for a width: the short form when it is narrow. */
     static String buttonLabel(int width) {
         return width >= 100 ? "URinth Optimizer" : "Optimizer";
+    }
+
+    /**
+     * Splits {@code text} at its spaces into lines that are not wider than {@code maxWidth} (as {@code width} measures them). A single
+     * word wider than that stays whole on a line of its own.
+     */
+    static List<String> wrap(String text, int maxWidth, ToIntFunction<String> width) {
+        List<String> lines = new ArrayList<>();
+        StringBuilder line = new StringBuilder();
+        for (String word : text.split(" ")) {
+            if (word.isEmpty()) continue;
+            if (line.length() == 0) {
+                line.append(word);
+            } else if (width.applyAsInt(line + " " + word) > maxWidth) {
+                lines.add(line.toString());
+                line.setLength(0);
+                line.append(word);
+            } else {
+                line.append(' ').append(word);
+            }
+        }
+        if (line.length() > 0) lines.add(line.toString());
+        return lines;
     }
 
     /**

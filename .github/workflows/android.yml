@@ -96,7 +96,7 @@ jobs:
           jar=$(ls build/libs/urinth-optimizer-*.jar | head -1)
           unzip -p "$jar" urinth_optimizer.mixins.json | grep -q '"refmap"' || { echo "the mixin configuration has no refmap entry"; exit 1; }
           refmap=$(unzip -p "$jar" urinth-optimizer-refmap.json) || { echo "the jar has no refmap"; exit 1; }
-          for m in GameRendererMixin LevelRendererMixin PlayerListMixin SectionOcclusionGraphMixin SectionRenderDispatcherMixin; do
+          for m in GameRendererMixin IntegratedServerMixin LevelRendererMixin PlayerListMixin SectionOcclusionGraphMixin SectionRenderDispatcherMixin; do
             echo "$refmap" | grep -q "dev/urinth/optimizer/mixin/$m" || { echo "the refmap has no entry for $m"; exit 1; }
           done
           echo "refmap ok"

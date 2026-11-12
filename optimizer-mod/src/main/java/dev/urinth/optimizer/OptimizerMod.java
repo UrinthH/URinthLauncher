@@ -16,8 +16,6 @@ import org.slf4j.LoggerFactory;
 public final class OptimizerMod implements ModInitializer {
     static final Logger LOG = LoggerFactory.getLogger("urinth_optimizer");
 
-    /** The least the server governor may lower the simulation distance to. */
-    static final int MIN_SIMULATION = 4;
     /** Every how many server ticks the governor looks (5 seconds). */
     static final int SAMPLE_TICKS = 100;
 
@@ -66,10 +64,14 @@ public final class OptimizerMod implements ModInitializer {
             int configured = config.simulationCap();
             int cap = configured;
             if (configured > 0 && config.serverGovernor()) {
-                cap = GOVERNOR.sample(server.getCurrentSmoothedTickTime(), configured, MIN_SIMULATION);
+                cap = GOVERNOR.sample(server.getCurrentSmoothedTickTime(), configured, ServerGovernor.MIN_SIMULATION);
             } else if (configured > 0) {
                 GOVERNOR.reset(configured);
             }
+            // short of memory: the simulation distance is shortened further, whatever the server speed says (it is given back when
+            // the memory is fine again, because the governor's own limit above is not changed by this)
+            int pressure = configured > 0 ? Monitor.simulationLimit() : 0;
+            if (pressure > 0 && pressure < cap) cap = pressure;
             if (cap != ServerCap.cap()) {
                 ServerCap.setCap(cap);
                 int asked = ServerCap.requested();

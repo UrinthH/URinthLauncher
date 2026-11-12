@@ -33,6 +33,12 @@ public final class OptimizerConfig {
     public static final int PARTICLES_ALWAYS = 2;
     private static final String[] PARTICLE_NAMES = {"off", "auto", "always"};
 
+    /** The memory guard: nothing | only invisible savings (particles, simulation distance) | and, as the last resort, a shorter world. */
+    public static final int MEMORY_OFF = 0;
+    public static final int MEMORY_SOFT = 1;
+    public static final int MEMORY_FULL = 2;
+    private static final String[] MEMORY_NAMES = {"off", "soft", "full"};
+
     private static volatile OptimizerConfig current = defaults(false);
 
     private volatile boolean adaptive = true;
@@ -44,6 +50,8 @@ public final class OptimizerConfig {
     private volatile int simulationCap = 8;
     private volatile boolean serverGovernor = true;
     private volatile int workerThreads = AUTO_THREADS;
+    private volatile int memoryGuard = MEMORY_FULL;
+    private volatile boolean diagnostics = true;
 
     private OptimizerConfig() {}
 
@@ -66,6 +74,8 @@ public final class OptimizerConfig {
             c.simulationCap = 0;
             c.serverGovernor = false;
             c.workerThreads = VANILLA_THREADS;
+            c.memoryGuard = MEMORY_OFF;
+            c.diagnostics = false;
         }
         return c;
     }
@@ -91,6 +101,8 @@ public final class OptimizerConfig {
         c.simulationCap = simulation(p.getProperty("simulation-cap"), c.simulationCap);
         c.serverGovernor = bool(p.getProperty("server-governor"), c.serverGovernor);
         c.workerThreads = threads(p.getProperty("worker-threads"), c.workerThreads);
+        c.memoryGuard = named(p.getProperty("memory-guard"), MEMORY_NAMES, c.memoryGuard);
+        c.diagnostics = bool(p.getProperty("freeze-log"), c.diagnostics);
         return c;
     }
 
@@ -99,7 +111,7 @@ public final class OptimizerConfig {
         return "# URinth Optimizer\n"
             + "# The render distance you chose in Video Settings is never changed (options.txt is not touched).\n"
             + "# While the frame rate is below the target, the mod draws fewer chunks (fog and culling move in, nothing reloads)\n"
-            + "# and brings them back when the game has room again.\n"
+            + "# and brings them back when the game has room again. (The one exception is memory-guard=full, below.)\n"
             + "adaptive-distance=" + adaptive + "\n"
             + "# The frame rate to keep (20-240). Capped by the frame limit and v-sync of the game.\n"
             + "target-fps=" + targetFps + "\n"
@@ -116,7 +128,14 @@ public final class OptimizerConfig {
             + "# Lower that distance by itself while the server is too slow to keep up, and raise it again later.\n"
             + "server-governor=" + serverGovernor + "\n"
             + "# Background threads for chunk generation and meshing: auto | vanilla | a number. Needs a restart.\n"
-            + "worker-threads=" + threadsName(workerThreads) + "\n";
+            + "worker-threads=" + threadsName(workerThreads) + "\n"
+            + "# When the game is running out of memory (a phone with little of it): off | soft | full.\n"
+            + "# soft = fewer particles and a shorter simulation distance until there is room again.\n"
+            + "# full = and, as the last resort before a crash, the world around you is shortened by two chunks for a while (your setting\n"
+            + "#        in Video Settings stays as it is) and given back one chunk at a time when memory is fine again.\n"
+            + "memory-guard=" + memoryGuardName(memoryGuard) + "\n"
+            + "# Write freezes (what the game was doing, with the garbage collector and memory numbers) and a summary a minute to the game log.\n"
+            + "freeze-log=" + diagnostics + "\n";
     }
 
     private static boolean bool(String raw, boolean fallback) {
@@ -139,9 +158,14 @@ public final class OptimizerConfig {
     }
 
     private static int particles(String raw, int fallback) {
+        return named(raw, PARTICLE_NAMES, fallback);
+    }
+
+    /** The index of {@code raw} in {@code names} (ignoring case and spaces), or the fallback. */
+    private static int named(String raw, String[] names, int fallback) {
         if (raw == null) return fallback;
         String v = raw.trim().toLowerCase(Locale.ROOT);
-        for (int i = 0; i < PARTICLE_NAMES.length; i++) if (PARTICLE_NAMES[i].equals(v)) return i;
+        for (int i = 0; i < names.length; i++) if (names[i].equals(v)) return i;
         return fallback;
     }
 
@@ -177,6 +201,10 @@ public final class OptimizerConfig {
         return PARTICLE_NAMES[Math.max(0, Math.min(mode, PARTICLE_NAMES.length - 1))];
     }
 
+    public static String memoryGuardName(int mode) {
+        return MEMORY_NAMES[Math.max(0, Math.min(mode, MEMORY_NAMES.length - 1))];
+    }
+
     // ---- values ------------------------------------------------------------------------------------------------------------
 
     public boolean adaptive() { return adaptive; }
@@ -188,6 +216,8 @@ public final class OptimizerConfig {
     public int simulationCap() { return simulationCap; }
     public boolean serverGovernor() { return serverGovernor; }
     public int workerThreads() { return workerThreads; }
+    public int memoryGuard() { return memoryGuard; }
+    public boolean diagnostics() { return diagnostics; }
 
     public void setAdaptive(boolean on) { adaptive = on; }
     public void setCull(boolean on) { cull = on; }
@@ -211,6 +241,9 @@ public final class OptimizerConfig {
     public void cycleSimulationCap() { simulationCap = next(SIM_CAP, simulationCap); }
     public void cycleParticles() { particles = (particles + 1) % PARTICLE_NAMES.length; }
     public void cycleThreads() { workerThreads = next(THREADS, workerThreads); }
+    /** The button goes full -> soft -> off -> full. */
+    public void cycleMemoryGuard() { memoryGuard = (memoryGuard + MEMORY_NAMES.length - 1) % MEMORY_NAMES.length; }
+    public void setMemoryGuard(int mode) { memoryGuard = Math.max(MEMORY_OFF, Math.min(mode, MEMORY_FULL)); }
 
     /** The value after {@code current} in the list (the first when current is the last or is not in the list). */
     static int next(int[] values, int current) {

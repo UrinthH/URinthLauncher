@@ -41,13 +41,32 @@ class HooksTest {
         Hooks.forgetFailures();
         try {
             fail("fog", Hooks.MAX_FAILURES);
-            for (String other : new String[] {"culling", "particles", "uploads", "simulation distance", "controller", "server governor"}) {
+            for (String other : new String[] {"culling", "particles", "uploads", "simulation distance", "controller", "server governor",
+                "view distance", "monitor", "memory guard"}) {
                 assertTrue(Hooks.usable(other), other);
             }
             // a name nobody knows is counted on its own, not against a real hook
             fail("something else", Hooks.MAX_FAILURES);
             assertFalse(Hooks.usable("something else"));
             assertTrue(Hooks.usable("culling"));
+        } finally {
+            Hooks.forgetFailures();
+        }
+    }
+
+    @Test
+    void eachMemoryPartSwitchesOffOnItsOwn() {
+        Hooks.forgetFailures();
+        try {
+            for (String own : new String[] {"view distance", "monitor", "memory guard"}) {
+                Hooks.forgetFailures();
+                assertTrue(Hooks.usable(own), own);
+                fail(own, Hooks.MAX_FAILURES);
+                assertFalse(Hooks.usable(own), own);
+                for (String other : new String[] {"fog", "view distance", "monitor", "memory guard", "controller"}) {
+                    if (!other.equals(own)) assertTrue(Hooks.usable(other), own + " must not switch off " + other);
+                }
+            }
         } finally {
             Hooks.forgetFailures();
         }

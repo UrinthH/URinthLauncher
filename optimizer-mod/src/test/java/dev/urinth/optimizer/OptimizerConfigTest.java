@@ -19,6 +19,8 @@ class OptimizerConfigTest {
         assertEquals(8, c.simulationCap());
         assertTrue(c.serverGovernor());
         assertEquals(OptimizerConfig.AUTO_THREADS, c.workerThreads());
+        assertEquals(OptimizerConfig.MEMORY_FULL, c.memoryGuard());
+        assertTrue(c.diagnostics());
     }
 
     @Test
@@ -27,6 +29,8 @@ class OptimizerConfigTest {
         assertEquals(0, c.simulationCap());
         assertFalse(c.serverGovernor());
         assertEquals(OptimizerConfig.VANILLA_THREADS, c.workerThreads());
+        assertEquals(OptimizerConfig.MEMORY_OFF, c.memoryGuard());
+        assertFalse(c.diagnostics());
         // it is still the same mod: the client settings are the same
         assertTrue(c.adaptive());
     }
@@ -43,6 +47,7 @@ class OptimizerConfigTest {
         a.cycleSimulationCap();
         a.setServerGovernor(false);
         a.cycleThreads();
+        a.setMemoryGuard(OptimizerConfig.MEMORY_SOFT);
         OptimizerConfig b = OptimizerConfig.fromText(a.toText(), false);
         assertEquals(a.toText(), b.toText());
         assertFalse(b.adaptive());
@@ -51,6 +56,61 @@ class OptimizerConfigTest {
         assertFalse(b.cull());
         assertFalse(b.uploads());
         assertFalse(b.serverGovernor());
+        assertEquals(OptimizerConfig.MEMORY_SOFT, b.memoryGuard());
+    }
+
+    @Test
+    void theMemoryGuardHasNamesAndAnUnknownOneIsTheDefault() {
+        assertEquals(OptimizerConfig.MEMORY_OFF, OptimizerConfig.fromText("memory-guard=off", false).memoryGuard());
+        assertEquals(OptimizerConfig.MEMORY_SOFT, OptimizerConfig.fromText("memory-guard=Soft", false).memoryGuard());
+        assertEquals(OptimizerConfig.MEMORY_FULL, OptimizerConfig.fromText("memory-guard= FULL ", true).memoryGuard());
+        assertEquals(OptimizerConfig.MEMORY_FULL, OptimizerConfig.fromText("memory-guard=loud", false).memoryGuard());
+        assertEquals(OptimizerConfig.MEMORY_OFF, OptimizerConfig.fromText("memory-guard=loud", true).memoryGuard());
+        assertEquals("off", OptimizerConfig.memoryGuardName(0));
+        assertEquals("soft", OptimizerConfig.memoryGuardName(1));
+        assertEquals("full", OptimizerConfig.memoryGuardName(2));
+        assertEquals("full", OptimizerConfig.memoryGuardName(99));
+        assertEquals("off", OptimizerConfig.memoryGuardName(-5));
+    }
+
+    @Test
+    void theMemoryGuardButtonGoesFullSoftOffAndBack() {
+        OptimizerConfig c = OptimizerConfig.defaults(false);
+        assertEquals(OptimizerConfig.MEMORY_FULL, c.memoryGuard());
+        c.cycleMemoryGuard();
+        assertEquals(OptimizerConfig.MEMORY_SOFT, c.memoryGuard());
+        c.cycleMemoryGuard();
+        assertEquals(OptimizerConfig.MEMORY_OFF, c.memoryGuard());
+        c.cycleMemoryGuard();
+        assertEquals(OptimizerConfig.MEMORY_FULL, c.memoryGuard());
+    }
+
+    @Test
+    void theMemoryGuardSetterClamps() {
+        OptimizerConfig c = OptimizerConfig.defaults(false);
+        c.setMemoryGuard(99);
+        assertEquals(OptimizerConfig.MEMORY_FULL, c.memoryGuard());
+        c.setMemoryGuard(-4);
+        assertEquals(OptimizerConfig.MEMORY_OFF, c.memoryGuard());
+    }
+
+    @Test
+    void theFreezeLogCanBeSwitchedOff() {
+        assertTrue(OptimizerConfig.fromText("", false).diagnostics());
+        assertFalse(OptimizerConfig.fromText("freeze-log=off", false).diagnostics());
+        assertTrue(OptimizerConfig.fromText("freeze-log=on", true).diagnostics());
+        assertTrue(OptimizerConfig.fromText("freeze-log=maybe", false).diagnostics());
+        String text = OptimizerConfig.fromText("freeze-log=false", false).toText();
+        assertTrue(text.contains("freeze-log=false"), text);
+        assertFalse(OptimizerConfig.fromText(text, false).diagnostics());
+    }
+
+    @Test
+    void theFileNeverMentionsTheRenderDistanceOptionOrResolution() {
+        // the standing rule: the player's own settings are not the mod's to change
+        String text = OptimizerConfig.defaults(false).toText().toLowerCase(java.util.Locale.ROOT);
+        assertFalse(text.contains("resolution"));
+        assertFalse(text.contains("options.txt=") || text.contains("render-distance="));
     }
 
     @Test

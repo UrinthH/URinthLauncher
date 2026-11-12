@@ -87,6 +87,41 @@ class SmallPartsTest {
         assertFalse(ParticleGate.decide(OptimizerConfig.PARTICLES_OFF, true));
     }
 
+    @Test
+    void aShortageOfMemoryThinsTheParticlesLikeALowFrameRateDoes() {
+        try {
+            OptimizerConfig.setCurrent(OptimizerConfig.defaults(false)); // particles: auto
+            ParticleGate.setLow(false);
+            ParticleGate.setShortOfMemory(false);
+            assertFalse(ParticleGate.reduce());
+            ParticleGate.setShortOfMemory(true);
+            assertTrue(ParticleGate.reduce());
+            ParticleGate.setShortOfMemory(false);
+            assertFalse(ParticleGate.reduce());
+            ParticleGate.setLow(true);
+            assertTrue(ParticleGate.reduce());
+        } finally {
+            ParticleGate.setLow(false);
+            ParticleGate.setShortOfMemory(false);
+            OptimizerConfig.setCurrent(null);
+        }
+    }
+
+    @Test
+    void whoSwitchedTheParticleGateOffIsLeftAloneEvenInAShortage() {
+        try {
+            OptimizerConfig off = OptimizerConfig.fromText("particles=off", false);
+            OptimizerConfig.setCurrent(off);
+            ParticleGate.setShortOfMemory(true);
+            ParticleGate.setLow(true);
+            assertFalse(ParticleGate.reduce());
+        } finally {
+            ParticleGate.setLow(false);
+            ParticleGate.setShortOfMemory(false);
+            OptimizerConfig.setCurrent(null);
+        }
+    }
+
     // ---- target frame rate ----
 
     @Test

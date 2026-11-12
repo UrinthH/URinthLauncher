@@ -21,6 +21,7 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.options.VideoSettingsScreen;
 import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.server.IntegratedServer;
 import net.minecraft.network.chat.Component;
 import org.lwjgl.glfw.GLFW;
 import org.slf4j.Logger;
@@ -40,6 +41,9 @@ public final class OptimizerClient implements ClientModInitializer {
     private static volatile OptimizerClient instance;
 
     private final DistanceGovernor governor = new DistanceGovernor();
+    private final ViewValve valve = new ViewValve();
+    // The button must not hold on to its screen: a WeakHashMap lets go of a key only if nothing reachable from its value points back
+    // at it, and a click handler that names the screen does exactly that (the screen, and everything it holds, would stay for good).
     private final Map<Screen, Button> screenButtons = new WeakHashMap<>();
     private final Set<Screen> hooked = Collections.newSetFromMap(new WeakHashMap<>());
     private int ticks;
@@ -73,6 +77,7 @@ public final class OptimizerClient implements ClientModInitializer {
         } catch (Throwable t) {
             LOG.warn("[Optimizer] could not add the key", t);
         }
+        Monitor.start();
         LOG.info("[Optimizer] client ready");
     }
 
@@ -99,6 +104,13 @@ public final class OptimizerClient implements ClientModInitializer {
 
             OptimizerConfig config = OptimizerConfig.current();
             int real = mc.options.getEffectiveRenderDistance();
+            Monitor.setWatching(settle <= 0 && mc.isWindowActive() && !mc.getWindow().isMinimized());
+            if (ticks % 20 == 10) {
+                // offset from the controller's second so the two never land in the same tick
+                IntegratedServer server = mc.getSingleplayerServer();
+                Monitor.setFacts(mc.getFps(), server == null ? -1f : server.getCurrentSmoothedTickTime());
+                memoryStep(mc, config, server != null);
+            }
             if (!config.adaptive()) {
                 if (wasActive) {
                     // switched off: let the fog move back out smoothly, then the game's own distance is all that is left
@@ -131,8 +143,54 @@ public final class OptimizerClient implements ClientModInitializer {
                 // it keeps failing: stop, and put the game's own distance and particles back
                 SoftDistance.reset();
                 ParticleGate.setLow(false);
+                ParticleGate.setShortOfMemory(false);
+                valve.reset();
+                ViewCap.set(0);
             }
         }
+    }
+
+    /**
+     * Once a second: what the game does about a shortage of memory (the monitor measures it, see {@link Monitor}). Particles are
+     * thinned and the server's simulation distance is shortened while it is tight; as the last resort, while it is critical, the
+     * world around the player is shortened by two chunks (see {@link ViewValve}). None of it touches options.txt or the option
+     * values, and all of it is given back when the memory is fine again.
+     */
+    private void memoryStep(Minecraft mc, OptimizerConfig config, boolean ownServer) {
+        if (!Hooks.usable("memory guard")) return;
+        try {
+            int mode = config.memoryGuard();
+            MemoryGuard.Level level = Monitor.level();
+            ParticleGate.setShortOfMemory(mode != OptimizerConfig.MEMORY_OFF && level != MemoryGuard.Level.OK);
+            // a server somewhere else decides its own view distance: there is nothing to shorten from here
+            boolean full = mode == OptimizerConfig.MEMORY_FULL && ownServer;
+            int option = mc.options.renderDistance().get();
+            int before = valve.cap();
+            int cap = valve.update(level, option, full, System.nanoTime() / 1_000_000_000L);
+            ViewCap.set(cap);
+            if (cap != before) announceView(mc, before, cap, option);
+        } catch (Throwable t) {
+            Hooks.failed("memory guard", t);
+            if (!Hooks.usable("memory guard")) {
+                ParticleGate.setShortOfMemory(false);
+                valve.reset();
+                ViewCap.set(0);
+            }
+        }
+    }
+
+    private static void announceView(Minecraft mc, int before, int cap, int option) {
+        String text;
+        if (cap == 0) {
+            text = "[URinth Optimizer] Memory is fine again: the world is back to your " + option + " chunks.";
+        } else if (before == 0 || cap < before) {
+            text = "[URinth Optimizer] The game is almost out of memory, so the world is shortened to " + cap
+                + " chunks for now to avoid a crash (your setting stays " + option + ").";
+        } else {
+            text = "[URinth Optimizer] More room in memory: the world is " + cap + " chunks now (your setting: " + option + ").";
+        }
+        LOG.info(text);
+        if (mc.player != null) mc.player.displayClientMessage(Component.literal(text), false);
     }
 
     private void leaveWorld() {
@@ -142,6 +200,10 @@ public final class OptimizerClient implements ClientModInitializer {
         governor.reset();
         SoftDistance.reset();
         ParticleGate.setLow(false);
+        ParticleGate.setShortOfMemory(false);
+        valve.reset();
+        ViewCap.set(0);
+        Monitor.setWatching(false);
     }
 
     /** The settings changed (the screen, the command): apply them without waiting for the next second. */
@@ -171,9 +233,15 @@ public final class OptimizerClient implements ClientModInitializer {
             lines.add("FPS " + mc.getFps() + " (target " + (self.governor.lastTarget() == 0 ? c.targetFps() : self.governor.lastTarget())
                 + ") | " + self.governor.reason() + (self.governor.giveUp() ? " | paused: it did not help" : ""));
         }
+        String memory = Monitor.describe() + " | guard " + OptimizerConfig.memoryGuardName(c.memoryGuard());
+        if (self != null && self.valve.cap() > 0) {
+            memory += " | world shortened to " + self.valve.cap() + " chunks";
+        }
+        lines.add(memory);
         lines.add("Hooks: fog " + Hooks.state(Hooks.fog) + ", culling " + Hooks.state(Hooks.cull) + ", particles "
-            + Hooks.state(Hooks.particles) + ", uploads " + Hooks.state(Hooks.uploads));
+            + Hooks.state(Hooks.particles) + ", uploads " + Hooks.state(Hooks.uploads) + ", view distance guard " + Hooks.state(Hooks.view));
         lines.add(OptimizerMod.serverStatus() + " | background threads: " + System.getProperty(ThreadPlan.PROPERTY, "the game's choice"));
+        if (!Monitor.lastHitch().isEmpty()) lines.add("Last freeze in the log: " + Monitor.lastHitch());
         if (!Hooks.failure().isEmpty()) lines.add("A hook failed and was skipped: " + Hooks.failure());
         return lines;
     }
@@ -192,8 +260,9 @@ public final class OptimizerClient implements ClientModInitializer {
                 if (old != null) Screens.getButtons(screen).remove(old);
                 int[] b = OptimizerScreens.bounds(kind, width, height);
                 if (b == null) return;
+                // the screen the button is on is the one that is open when it is pressed: no reference to it is kept here
                 Button button = Button.builder(Component.literal(OptimizerScreens.buttonLabel(b[2])),
-                    x -> client.setScreen(new OptimizerScreen(screen))).bounds(b[0], b[1], b[2], b[3]).build();
+                    x -> client.setScreen(new OptimizerScreen(client.screen))).bounds(b[0], b[1], b[2], b[3]).build();
                 screenButtons.put(screen, button);
                 ensureButton(screen);
                 // Sodium wipes and rebuilds its widgets each time a tab is picked: put the button back before every draw
@@ -256,6 +325,17 @@ public final class OptimizerClient implements ClientModInitializer {
                     ctx.getSource().sendFeedback(Component.literal("Shortest distance: " + chunks + " chunks"));
                     return 1;
                 })));
+            var memory = ClientCommandManager.literal("memory");
+            for (int mode = OptimizerConfig.MEMORY_OFF; mode <= OptimizerConfig.MEMORY_FULL; mode++) {
+                final int chosen = mode;
+                memory.then(ClientCommandManager.literal(OptimizerConfig.memoryGuardName(mode)).executes(ctx -> {
+                    OptimizerConfig.current().setMemoryGuard(chosen);
+                    OptimizerMod.save();
+                    ctx.getSource().sendFeedback(Component.literal("Memory guard: " + OptimizerConfig.memoryGuardName(chosen)));
+                    return 1;
+                }));
+            }
+            root.then(memory);
             root.then(ClientCommandManager.literal("reset").executes(ctx -> {
                 governor.reset();
                 ctx.getSource().sendFeedback(Component.literal("Forgot what it learned: starting again from your render distance"));

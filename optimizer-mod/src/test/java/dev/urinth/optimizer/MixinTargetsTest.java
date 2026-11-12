@@ -111,8 +111,60 @@ class MixinTargetsTest {
     void everyInjectionFitsTheGamesCode() throws IOException {
         int checked = 0;
         for (String name : mixinNames()) checked += check(name);
-        // fog, particles, uploads (and its shadowed queue), culling, simulation distance: five injections and one shadowed field
-        assertTrue(checked >= 6, "injections checked: " + checked);
+        // fog (and the freeze monitor), particles, uploads (and its shadowed queue), culling, simulation distance and the integrated
+        // server's view distance: six injections and one shadowed field
+        assertTrue(checked >= 7, "injections checked: " + checked);
+    }
+
+    /**
+     * The memory guard's last resort redirects the FIRST {@code Math.max} in {@code IntegratedServer.tickServer}. If a game update
+     * ever reorders that method so that the first one is something else, the redirect would cap the wrong number, so this checks,
+     * in the game's own code, that the first one reads the render distance option and the second the simulation distance option,
+     * and that the method compares the result with the player list's view distance and sets it when they differ (which is why the
+     * capped number can be handed back here without the game undoing it on the next tick).
+     */
+    @Test
+    void theIntegratedServerReadsTheRenderDistanceFirstAndTheSimulationDistanceSecond() throws IOException {
+        ClassNode server = ClassFiles.read("net/minecraft/client/server/IntegratedServer");
+        assertNotNull(server);
+        List<MethodNode> ticks = methods(server, "tickServer(Ljava/util/function/BooleanSupplier;)V");
+        assertEquals(1, ticks.size(), "IntegratedServer.tickServer(BooleanSupplier)");
+        List<String> optionBeforeEachMax = new ArrayList<>();
+        String lastOption = null;
+        boolean readsViewDistance = false;
+        boolean setsViewDistance = false;
+        for (AbstractInsnNode insn = ticks.get(0).instructions.getFirst(); insn != null; insn = insn.getNext()) {
+            if (!(insn instanceof MethodInsnNode call)) continue;
+            if (call.owner.equals("net/minecraft/client/Options") && (call.name.equals("renderDistance") || call.name.equals("simulationDistance"))) {
+                lastOption = call.name;
+            }
+            if (call.owner.equals("java/lang/Math") && call.name.equals("max") && call.desc.equals("(II)I")) {
+                optionBeforeEachMax.add(String.valueOf(lastOption));
+                lastOption = null;
+            }
+            if (call.owner.equals("net/minecraft/server/players/PlayerList") && call.name.equals("getViewDistance") && call.desc.equals("()I")) {
+                readsViewDistance = true;
+            }
+            if (call.owner.equals("net/minecraft/server/players/PlayerList") && call.name.equals("setViewDistance") && call.desc.equals("(I)V")) {
+                setsViewDistance = true;
+            }
+        }
+        assertEquals(List.of("renderDistance", "simulationDistance"), optionBeforeEachMax,
+            "the Math.max calls of IntegratedServer.tickServer, each with the option read just before it");
+        assertTrue(readsViewDistance, "tickServer no longer compares with PlayerList.getViewDistance()");
+        assertTrue(setsViewDistance, "tickServer no longer sets PlayerList.setViewDistance(int)");
+    }
+
+    /** The mixin config lists the redirect where it belongs: it is about a client-only class, so it must be in the client list. */
+    @Test
+    void theIntegratedServerMixinIsAClientMixin() throws IOException {
+        String json = resource("urinth_optimizer.mixins.json");
+        Matcher client = Pattern.compile("\"client\"\\s*:\\s*\\[(.*?)\\]", Pattern.DOTALL).matcher(json);
+        assertTrue(client.find(), "no client list in the mixin configuration");
+        assertTrue(client.group(1).contains("\"IntegratedServerMixin\""), "IntegratedServerMixin must be a client mixin");
+        Matcher common = Pattern.compile("\"mixins\"\\s*:\\s*\\[(.*?)\\]", Pattern.DOTALL).matcher(json);
+        assertTrue(common.find());
+        assertFalse(common.group(1).contains("IntegratedServerMixin"), "a dedicated server has no IntegratedServer class");
     }
 
     private static int check(String simpleName) throws IOException {
@@ -270,6 +322,11 @@ class MixinTargetsTest {
             {"com/mojang/blaze3d/platform/Window", "isMinimized", "()Z"},
             {"net/minecraft/server/MinecraftServer", "getCurrentSmoothedTickTime", "()F"},
             {"net/minecraft/server/players/PlayerList", "setSimulationDistance", "(I)V"},
+            {"net/minecraft/server/players/PlayerList", "getViewDistance", "()I"},
+            {"net/minecraft/server/players/PlayerList", "setViewDistance", "(I)V"},
+            {"net/minecraft/client/Options", "renderDistance", "()Lnet/minecraft/client/OptionInstance;"},
+            {"net/minecraft/client/Options", "simulationDistance", "()Lnet/minecraft/client/OptionInstance;"},
+            {"net/minecraft/client/Minecraft", "getSingleplayerServer", "()Lnet/minecraft/client/server/IntegratedServer;"},
         };
         for (String[] call : calls) {
             ClassNode node = ClassFiles.read(call[0]);
