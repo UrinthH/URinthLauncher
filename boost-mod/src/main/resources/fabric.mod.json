@@ -1,0 +1,20 @@
+{
+	"schemaVersion": 1,
+	"id": "urinth_boost",
+	"version": "${version}",
+	"name": "URinth Boost",
+	"description": "Frame rate help for crowds. Only while your frame rate is low, it stops drawing the things that cost the most and are missed the least: extra particles, far dropped items, far armor stands and small mobs, far name tags, and the armor of far players. Nothing about the game, the server or your settings changes. /uboost shows what it is doing and /uboost bench measures what it gains on your phone.",
+	"authors": ["URinth"],
+	"license": "MIT",
+	"environment": "client",
+	"entrypoints": {
+		"client": ["dev.urinth.boost.BoostClient"]
+	},
+	"mixins": ["urinth_boost.mixins.json"],
+	"depends": {
+		"fabricloader": ">=0.16.0",
+		"minecraft": "~1.21.4",
+		"java": ">=21",
+		"fabric-api": "*"
+	}
+}

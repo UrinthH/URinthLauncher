@@ -21,7 +21,10 @@ public final class BoostRuntime {
     private final Governor governor;
     private final Bench bench = new Bench();
     private final BoostStats stats = new BoostStats();
+    private final PlayerCap playerCap = new PlayerCap();
 
+    private volatile int playersSetting;
+    private volatile int playersAround;
     private int usedThisTick;
     private long lastSampleAt = Long.MIN_VALUE / 4;
     private long joinedAt = Long.MIN_VALUE / 4;
@@ -30,7 +33,12 @@ public final class BoostRuntime {
     private Bench.Result lastBench;
 
     public BoostRuntime(BoostMode mode, int targetFps) {
+        this(mode, targetFps, BoostConfig.DEFAULT_PLAYERS);
+    }
+
+    public BoostRuntime(BoostMode mode, int targetFps, int playersSetting) {
         this.mode = mode;
+        this.playersSetting = BoostConfig.clampPlayers(playersSetting);
         this.governor = new Governor(BoostConfig.clampTarget(targetFps));
         applyLevel();
     }
@@ -45,6 +53,7 @@ public final class BoostRuntime {
         bench.cancel();
         governor.reset();
         mode = newMode;
+        playerCap.clear();
         applyLevel();
     }
 
@@ -98,6 +107,7 @@ public final class BoostRuntime {
         if (problem == null) problem = reason;
         bench.cancel();
         limits = Limits.forLevel(BoostLevel.OFF);
+        playerCap.clear();
     }
 
     /** Starts the bench test. False when it cannot run (the mod switched itself off). */
@@ -106,6 +116,70 @@ public final class BoostRuntime {
         bench.start();
         applyLevel();
         return true;
+    }
+
+    // ---- other players ----
+
+    /** {@link BoostConfig#PLAYERS_AUTO}, {@link BoostConfig#PLAYERS_OFF} or the number the player chose. */
+    public int playersSetting() {
+        return playersSetting;
+    }
+
+    public void setPlayersSetting(int setting) {
+        playersSetting = BoostConfig.clampPlayers(setting);
+        playerCap.clear();
+    }
+
+    /**
+     * True while nothing at all is to be taken away: the mod switched itself off, the mode is off, or this is the
+     * "Boost off" half of the bench test. The player limit is then off too, whatever the player chose for it.
+     */
+    public boolean takesNothingAway() {
+        if (problem != null) return true;
+        if (bench.active()) return bench.level() == BoostLevel.OFF;
+        return mode == BoostMode.OFF;
+    }
+
+    /** The most other players drawn right now, the nearest ones; {@link Limits#UNLIMITED} when all are drawn. */
+    public int effectivePlayerCap() {
+        if (takesNothingAway()) return Limits.UNLIMITED;
+        int setting = playersSetting;
+        if (setting == BoostConfig.PLAYERS_OFF) return Limits.UNLIMITED;
+        if (setting == BoostConfig.PLAYERS_AUTO) return limits.maxPlayers;
+        return setting;
+    }
+
+    /** True when the game should hand over the distances of the other players this tick. */
+    public boolean wantsPlayerRanks() {
+        return effectivePlayerCap() != Limits.UNLIMITED;
+    }
+
+    /**
+     * Once per tick, when {@link #wantsPlayerRanks()}: the entity ids of the other players and how far each one is
+     * (squared). The farthest ones beyond the limit are then left out until the next call.
+     */
+    public void updatePlayers(int[] ids, double[] distSq, int count) {
+        playersAround = count;
+        playerCap.update(effectivePlayerCap(), ids, distSq, count);
+    }
+
+    /** Everybody is drawn again. */
+    public void clearPlayers() {
+        playerCap.clear();
+    }
+
+    /** For the status: how many other players the game has around (nearby ones the server sends). */
+    public void setPlayersAround(int count) {
+        playersAround = Math.max(0, count);
+    }
+
+    public int playersAround() {
+        return playersAround;
+    }
+
+    /** How many players are being left out right now. */
+    public int playersLeftOut() {
+        return playerCap.hiddenCount();
     }
 
     // ---- the clock ----
@@ -128,6 +202,8 @@ public final class BoostRuntime {
             wasInWorld = false;
             if (bench.active()) bench.cancel();
             governor.reset();
+            playerCap.clear();
+            playersAround = 0;
             applyLevel();
             return;
         }
@@ -206,6 +282,14 @@ public final class BoostRuntime {
         }
         boolean hide = distSq > limit;
         if (hide) stats.act(BoostStats.ENTITY);
+        return hide;
+    }
+
+    /** Another player is about to be drawn. True: leave him out (he is one of the farthest in a crowd). */
+    public boolean hidePlayer(int entityId) {
+        stats.call(BoostStats.PLAYER);
+        boolean hide = playerCap.isHidden(entityId);
+        if (hide) stats.act(BoostStats.PLAYER);
         return hide;
     }
 

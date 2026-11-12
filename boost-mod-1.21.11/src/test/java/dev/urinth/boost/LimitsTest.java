@@ -60,4 +60,14 @@ public class LimitsTest {
             assertTrue(Limits.blocks(l.particleDistSq) <= 64);
         }
     }
+
+
+    @Test
+    public void thePlayerLimitExistsOnlyAtTheStrongLevelsAndGetsTighter() {
+        assertEquals(Limits.UNLIMITED, Limits.forLevel(0).maxPlayers);
+        assertEquals(Limits.UNLIMITED, Limits.forLevel(1).maxPlayers);
+        assertTrue(Limits.forLevel(2).maxPlayers > Limits.forLevel(3).maxPlayers);
+        assertTrue(Limits.forLevel(3).maxPlayers >= BoostConfig.MIN_PLAYERS);
+        assertTrue(Limits.forLevel(2).maxPlayers <= BoostConfig.MAX_PLAYERS);
+    }
 }
