@@ -10,12 +10,14 @@ import java.nio.file.StandardCopyOption;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Locale;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
 /**
- * Puts the bundled URinth Boost mod (the /uboost frame rate helper) into a Fabric 1.21.4 instance, once.
+ * Puts the bundled URinth Boost mod (the /uboost frame rate helper) into a Fabric 1.21.4 or 1.21.11 instance, once.
+ * There is one bundled jar per game version; the one that matches the instance's version is used.
  *
  * Unlike the sun flare mod this one is an ordinary mod that shows up in the Mods list, so the player decides
  * what happens to it. The rules:
@@ -34,7 +36,9 @@ import java.util.zip.ZipFile;
 public final class BoostModInstaller {
     private BoostModInstaller() {}
 
-    public static final String ASSET_PATH = "mods/urinth-boost.jar";
+    public static final String ASSET_PATH_1_21_4 = "mods/urinth-boost-1.21.4.jar";
+    public static final String ASSET_PATH_1_21_11 = "mods/urinth-boost-1.21.11.jar";
+    /** The name in the instance's mods folder, the same for every game version. */
     public static final String FILE_NAME = "urinth-boost.jar";
     /** Hidden (the Mods list ignores names that start with a dot); holds the SHA-256 of the jar installed last. */
     static final String MARKER_NAME = ".urinth-boost.installed";
@@ -42,6 +46,8 @@ public final class BoostModInstaller {
 
     private static final String DISABLED_SUFFIX = ".disabled";
     private static final Pattern MOD_ID_IN_JSON = Pattern.compile("\"id\"\\s*:\\s*\"" + MOD_ID + "\"");
+    /** 1.21.4 or 1.21.11 as a whole version: not part of a longer number, and not a pre-release or release candidate. */
+    private static final Pattern MC_VERSION = Pattern.compile("(?<![0-9.])1\\.21\\.(4|11)(?![0-9.]|-(pre|rc))");
 
     public interface Source {
         InputStream open() throws IOException;
@@ -63,11 +69,25 @@ public final class BoostModInstaller {
         FAILED
     }
 
-    /** True for Fabric 1.21.4 version ids such as "fabric-loader-0.16.10-1.21.4". */
-    public static boolean appliesTo(String versionId) {
-        if (versionId == null) return false;
+    /**
+     * The bundled jar that goes with this version id, such as "fabric-loader-0.16.10-1.21.4" or
+     * "fabric-loader-0.18.1-1.21.11", or null when the mod has no jar for it.
+     */
+    public static String assetPathFor(String versionId) {
+        if (versionId == null) return null;
         String id = versionId.toLowerCase(Locale.ROOT);
-        return id.contains("fabric") && id.contains("1.21.4");
+        if (!id.contains("fabric")) return null;
+        Matcher matcher = MC_VERSION.matcher(id);
+        String found = null;
+        while (matcher.find()) found = matcher.group(1);
+        if ("4".equals(found)) return ASSET_PATH_1_21_4;
+        if ("11".equals(found)) return ASSET_PATH_1_21_11;
+        return null;
+    }
+
+    /** True for the Fabric versions the mod has a jar for. */
+    public static boolean appliesTo(String versionId) {
+        return assetPathFor(versionId) != null;
     }
 
     public static Result sync(File gameDir, String versionId, Source bundled) {

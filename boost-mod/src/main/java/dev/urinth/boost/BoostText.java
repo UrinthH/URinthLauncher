@@ -11,8 +11,8 @@ import java.util.Locale;
 public final class BoostText {
     private BoostText() {}
 
-    public static final String COMMANDS =
-            "/uboost auto | off | light | strong | max   /uboost target <fps>   /uboost bench";
+    public static final String COMMANDS = "/uboost auto | off | light | strong | max   /uboost target <fps>   "
+            + "/uboost players auto | off | <number>   /uboost bench";
 
     /** What /uboost says about the state of the mod. */
     public static List<String> status(BoostRuntime runtime) {
@@ -35,6 +35,7 @@ public final class BoostText {
             lines.add(fps);
         }
         lines.add(describe(runtime.limits()));
+        lines.add(playersLine(runtime));
         lines.add(counts(runtime.stats()));
         if (mode.isAuto() && !runtime.governorNote().isEmpty()) {
             lines.add("Last decision: " + runtime.governorNote());
@@ -56,7 +57,42 @@ public final class BoostText {
         add(parts, "small mobs beyond ", limits.mobDistSq);
         add(parts, "name tags beyond ", limits.nameTagDistSq);
         add(parts, "armor and held items of far players and mobs beyond ", limits.layerDistSq);
-        return "Taking away: " + String.join("; ", parts) + ". Players themselves are always drawn.";
+        return "Taking away: " + String.join("; ", parts) + ".";
+    }
+
+    /** What is going on with the other players, in one line. */
+    public static String playersLine(BoostRuntime runtime) {
+        int setting = runtime.playersSetting();
+        int cap = runtime.effectivePlayerCap();
+        int around = runtime.playersAround();
+        String near = around > 0 ? " (" + around + " around you)" : "";
+        if (setting == BoostConfig.PLAYERS_OFF) return "Other players: all are drawn, the limit is off" + near + ".";
+        if (cap == Limits.UNLIMITED) {
+            if (runtime.takesNothingAway()) return "Other players: all are drawn, Boost is off" + near + ".";
+            return "Other players: all are drawn now" + near + ". In a crowd, auto draws only the nearest "
+                    + Limits.forLevel(BoostLevel.STRONG).maxPlayers + " at strong and the nearest "
+                    + Limits.forLevel(BoostLevel.MAX).maxPlayers + " at max.";
+        }
+        String who = setting == BoostConfig.PLAYERS_AUTO ? "auto" : "your limit";
+        int left = runtime.playersLeftOut();
+        return "Other players: only the nearest " + cap + " are drawn (" + who + ")" + near + "; "
+                + (left == 0 ? "nobody is left out right now." : left + " left out right now.");
+    }
+
+    /** What /uboost players says after the player changed the setting. */
+    public static String playersChanged(BoostRuntime runtime) {
+        int setting = runtime.playersSetting();
+        if (setting == BoostConfig.PLAYERS_OFF) {
+            return "Other players: the limit is off. Everybody is always drawn.";
+        }
+        String note = " Players that are left out are only not drawn: they are still there and can still see and hit you.";
+        String boostOff = runtime.takesNothingAway() ? " Boost itself is off right now, so no limit applies (/uboost auto)." : "";
+        if (setting == BoostConfig.PLAYERS_AUTO) {
+            return "Other players: automatic. In a crowd Boost draws only the nearest "
+                    + Limits.forLevel(BoostLevel.STRONG).maxPlayers + " at strong and the nearest "
+                    + Limits.forLevel(BoostLevel.MAX).maxPlayers + " at max, and everybody at light or off." + note + boostOff;
+        }
+        return "Other players: only the nearest " + setting + " are drawn from now on, whatever the level." + note + boostOff;
     }
 
     private static void add(List<String> parts, String what, double distSq) {
@@ -68,6 +104,7 @@ public final class BoostText {
     public static String counts(BoostStats stats) {
         return "Checked / left out since the game started: particles " + pair(stats, BoostStats.PARTICLE)
                 + ", entities " + pair(stats, BoostStats.ENTITY)
+                + ", players " + pair(stats, BoostStats.PLAYER)
                 + ", name tags " + pair(stats, BoostStats.NAME_TAG)
                 + ", armor " + pair(stats, BoostStats.LAYERS) + ".";
     }

@@ -34,7 +34,7 @@ public class BoostTextTest {
         assertTrue(any(lines, "at most 48 new particles per tick"));
         assertTrue(any(lines, "new particles beyond 20 blocks"));
         assertTrue(any(lines, "dropped items beyond 14 blocks"));
-        assertTrue(any(lines, "Players themselves are always drawn."));
+        assertTrue(any(lines, "Other players: only the nearest 20 are drawn (auto)"));
         assertFalse(any(lines, "aim"));
     }
 
@@ -113,5 +113,74 @@ public class BoostTextTest {
     @Test
     public void theProgressLineShowsSecondsAndWhichSideIsRunning() {
         assertEquals("Boost test: 12 s left, stand still (now max)", BoostText.benchProgress(12, BoostLevel.MAX));
+    }
+
+
+    private static int[] ids(int n) {
+        int[] ids = new int[n];
+        for (int i = 0; i < n; i++) ids[i] = 100 + i;
+        return ids;
+    }
+
+    private static double[] dist(int n) {
+        double[] d = new double[n];
+        for (int i = 0; i < n; i++) d[i] = (i + 1) * (i + 1);
+        return d;
+    }
+
+    @Test
+    public void theOtherPlayersLineSaysWhatIsHappening() {
+        BoostRuntime auto = new BoostRuntime(BoostMode.AUTO, 50);
+        String idle = BoostText.playersLine(auto);
+        assertTrue(idle.contains("all are drawn now"), idle);
+        assertTrue(idle.contains("nearest 40 at strong and the nearest 20 at max"), idle);
+
+        BoostRuntime max = new BoostRuntime(BoostMode.MAX, 50);
+        max.updatePlayers(ids(3), dist(3), 3);
+        String few = BoostText.playersLine(max);
+        assertTrue(few.contains("only the nearest 20 are drawn (auto)"), few);
+        assertTrue(few.contains("(3 around you)"), few);
+        assertTrue(few.contains("nobody is left out"), few);
+
+        BoostRuntime fixed = new BoostRuntime(BoostMode.AUTO, 50, 12);
+        fixed.updatePlayers(ids(30), dist(30), 30);
+        String crowd = BoostText.playersLine(fixed);
+        assertTrue(crowd.contains("only the nearest 12 are drawn (your limit)"), crowd);
+        assertTrue(crowd.contains("18 left out right now"), crowd);
+
+        assertTrue(BoostText.playersLine(new BoostRuntime(BoostMode.MAX, 50, BoostConfig.PLAYERS_OFF))
+                .contains("the limit is off"));
+        assertTrue(BoostText.playersLine(new BoostRuntime(BoostMode.OFF, 50, 12)).contains("Boost is off"));
+    }
+
+    @Test
+    public void changingThePlayerLimitIsConfirmedAndSaysThatLeftOutPlayersAreStillThere() {
+        BoostRuntime runtime = new BoostRuntime(BoostMode.AUTO, 50);
+        runtime.setPlayersSetting(15);
+        String fixed = BoostText.playersChanged(runtime);
+        assertTrue(fixed.contains("only the nearest 15 are drawn from now on"), fixed);
+        assertTrue(fixed.contains("still there and can still see and hit you"), fixed);
+        assertFalse(fixed.contains("Boost itself is off"), fixed);
+
+        runtime.setPlayersSetting(BoostConfig.PLAYERS_AUTO);
+        String auto = BoostText.playersChanged(runtime);
+        assertTrue(auto.contains("automatic"), auto);
+        assertTrue(auto.contains("nearest 40 at strong and the nearest 20 at max"), auto);
+
+        runtime.setPlayersSetting(BoostConfig.PLAYERS_OFF);
+        assertEquals("Other players: the limit is off. Everybody is always drawn.", BoostText.playersChanged(runtime));
+
+        runtime.setMode(BoostMode.OFF);
+        runtime.setPlayersSetting(15);
+        assertTrue(BoostText.playersChanged(runtime).contains("Boost itself is off right now"));
+    }
+
+    @Test
+    public void thePlayerCountsAreShown() {
+        BoostStats stats = new BoostStats();
+        stats.call(BoostStats.PLAYER);
+        stats.call(BoostStats.PLAYER);
+        stats.act(BoostStats.PLAYER);
+        assertTrue(BoostText.counts(stats).contains("players 2 / 1"), BoostText.counts(stats));
     }
 }

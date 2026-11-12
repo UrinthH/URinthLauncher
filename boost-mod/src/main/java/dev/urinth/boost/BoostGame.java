@@ -4,9 +4,12 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.particle.Particle;
+import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import net.minecraft.client.renderer.entity.state.HumanoidRenderState;
 import net.minecraft.network.chat.Component;
@@ -43,6 +46,8 @@ public final class BoostGame {
     private static Bench.Result shownBench;
     private static int loggedLevel = -1;
     private static int shownSecondsLeft = -1;
+    private static int[] rankIds = new int[64];
+    private static double[] rankDist = new double[64];
 
     private BoostGame() {}
 
@@ -56,16 +61,19 @@ public final class BoostGame {
         settingsFile = FabricLoader.getInstance().getConfigDir().resolve(BoostConfig.FILE_NAME);
         BoostConfig.Settings settings = BoostConfig.parse(read(settingsFile));
         if (!Files.exists(settingsFile)) write(settingsFile, BoostConfig.DEFAULT_TEXT);
-        runtime = new BoostRuntime(settings.mode, settings.targetFps);
-        LOGGER.info("[URinth Boost] mode {}, aiming for {} fps. Hooks: new particles, far items/stands/small mobs, "
-                + "name tags, armor of far players. Type /uboost in the game for the state.", settings.mode.word(),
-                settings.targetFps);
+        runtime = new BoostRuntime(settings.mode, settings.targetFps, settings.players);
+        LOGGER.info("[URinth Boost] mode {}, aiming for {} fps, other players {}. Hooks: new particles, far "
+                + "items/stands/small mobs, name tags, armor of far players, the farthest players in a crowd. "
+                + "Type /uboost in the game for the state.", settings.mode.word(), settings.targetFps,
+                BoostConfig.playersWord(settings.players));
     }
 
     /** Writes the current mode and target to the settings file. */
     static void save() {
         BoostRuntime r = runtime;
-        if (r != null && settingsFile != null) write(settingsFile, BoostConfig.render(r.mode(), r.target()));
+        if (r != null && settingsFile != null) {
+            write(settingsFile, BoostConfig.render(r.mode(), r.target(), r.playersSetting()));
+        }
     }
 
     private static String read(Path file) {
@@ -99,6 +107,7 @@ public final class BoostGame {
         try {
             boolean inWorld = minecraft.level != null && minecraft.player != null;
             r.tick(System.nanoTime() / 1_000_000L, minecraft.getFps(), inWorld);
+            rankPlayers(minecraft, r);
 
             int level = r.level();
             if (level != loggedLevel) {
@@ -110,6 +119,40 @@ public final class BoostGame {
         } catch (Throwable error) {
             fail(r, "the clock", error);
         }
+    }
+
+    /**
+     * Once per tick: when only the nearest players are to be drawn, tells the runtime who the other players are and how
+     * far each is from you. Looks only; nothing about any player is changed.
+     */
+    private static void rankPlayers(Minecraft minecraft, BoostRuntime r) {
+        ClientLevel level = minecraft.level;
+        LocalPlayer me = minecraft.player;
+        if (level == null || me == null) {
+            r.clearPlayers();
+            return;
+        }
+        List<? extends Player> players = level.players();
+        int size = players.size();
+        if (!r.wantsPlayerRanks()) {
+            r.setPlayersAround(size - 1);
+            r.clearPlayers();
+            return;
+        }
+        if (rankIds.length < size) {
+            rankIds = new int[size + 32];
+            rankDist = new double[size + 32];
+        }
+        Entity camera = minecraft.getCameraEntity();
+        int count = 0;
+        for (int i = 0; i < size; i++) {
+            Player other = players.get(i);
+            if (other == me || other == camera) continue; // you, and the one the camera is on, are always drawn
+            rankIds[count] = other.getId();
+            rankDist[count] = me.distanceToSqr(other);
+            count++;
+        }
+        r.updatePlayers(rankIds, rankDist, count);
     }
 
     private static void showBench(Minecraft minecraft, BoostRuntime r) {
@@ -161,6 +204,10 @@ public final class BoostGame {
         BoostRuntime r = runtime;
         if (r == null) return false;
         try {
+            if (entity instanceof Player) {
+                // Only the farthest ones in a crowd are ever left out; you and the camera's player are never listed.
+                return r.hidePlayer(entity.getId());
+            }
             if (r.level() == BoostLevel.OFF) {
                 r.stats().call(BoostStats.ENTITY);
                 return false;

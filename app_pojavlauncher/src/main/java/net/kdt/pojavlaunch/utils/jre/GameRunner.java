@@ -244,13 +244,18 @@ public class GameRunner {
     }
 
     /**
-     * Puts the URinth Boost mod (/uboost, frame rate help for crowds) into Fabric 1.21.4 instances, once. It is an
+     * Puts the URinth Boost mod (/uboost, frame rate help for crowds) into Fabric 1.21.4 and 1.21.11 instances, once. It is an
      * ordinary mod in the Mods list: deleting or switching it off there is respected and it is never put back.
      */
     private static void prepareBoostMod(AppCompatActivity activity, Instance instance, String versionId) {
         try {
+            final String asset = BoostModInstaller.assetPathFor(versionId);
+            if (asset == null) {
+                Logger.appendToLog("[Boost] " + BoostModInstaller.Result.WRONG_VERSION);
+                return;
+            }
             BoostModInstaller.Result result = BoostModInstaller.sync(instance.getGameDirectory(), versionId,
-                    () -> activity.getAssets().open(BoostModInstaller.ASSET_PATH));
+                    () -> activity.getAssets().open(asset));
             Logger.appendToLog("[Boost] " + result);
         } catch (Throwable t) {
             Logger.appendToLog("[Boost] skipped: " + t);

@@ -30,6 +30,25 @@ final class BoostCommand {
                             setTarget(context.getSource(), IntegerArgumentType.getInteger(context, "fps"));
                             return 1;
                         })));
+        root.then(ClientCommandManager.literal("players")
+                .executes(context -> {
+                    sayPlayers(context.getSource());
+                    return 1;
+                })
+                .then(ClientCommandManager.literal("auto").executes(context -> {
+                    setPlayers(context.getSource(), BoostConfig.PLAYERS_AUTO);
+                    return 1;
+                }))
+                .then(ClientCommandManager.literal("off").executes(context -> {
+                    setPlayers(context.getSource(), BoostConfig.PLAYERS_OFF);
+                    return 1;
+                }))
+                .then(ClientCommandManager.argument("count",
+                                IntegerArgumentType.integer(BoostConfig.MIN_PLAYERS, BoostConfig.MAX_PLAYERS))
+                        .executes(context -> {
+                            setPlayers(context.getSource(), IntegerArgumentType.getInteger(context, "count"));
+                            return 1;
+                        })));
         root.then(ClientCommandManager.literal("bench").executes(context -> {
             bench(context.getSource());
             return 1;
@@ -63,7 +82,24 @@ final class BoostCommand {
         } else {
             say(source, "Boost is held at " + mode.word() + ". /uboost auto lets it decide by itself.");
             say(source, BoostText.describe(runtime.limits()));
+            say(source, BoostText.playersLine(runtime));
         }
+    }
+
+    private static void sayPlayers(FabricClientCommandSource source) {
+        BoostRuntime runtime = BoostGame.runtime();
+        if (runtime == null) return;
+        say(source, BoostText.playersLine(runtime));
+        say(source, "Change it: /uboost players auto | off | <" + BoostConfig.MIN_PLAYERS + " to " + BoostConfig.MAX_PLAYERS
+                + ">. A number draws only that many of the nearest other players, always.");
+    }
+
+    private static void setPlayers(FabricClientCommandSource source, int setting) {
+        BoostRuntime runtime = BoostGame.runtime();
+        if (runtime == null) return;
+        runtime.setPlayersSetting(setting);
+        BoostGame.save();
+        say(source, BoostText.playersChanged(runtime));
     }
 
     private static void setTarget(FabricClientCommandSource source, int fps) {

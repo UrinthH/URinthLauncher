@@ -1,7 +1,7 @@
 package dev.urinth.boost;
 
 /**
- * Counts what the four hooks have done, so /uboost can show it and the log can say it. For every hook two numbers:
+ * Counts what the hooks have done, so /uboost can show it and the log can say it. For every hook two numbers:
  * how many times the game reached it ("calls"; a hook that was never reached did not apply, and this is how the
  * player and the developer can see that) and how many times it took something away ("acted").
  *
@@ -13,7 +13,8 @@ public final class BoostStats {
     public static final int ENTITY = 1;
     public static final int NAME_TAG = 2;
     public static final int LAYERS = 3;
-    public static final int HOOKS = 4;
+    public static final int PLAYER = 4;
+    public static final int HOOKS = 5;
 
     private final long[] calls = new long[HOOKS];
     private final long[] acted = new long[HOOKS];

@@ -3,6 +3,7 @@ package net.kdt.pojavlaunch.game;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.ByteArrayInputStream;
@@ -19,6 +20,7 @@ import org.junit.Test;
 
 public class BoostModInstallerTest {
     private static final String FABRIC = "fabric-loader-0.16.10-1.21.4";
+    private static final String FABRIC_1211 = "fabric-loader-0.18.1-1.21.11";
     private static final byte[] V1 = {1, 2, 3, 4, 5};
     private static final byte[] V2 = {6, 7, 8, 9};
 
@@ -60,13 +62,38 @@ public class BoostModInstallerTest {
     }
 
     @Test
-    public void onlyFabric1214IsSupported() {
+    public void onlyFabric1214And12111AreSupported() {
         assertTrue(BoostModInstaller.appliesTo(FABRIC));
         assertTrue(BoostModInstaller.appliesTo("Fabric-Loader-0.16.9-1.21.4"));
+        assertTrue(BoostModInstaller.appliesTo(FABRIC_1211));
+        assertTrue(BoostModInstaller.appliesTo("Fabric-Loader-0.17.3-1.21.11"));
         assertFalse(BoostModInstaller.appliesTo("1.21.4"));
+        assertFalse(BoostModInstaller.appliesTo("1.21.11"));
         assertFalse(BoostModInstaller.appliesTo("fabric-loader-0.16.10-1.21.1"));
+        assertFalse(BoostModInstaller.appliesTo("fabric-loader-0.16.10-1.21.40"));
+        assertFalse(BoostModInstaller.appliesTo("fabric-loader-0.16.10-1.21.4-pre1"));
+        assertFalse(BoostModInstaller.appliesTo("fabric-loader-0.18.1-1.21.11-rc1"));
         assertFalse(BoostModInstaller.appliesTo("1.21.4-forge-54.0.0"));
+        assertFalse(BoostModInstaller.appliesTo("1.21.11-forge-61.0.0"));
         assertFalse(BoostModInstaller.appliesTo(null));
+    }
+
+    @Test
+    public void eachGameVersionGetsItsOwnJar() {
+        assertEquals(BoostModInstaller.ASSET_PATH_1_21_4, BoostModInstaller.assetPathFor(FABRIC));
+        assertEquals(BoostModInstaller.ASSET_PATH_1_21_11, BoostModInstaller.assetPathFor(FABRIC_1211));
+        assertNull(BoostModInstaller.assetPathFor("fabric-loader-0.16.10-1.20.1"));
+        assertNull(BoostModInstaller.assetPathFor(null));
+    }
+
+    @Test
+    public void anInstanceMovedBetweenTheTwoVersionsGetsTheMatchingJar() throws IOException {
+        File dir = gameDir();
+        assertEquals(BoostModInstaller.Result.INSTALLED, BoostModInstaller.sync(dir, FABRIC, jar(V1)));
+        assertEquals(BoostModInstaller.Result.UPDATED, BoostModInstaller.sync(dir, FABRIC_1211, jar(V2)));
+        assertArrayEquals(V2, Files.readAllBytes(installed(dir).toPath()));
+        assertEquals(BoostModInstaller.Result.UPDATED, BoostModInstaller.sync(dir, FABRIC, jar(V1)));
+        assertArrayEquals(V1, Files.readAllBytes(installed(dir).toPath()));
     }
 
     @Test

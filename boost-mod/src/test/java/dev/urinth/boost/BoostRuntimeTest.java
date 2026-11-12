@@ -238,4 +238,147 @@ public class BoostRuntimeTest {
         runtime.setTarget(45);
         assertEquals(45, runtime.target());
     }
+
+
+    // ---- the limit on other players ----
+
+    private static int[] ids(int n) {
+        int[] ids = new int[n];
+        for (int i = 0; i < n; i++) ids[i] = 100 + i;
+        return ids;
+    }
+
+    /** Player 100 is the nearest, then 101, and so on. */
+    private static double[] dist(int n) {
+        double[] d = new double[n];
+        for (int i = 0; i < n; i++) d[i] = (i + 1) * (i + 1);
+        return d;
+    }
+
+    @Test
+    public void levelsWithoutAPlayerLimitDrawEverybody() {
+        for (BoostMode mode : new BoostMode[] {BoostMode.AUTO, BoostMode.OFF, BoostMode.LIGHT}) {
+            BoostRuntime runtime = new BoostRuntime(mode, 50);
+            assertEquals(Limits.UNLIMITED, runtime.effectivePlayerCap(), mode.word());
+            assertFalse(runtime.wantsPlayerRanks(), mode.word());
+            assertFalse(runtime.hidePlayer(105), mode.word());
+        }
+    }
+
+    @Test
+    public void theAutomaticPlayerLimitFollowsTheLevel() {
+        assertEquals(Limits.forLevel(2).maxPlayers, new BoostRuntime(BoostMode.STRONG, 50).effectivePlayerCap());
+        BoostRuntime max = new BoostRuntime(BoostMode.MAX, 50);
+        int cap = Limits.forLevel(3).maxPlayers;
+        assertEquals(cap, max.effectivePlayerCap());
+        assertTrue(max.wantsPlayerRanks());
+        max.updatePlayers(ids(50), dist(50), 50);
+        assertEquals(50 - cap, max.playersLeftOut());
+        assertEquals(50, max.playersAround());
+        assertFalse(max.hidePlayer(100), "the nearest is drawn");
+        assertTrue(max.hidePlayer(149), "the farthest is left out");
+        assertEquals(2L, max.stats().calls(BoostStats.PLAYER));
+        assertEquals(1L, max.stats().acted(BoostStats.PLAYER));
+    }
+
+    @Test
+    public void aCrowdThatFitsTheLimitIsDrawnWhole() {
+        BoostRuntime max = new BoostRuntime(BoostMode.MAX, 50);
+        int cap = max.effectivePlayerCap();
+        max.updatePlayers(ids(cap), dist(cap), cap);
+        assertEquals(0, max.playersLeftOut());
+        assertFalse(max.hidePlayer(100 + cap - 1));
+    }
+
+    @Test
+    public void aNumberIsALimitEvenWhileTheAutomaticModeIsIdle() {
+        BoostRuntime runtime = new BoostRuntime(BoostMode.AUTO, 50, 10);
+        assertEquals(0, runtime.level(), "automatic has not taken anything away");
+        assertEquals(10, runtime.effectivePlayerCap());
+        runtime.updatePlayers(ids(30), dist(30), 30);
+        assertEquals(20, runtime.playersLeftOut());
+        assertTrue(runtime.hidePlayer(129));
+        assertFalse(runtime.hidePlayer(100));
+        assertFalse(runtime.hidePlayer(999), "somebody who was not listed is always drawn");
+    }
+
+    @Test
+    public void offNeverLeavesAPlayerOut() {
+        BoostRuntime runtime = new BoostRuntime(BoostMode.MAX, 50, BoostConfig.PLAYERS_OFF);
+        assertEquals(Limits.UNLIMITED, runtime.effectivePlayerCap());
+        runtime.updatePlayers(ids(60), dist(60), 60);
+        assertEquals(0, runtime.playersLeftOut());
+        assertFalse(runtime.hidePlayer(159));
+    }
+
+    @Test
+    public void whenBoostIsOffNoLimitAppliesWhateverNumberWasChosen() {
+        BoostRuntime runtime = new BoostRuntime(BoostMode.OFF, 50, 10);
+        assertTrue(runtime.takesNothingAway());
+        assertEquals(Limits.UNLIMITED, runtime.effectivePlayerCap());
+        runtime.updatePlayers(ids(30), dist(30), 30);
+        assertEquals(0, runtime.playersLeftOut());
+    }
+
+    @Test
+    public void changingTheSettingOrTheModeDrawsEverybodyAtOnce() {
+        BoostRuntime runtime = new BoostRuntime(BoostMode.MAX, 50);
+        runtime.updatePlayers(ids(60), dist(60), 60);
+        assertTrue(runtime.playersLeftOut() > 0);
+        runtime.setPlayersSetting(BoostConfig.PLAYERS_OFF);
+        assertEquals(0, runtime.playersLeftOut());
+        runtime.setPlayersSetting(BoostConfig.PLAYERS_AUTO);
+        runtime.updatePlayers(ids(60), dist(60), 60);
+        assertTrue(runtime.playersLeftOut() > 0);
+        runtime.setMode(BoostMode.OFF);
+        assertEquals(0, runtime.playersLeftOut());
+    }
+
+    @Test
+    public void aNumberOutsideTheLimitsIsKeptInside() {
+        BoostRuntime runtime = new BoostRuntime(BoostMode.AUTO, 50, 1);
+        assertEquals(BoostConfig.MIN_PLAYERS, runtime.playersSetting());
+        runtime.setPlayersSetting(5000);
+        assertEquals(BoostConfig.MAX_PLAYERS, runtime.playersSetting());
+    }
+
+    @Test
+    public void aFailedModLeavesNobodyOut() {
+        BoostRuntime runtime = new BoostRuntime(BoostMode.MAX, 50);
+        runtime.updatePlayers(ids(60), dist(60), 60);
+        runtime.disable("boom");
+        assertEquals(0, runtime.playersLeftOut());
+        assertEquals(Limits.UNLIMITED, runtime.effectivePlayerCap());
+        assertFalse(runtime.hidePlayer(159));
+    }
+
+    @Test
+    public void leavingTheWorldDrawsEverybodyAgain() {
+        BoostRuntime runtime = new BoostRuntime(BoostMode.MAX, 50);
+        runtime.updatePlayers(ids(60), dist(60), 60);
+        runtime.tick(1_000, 60, false);
+        assertEquals(0, runtime.playersLeftOut());
+        assertEquals(0, runtime.playersAround());
+    }
+
+    @Test
+    public void theOffHalfOfTheBenchTestHasNoPlayerLimitEither() {
+        BoostRuntime runtime = new BoostRuntime(BoostMode.AUTO, 50, 10);
+        run(runtime, 0, 8, 60);
+        assertTrue(runtime.startBench());
+        boolean sawOff = false;
+        boolean sawOn = false;
+        for (int second = 9; second < 400 && runtime.bench().active(); second++) {
+            runtime.tick(second * 1000L, 60, true);
+            if (!runtime.bench().active()) break;
+            if (runtime.level() == BoostLevel.OFF) {
+                sawOff = true;
+                assertEquals(Limits.UNLIMITED, runtime.effectivePlayerCap(), "second " + second);
+            } else {
+                sawOn = true;
+                assertEquals(10, runtime.effectivePlayerCap(), "second " + second);
+            }
+        }
+        assertTrue(sawOff && sawOn, "the test went through both halves");
+    }
 }
