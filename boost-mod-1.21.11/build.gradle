@@ -4,7 +4,7 @@ plugins {
 
 version = project.mod_version
 group = 'dev.urinth'
-base { archivesName = 'urinth-boost' }
+base { archivesName = 'urinth-boost-1.21.11' }
 
 repositories {
 	mavenCentral()
