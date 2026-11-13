@@ -86,8 +86,15 @@ public final class RefreshRateBoost {
             float current = display.getRefreshRate();
             float best = current;
             int bestModeId = 0;
+            boolean higherModeFound = false;
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 Display.Mode now = display.getMode();
+                // The mode the screen is in now is the starting point, so a higher one is only
+                // chosen when it really is higher. Either way the best mode is asked for by its id,
+                // which the system honours more firmly than a bare rate: on a 90 Hz screen with no
+                // higher mode this keeps it from settling back at 60 Hz on its own.
+                bestModeId = now.getModeId();
+                best = now.getRefreshRate();
                 for (Display.Mode mode : display.getSupportedModes()) {
                     if (mode.getPhysicalWidth() != now.getPhysicalWidth()
                             || mode.getPhysicalHeight() != now.getPhysicalHeight()) continue;
@@ -95,6 +102,7 @@ public final class RefreshRateBoost {
                     if (rate <= WANTED_MAX_HZ + 0.5f && rate > best + 0.5f) {
                         best = rate;
                         bestModeId = mode.getModeId();
+                        higherModeFound = true;
                     }
                 }
                 if (bestModeId != 0) params.preferredDisplayModeId = bestModeId;
@@ -104,7 +112,9 @@ public final class RefreshRateBoost {
             sTarget = best;
             sModeId = bestModeId;
             Logger.appendToLog("[RefreshRate] screen is at " + current + " Hz, requested " + best + " Hz"
-                    + (bestModeId == 0 ? " (no higher mode available)" : " (mode " + bestModeId + ")"));
+                    + (higherModeFound ? " (mode " + bestModeId + ")"
+                    : bestModeId == 0 ? " (no higher mode available)"
+                    : " (no higher mode available; holding the current mode " + bestModeId + ")"));
         } catch (RuntimeException error) {
             Log.w(TAG, "Could not request a higher refresh rate", error);
         }
