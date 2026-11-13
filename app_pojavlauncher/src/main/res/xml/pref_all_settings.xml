@@ -277,15 +277,6 @@
             android:summary="@string/mcl_setting_subtitle_javaargs"
             android:title="@string/mcl_setting_title_javaargs" />
 
-        <androidx.preference.ListPreference
-            android:defaultValue="g1"
-            android:icon="@drawable/ic_modrinth_java"
-            android:key="gcMode"
-            android:entries="@array/gc_mode_names"
-            android:entryValues="@array/gc_mode_values"
-            android:title="@string/preference_gc_mode_title"
-            android:summary="@string/preference_gc_mode_summary"/>
-
         <net.kdt.pojavlaunch.prefs.CustomSeekBarPreference
             android:key="allocation"
             android:icon="@drawable/ic_modrinth_java"

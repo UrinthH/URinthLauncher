@@ -519,10 +519,6 @@ public class GameRunner {
                 + "Java runtime: " + runtime.name + "\n"
                 + "RAM allocated: " + LauncherPreferences.PREF_RAM_ALLOCATION + " MB\n"
                 + "Java arguments: \"" + instance.getLaunchArgs() + "\"\n"
-                // GameExitReporter reads this line: a launch that dies while starting with the
-                // low-pause collector switches the setting back to the standard one.
-                + "Garbage collector: " + (JavaRunner.lowPauseCollectorUsable(runtime)
-                        ? "Shenandoah (low pause)" : "standard") + "\n"
                 + "Safe launch: " + (LauncherPreferences.PREF_SAFE_LAUNCH ? "yes" : "no") + "\n"
                 + "Big-core pinning: " + LauncherPreferences.PREF_BIG_CORE_AFFINITY
                 + ", sustained performance: " + LauncherPreferences.PREF_SUSTAINED_PERFORMANCE

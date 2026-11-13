@@ -108,16 +108,6 @@ public final class GameExitReporter {
                 // A marker that is still being refreshed belongs to a game that is still running.
                 && now - marker.aliveMs > LaunchGuard.STALE_AFTER_MS;
 
-        // The low-pause collector is experimental. If a launch that was using it never finished
-        // starting, put the setting back to the standard collector so it cannot fail again and again.
-        // This runs in the launcher, which owns the settings file.
-        boolean lowPauseFailed = endedDuringStartup && lastLaunchUsedLowPauseCollector(context);
-        if (lowPauseFailed) {
-            prefs.edit().putString("gcMode", "g1").apply();
-            LauncherPreferences.PREF_GC_MODE = "g1";
-            Log.w(TAG, "The launch with the low-pause collector did not finish starting; back to the standard collector");
-        }
-
         ExitSummary exit = null;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             exit = ExitReader.newestGameExit(context);
@@ -141,15 +131,9 @@ public final class GameExitReporter {
         }
 
         String report = describe(context, now, marker, endedDuringStartup, exit);
-        if (lowPauseFailed) {
-            report = report + context.getString(R.string.game_exit_low_pause_off) + "\n";
-        }
         String savedTo = save(context, report);
 
         StringBuilder dialog = new StringBuilder(context.getString(hint));
-        if (lowPauseFailed) {
-            dialog.append("\n\n").append(context.getString(R.string.game_exit_low_pause_off));
-        }
         if (endedDuringStartup) {
             dialog.append("\n\n").append(context.getString(R.string.game_exit_ran_for,
                     Math.max(1L, marker.lifetimeMs() / 1000L)));
@@ -169,12 +153,6 @@ public final class GameExitReporter {
                 .putLong(KEY_LAST_MARKER_START, marker != null ? marker.startMs : lastMarkerReported)
                 .apply();
         return new String[] { dialog.toString(), report };
-    }
-
-    /** Whether the launch described by {@link LaunchGuard#loadDetails} ran with the low-pause collector. */
-    private static boolean lastLaunchUsedLowPauseCollector(Context context) {
-        String details = LaunchGuard.loadDetails(context);
-        return details != null && details.contains("Garbage collector: Shenandoah");
     }
 
     private static String describe(Context context, long now, @Nullable LaunchGuard.Record marker,
