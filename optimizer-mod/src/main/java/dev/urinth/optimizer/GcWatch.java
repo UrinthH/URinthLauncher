@@ -28,7 +28,7 @@ final class GcWatch {
                 names.append(name);
                 String lower = name.toLowerCase(Locale.ROOT);
                 // a concurrent bean counts the time of work that runs beside the game, not the time the game stood still
-                if (lower.contains("concurrent")) continue;
+                if (!countsAsPause(lower)) continue;
                 pauses.add(bean);
                 if (isFull(lower)) fulls.add(bean);
             }
@@ -51,6 +51,15 @@ final class GcWatch {
 
     boolean hasOldGen() {
         return oldGen != null;
+    }
+
+    /**
+     * True when the collector's time is time the game stood still. The low-pause collectors report two beans: "Shenandoah Pauses"
+     * (the game stood still) and "Shenandoah Cycles" (the whole cycle, almost all of it beside the game), likewise "ZGC Pauses" and
+     * "ZGC Cycles"; only the first kind counts.
+     */
+    static boolean countsAsPause(String lowerCaseName) {
+        return !lowerCaseName.contains("concurrent") && !lowerCaseName.contains("cycles");
     }
 
     /** True for the collectors that run the slow, complete collections ("G1 Old Generation", "PS MarkSweep"). */

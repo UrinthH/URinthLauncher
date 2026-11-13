@@ -20,6 +20,24 @@ class GcWatchTest {
     }
 
     @Test
+    void onlyTheTimeTheGameStoodStillCountsAsPause() {
+        // G1: the young and old generation beans are pauses, the concurrent one is not.
+        assertTrue(GcWatch.countsAsPause("g1 young generation"));
+        assertTrue(GcWatch.countsAsPause("g1 old generation"));
+        assertFalse(GcWatch.countsAsPause("g1 concurrent gc"));
+        // The low-pause collectors: "Pauses" stood still, "Cycles" ran beside the game.
+        assertTrue(GcWatch.countsAsPause("shenandoah pauses"));
+        assertFalse(GcWatch.countsAsPause("shenandoah cycles"));
+        assertTrue(GcWatch.countsAsPause("zgc pauses"));
+        assertFalse(GcWatch.countsAsPause("zgc cycles"));
+        assertFalse(GcWatch.countsAsPause("zgc minor cycles"));
+        assertFalse(GcWatch.countsAsPause("zgc major cycles"));
+        assertTrue(GcWatch.countsAsPause("zgc major pauses"));
+        // Anything unknown counts, as before.
+        assertTrue(GcWatch.countsAsPause("ps scavenge"));
+    }
+
+    @Test
     void theRunningJvmCanBeRead() {
         GcWatch w = new GcWatch();
         assertFalse(w.collectors().isEmpty());
