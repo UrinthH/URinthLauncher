@@ -680,6 +680,11 @@
     <string name="game_exit_report_copied">Details copied</string>
     <string name="launch_safe_mode_notice">The last launch stopped while starting up, so this one uses plain settings: no custom Java arguments and less RAM.</string>
     <string name="thermal_guard_hot_toast">Performance Mode: the phone is hot, so background load is being eased to keep frame rates steady.</string>
+    <string name="game_exit_low_pause_off">The low-pause garbage collector (experimental) was on for this launch. It has been switched back to the standard collector in Settings. You can choose it again there.</string>
+    <string name="preference_gc_mode_title">Garbage collector (Performance Mode)</string>
+    <string name="preference_gc_mode_summary">%s. Applies when Performance Mode is on. If the game ever fails to start with the low-pause option, the launcher switches it back by itself.</string>
+    <string name="gc_mode_g1">Standard (G1, short pauses)</string>
+    <string name="gc_mode_low_pause">Low pause (Shenandoah, experimental)</string>
     <string name="preference_performance_mode_title">Performance Mode</string>
     <string name="preference_performance_mode_description">Fewer lag spikes and smoother screen flips: a calmer memory collector, top priority for the render thread, background tasks that step aside whenever the render thread is waiting for a CPU core, and a temperature watch for hot phones. Applies on the next launch. It never changes your resolution or your game options.</string>
 </resources>

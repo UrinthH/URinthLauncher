@@ -11,6 +11,7 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 
 import net.kdt.pojavlaunch.Architecture;
+import net.kdt.pojavlaunch.Logger;
 import net.kdt.pojavlaunch.Tools;
 import net.kdt.pojavlaunch.awt.AWTView;
 import net.kdt.pojavlaunch.multirt.MultiRTUtils;
@@ -91,7 +92,7 @@ public class JavaRunner {
      *  and the auto-generated ones (eg. the window resolution).
      * @return A list filled with args.
      */
-    private static List<String> getJavaArgs(String runtimeHome, List<String> userArguments) {
+    private static List<String> getJavaArgs(String runtimeHome, List<String> userArguments, boolean lowPauseCollector) {
         String resolvFile;
         resolvFile = new File(Tools.DIR_DATA,"resolv.conf").getAbsolutePath();
 
@@ -149,7 +150,7 @@ public class JavaRunner {
 
         //Add all the arguments
         userArguments.addAll(additionalArguments);
-        if(LauncherPreferences.PREF_PERFORMANCE_MODE) addPerformanceModeArguments(userArguments);
+        if(LauncherPreferences.PREF_PERFORMANCE_MODE) addPerformanceModeArguments(userArguments, lowPauseCollector);
         return userArguments;
     }
 
@@ -159,13 +160,32 @@ public class JavaRunner {
     }
 
     /**
-     * Performance Mode: fewer and shorter garbage collection pauses (a larger young generation, a
-     * shorter pause goal, no explicit full collections, no pauses for metadata growth while loading).
-     * The flags and the reasons are in {@link PerformanceJvmArguments}. Never overrides a flag the
-     * player already set.
+     * Performance Mode: fewer and shorter garbage collection pauses (a short pause goal that lets
+     * G1 size the young generation itself, no explicit full collections, no pauses for metadata
+     * growth while loading), or the low-pause collector when the player chose it. The flags and the
+     * reasons are in {@link PerformanceJvmArguments}. Never overrides a flag the player set; only
+     * the three values in the launcher's own default block are replaced.
      */
-    private static void addPerformanceModeArguments(List<String> arguments) {
-        PerformanceJvmArguments.addTo(arguments);
+    private static void addPerformanceModeArguments(List<String> arguments, boolean lowPauseCollector) {
+        String collector = PerformanceJvmArguments.addTo(arguments, lowPauseCollector);
+        // In the game log, so a log sent for a bug report shows what the JVM was really given.
+        Logger.appendToLog("[PerformanceMode] garbage collector: " + collector);
+        StringBuilder memoryFlags = new StringBuilder();
+        for(String argument : arguments) {
+            if(argument.startsWith("-Xm") || argument.startsWith("-XX:")) memoryFlags.append(' ').append(argument);
+        }
+        Logger.appendToLog("[PerformanceMode] JVM flags:" + memoryFlags);
+    }
+
+    /**
+     * Whether this launch uses the low-pause collector (Shenandoah): Performance Mode is on, the
+     * player asked for it in Settings, and the Java runtime is a version this launcher ships it
+     * in (21 and newer).
+     */
+    public static boolean lowPauseCollectorUsable(Runtime runtime) {
+        return LauncherPreferences.PREF_PERFORMANCE_MODE
+                && LauncherPreferences.GC_MODE_LOW_PAUSE.equals(LauncherPreferences.PREF_GC_MODE)
+                && runtime.javaVersion >= 21;
     }
 
     private static File getVmPath(File runtimeHomeDir, String arch, String flavor) {
@@ -302,7 +322,7 @@ public class JavaRunner {
         boolean hasJavaAgent = preprocessUserArgs(vmArgs);
         List<String> runtimeArgs = new ArrayList<>();
         if(getCacioJavaArgs(runtimeArgs,runtime.javaVersion == 8)) hasJavaAgent = true;
-        runtimeArgs.addAll(getJavaArgs(runtimeHomeDir.getAbsolutePath(), vmArgs));
+        runtimeArgs.addAll(getJavaArgs(runtimeHomeDir.getAbsolutePath(), vmArgs, lowPauseCollectorUsable(runtime)));
         vmArgs.clear();
 
 

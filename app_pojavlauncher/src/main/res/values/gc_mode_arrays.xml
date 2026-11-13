@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Which garbage collector Performance Mode uses. The values are what is stored in "gcMode". -->
+    <string-array name="gc_mode_names">
+        <item>@string/gc_mode_g1</item>
+        <item>@string/gc_mode_low_pause</item>
+    </string-array>
+    <string-array name="gc_mode_values">
+        <item>g1</item>
+        <item>shenandoah</item>
+    </string-array>
+</resources>

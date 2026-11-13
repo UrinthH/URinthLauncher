@@ -66,6 +66,10 @@ public class LauncherPreferences {
     public static boolean PREF_BIG_CORE_AFFINITY = false;
     /** Watch device temperature while the game runs and ease CPU/GPU load when it gets hot. */
     public static boolean PREF_PERFORMANCE_MODE = false;
+    /** The garbage collector value that asks Performance Mode for the experimental low-pause collector. */
+    public static final String GC_MODE_LOW_PAUSE = "shenandoah";
+    /** Which garbage collector Performance Mode uses: "g1" (the default) or {@link #GC_MODE_LOW_PAUSE}. */
+    public static String PREF_GC_MODE = "g1";
     /**
      * Set for the lifetime of one game process that LaunchGuard put into safe launch.
      * Never written to SharedPreferences.
@@ -131,6 +135,7 @@ public class LauncherPreferences {
         // cores all report the same maximum frequency.
         PREF_BIG_CORE_AFFINITY = DEFAULT_PREF.getBoolean("bigCoreAffinity", false);
         PREF_PERFORMANCE_MODE = performanceModeIsOn();
+        PREF_GC_MODE = DEFAULT_PREF.getString("gcMode", "g1");
         syncRendererWithPerformanceMode();
         PREF_ZINK_PREFER_SYSTEM_DRIVER = DEFAULT_PREF.getBoolean("zinkPreferSystemDriver", false);
         PREF_DOWNLOAD_SOURCE = DEFAULT_PREF.getString("downloadSource", "default");
@@ -327,6 +332,7 @@ public class LauncherPreferences {
         PREF_BIG_CORE_AFFINITY = false;
         PREF_SUSTAINED_PERFORMANCE = false;
         PREF_PERFORMANCE_MODE = false;
+        PREF_GC_MODE = "g1";
         // Roughly what the stock RAM tiers hand a 4 GB phone: leaves Android room to breathe.
         int cap = Math.max(448, (int) (Tools.getTotalDeviceMemory(ctx) * 0.28f));
         if (PREF_RAM_ALLOCATION > cap) PREF_RAM_ALLOCATION = cap;
