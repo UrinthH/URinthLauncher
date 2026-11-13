@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Settings icon: line style, tinted in code so it follows the accent colour. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M9.8 4h4.4a1.8 1.8 0 0 1 1.8 1.8v12.4a1.8 1.8 0 0 1 -1.8 1.8h-4.4a1.8 1.8 0 0 1 -1.8 -1.8v-12.4a1.8 1.8 0 0 1 1.8 -1.8z"
+        android:fillColor="#00000000"
+        android:strokeColor="#FF000000"
+        android:strokeWidth="1.8"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M4.5 9v6M19.5 9v6M2 11v2M22 11v2"
+        android:fillColor="#00000000"
+        android:strokeColor="#FF000000"
+        android:strokeWidth="1.8"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>
