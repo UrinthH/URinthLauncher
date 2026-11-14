@@ -6,30 +6,38 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - name: Look at the upstream Mesa and plugin sources
+      - name: Look at the public plugin repositories
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          echo "=== mesa-unified2 repo"
-          gh api repos/MojoLauncher/mesa-unified2 --jq '{private,visibility,default_branch,pushed_at}' 2>&1 | head -5 || true
-          echo "=== mesa-unified2 artifacts"
-          gh api "repos/MojoLauncher/mesa-unified2/actions/artifacts?per_page=10" --jq '.artifacts[] | "\(.name) expired=\(.expired) \(.size_in_bytes) \(.created_at) \(.workflow_run.head_branch)"' 2>&1 | head -12 || true
-          echo "=== MojoLauncher org repos"
-          gh repo list MojoLauncher --limit 60 --json name,description,isPrivate -q '.[] | "\(.name) | \(.description)"' 2>&1 | head -60 || true
-          echo "=== MojoLauncher releases"
-          gh release list -R MojoLauncher/MojoLauncher --limit 8 2>&1 | head -10 || true
-          for tag in justicia nightly; do
-            echo "=== assets of $tag"
-            gh release view $tag -R MojoLauncher/MojoLauncher --json assets -q '.assets[] | "\(.name) \(.size)"' 2>&1 | head -30 || true
+          for repo in ZinkPlugin MesaPlugin; do
+            echo "=================== $repo"
+            gh api repos/MojoLauncher/$repo --jq '{private,default_branch,pushed_at,license:.license.spdx_id}' 2>&1 | head -3
+            echo "--- top level files"
+            gh api repos/MojoLauncher/$repo/contents --jq '.[].name' 2>&1 | head -30
+            echo "--- readme"
+            gh api repos/MojoLauncher/$repo/readme --jq .content 2>&1 | base64 -d 2>/dev/null | head -50
+            echo "--- releases"
+            gh release list -R MojoLauncher/$repo --limit 8 2>&1 | head -10
+            for tag in $(gh release list -R MojoLauncher/$repo --limit 3 --json tagName -q '.[].tagName' 2>/dev/null); do
+              echo "--- assets of $tag"
+              gh release view $tag -R MojoLauncher/$repo --json assets -q '.assets[] | "\(.name) \(.size) \(.url)"' 2>&1 | head -12
+            done
+            echo "--- artifacts of workflow runs"
+            gh api "repos/MojoLauncher/$repo/actions/artifacts?per_page=6" --jq '.artifacts[] | "\(.name) expired=\(.expired) \(.size_in_bytes) \(.created_at) \(.workflow_run.head_branch)"' 2>&1 | head -8
           done
-      - name: Look inside the official APK for Mesa libraries
+      - name: Look inside the newest Zink plugin APK
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          mkdir -p /tmp/mojo && cd /tmp/mojo
-          gh release download justicia -R MojoLauncher/MojoLauncher -p '*.apk' -D . 2>&1 | tail -3 || true
-          ls -la /tmp/mojo
-          for f in /tmp/mojo/*.apk; do
+          mkdir -p /tmp/zp && cd /tmp/zp
+          gh release download -R MojoLauncher/ZinkPlugin -p '*.apk' -D . 2>&1 | tail -3 || true
+          ls -la /tmp/zp
+          for f in /tmp/zp/*.apk; do
             echo "=== $f"
-            unzip -l "$f" | grep -i -E "mesa|zink|legacy|OSMesa|vulkan|libEGL|angle|ltw|gl4es" | head -40
+            unzip -l "$f" | awk '{print $1, $4}' | grep -v "META-INF\|\.png\|\.xml$" | head -40
+            AAPT2=$(ls $ANDROID_HOME/build-tools/*/aapt2 2>/dev/null | tail -1)
+            echo "aapt2: $AAPT2"
+            "$AAPT2" dump badging "$f" 2>&1 | grep -E "^package|sdkVersion|native-code|uses-" | head -12
+            "$AAPT2" dump xmltree --file AndroidManifest.xml "$f" 2>&1 | head -60
           done
