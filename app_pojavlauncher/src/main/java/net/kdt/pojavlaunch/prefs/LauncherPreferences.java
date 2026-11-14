@@ -13,6 +13,7 @@ import android.util.DisplayMetrics;
 import android.util.Log;
 
 import net.kdt.pojavlaunch.*;
+import net.kdt.pojavlaunch.utils.ButtonHaptics;
 import net.kdt.pojavlaunch.game.renderer.PerformanceRendererPolicy;
 import net.kdt.pojavlaunch.game.renderer.RendererCache;
 import net.kdt.pojavlaunch.multirt.MultiRTUtils;
@@ -61,6 +62,10 @@ public class LauncherPreferences {
     public static boolean PREF_USE_ANGLE = false;
 
     public static boolean PREF_BUTTON_ALL_CAPS = true;
+    /** A short buzz when an on-screen control button is pressed. */
+    public static boolean PREF_BUTTON_HAPTICS = false;
+    /** Length of that buzz in milliseconds. */
+    public static int PREF_BUTTON_HAPTICS_MS = 15;
     public static boolean PREF_DUMP_SHADERS = false;
     public static float PREF_DEADZONE_SCALE = 1f;
     public static boolean PREF_BIG_CORE_AFFINITY = false;
@@ -124,6 +129,8 @@ public class LauncherPreferences {
         PREF_FORCE_VSYNC = DEFAULT_PREF.getBoolean("force_vsync", isDevicePowerful);
         PREF_USE_ANGLE = DEFAULT_PREF.getBoolean("use_angle", false);
         PREF_BUTTON_ALL_CAPS = DEFAULT_PREF.getBoolean("buttonAllCaps", true);
+        PREF_BUTTON_HAPTICS = DEFAULT_PREF.getBoolean("buttonHaptics", false);
+        PREF_BUTTON_HAPTICS_MS = ButtonHaptics.clampMs(DEFAULT_PREF.getInt("buttonHapticsMs", 15));
         PREF_DUMP_SHADERS = DEFAULT_PREF.getBoolean("dump_shaders", false);
         PREF_DEADZONE_SCALE = ((float) DEFAULT_PREF.getInt("gamepad_deadzone_scale", 100))/100f;
         // Experimental and off unless the user turns it on in Settings. It pins a thread to one

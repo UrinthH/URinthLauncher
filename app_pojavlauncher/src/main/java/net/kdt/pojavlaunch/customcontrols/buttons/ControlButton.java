@@ -25,6 +25,7 @@ import net.kdt.pojavlaunch.customcontrols.ControlData;
 import net.kdt.pojavlaunch.customcontrols.ControlLayout;
 import net.kdt.pojavlaunch.customcontrols.handleview.EditControlSideDialog;
 import net.kdt.pojavlaunch.prefs.LauncherPreferences;
+import net.kdt.pojavlaunch.utils.ButtonHaptics;
 
 import net.kdt.pojavlaunch.CallbackBridge;
 
@@ -177,6 +178,9 @@ public class ControlButton extends TextView implements ControlInterface {
         switch (action){
             case MotionEvent.ACTION_DOWN: // 0
             case MotionEvent.ACTION_POINTER_DOWN: // 5
+                if (LauncherPreferences.PREF_BUTTON_HAPTICS) {
+                    ButtonHaptics.buzz(getContext(), LauncherPreferences.PREF_BUTTON_HAPTICS_MS);
+                }
                 handlePressed();
                 break;
             case MotionEvent.ACTION_UP: // 1

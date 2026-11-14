@@ -1,84 +1,74 @@
 package net.kdt.pojavlaunch.prefs.screens;
 
 import android.annotation.SuppressLint;
+import android.content.SharedPreferences;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
+import android.graphics.Typeface;
+import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.LayerDrawable;
 import android.graphics.drawable.RippleDrawable;
-import android.view.MotionEvent;
+import android.os.Build;
+import android.util.TypedValue;
+import android.view.Gravity;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.animation.DecelerateInterpolator;
-import android.view.animation.OvershootInterpolator;
 import android.widget.ImageView;
+import android.widget.SeekBar;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.widget.SwitchCompat;
 import androidx.preference.Preference;
-import androidx.preference.PreferenceCategory;
 import androidx.preference.PreferenceGroup;
 import androidx.preference.PreferenceGroupAdapter;
+import androidx.preference.PreferenceManager;
 import androidx.preference.PreferenceViewHolder;
 import androidx.preference.SwitchPreferenceCompat;
 
 import net.kdt.pojavlaunch.prefs.CustomSeekBarPreference;
+import net.kdt.pojavlaunch.prefs.GamepadRemapPreference;
+import net.kdt.pojavlaunch.prefs.screens.SettingsStyle.RowPosition;
 
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 
 import git.artdeell.mojo.R;
 
 /**
- * Gives every row of the settings list the launcher's card look, without changing what the rows
- * do: a white card (tinted for a switch that is on), an icon in a tinted rounded chip, a
- * coloured section header, a pill around slider values, an entrance slide-in the first time a
- * row appears, a small press effect and a pulse when a switch is turned on.
+ * Draws the settings list as white grouped cards: the rows of one section share a card with
+ * rounded outer corners and thin dividers, each row has its icon in a tinted chip, switches and
+ * sliders take the accent colour, and a section starts with a small header. Nothing about what a
+ * row does is changed; only how it looks.
  *
- * Each section of the settings gets its own accent colour; rows take the colour of the section
- * they are in. The animations use view property animators, so with "Animator duration scale"
- * turned off they simply end instantly and the rows are still fully visible.
+ * The accent colour, compact rows and reduced motion come from the Appearance settings (see
+ * {@link SettingsStyle}); call {@link #refreshStyle()} and redraw the list after one changes.
  */
 @SuppressLint("RestrictedApi")
 final class UrinthPreferenceAdapter extends PreferenceGroupAdapter {
-    private static final int DEFAULT_ACCENT = 0xFF14A765;
-    private static final int[] SECTION_COLORS = {
-            0xFF14A765, // green
-            0xFF2E8BFF, // blue
-            0xFFE8A317, // amber
-            0xFF8B5CF6, // violet
-            0xFFF0506E, // coral
-    };
-    private static final int TITLE_COLOR = 0xFF1B2733;
-    private static final int SUMMARY_COLOR = 0xFF6B7A87;
-    private static final int MAX_STAGGER_STEPS = 8;
+    private static final int MAX_STAGGER_STEPS = 6;
 
-    private final Map<Preference, Integer> accents = new HashMap<>();
-    private final Set<Object> entered = new HashSet<>();
-    private final Set<Object> headersPulsed = new HashSet<>();
-    private final Set<Preference> lastOn = new HashSet<>();
+    private final PreferenceGroup root;
+    private final Set<Preference> entered = new HashSet<>();
+    private int accent = SettingsStyle.accentColor((String) null);
+    private boolean compact;
+    private boolean reduceMotion;
 
     UrinthPreferenceAdapter(@NonNull PreferenceGroup group) {
         super(group);
-        int section = 0;
-        for (int i = 0; i < group.getPreferenceCount(); i++) {
-            Preference child = group.getPreference(i);
-            if (child instanceof PreferenceGroup) {
-                int color = SECTION_COLORS[section++ % SECTION_COLORS.length];
-                paintGroup((PreferenceGroup) child, color);
-            } else {
-                accents.put(child, DEFAULT_ACCENT);
-            }
-        }
+        root = group;
+        refreshStyle();
     }
 
-    private void paintGroup(PreferenceGroup group, int color) {
-        accents.put(group, color);
-        for (int i = 0; i < group.getPreferenceCount(); i++) {
-            Preference child = group.getPreference(i);
-            if (child instanceof PreferenceGroup) paintGroup((PreferenceGroup) child, color);
-            else accents.put(child, color);
-        }
+    /** Reads the three Appearance settings again. */
+    void refreshStyle() {
+        PreferenceManager manager = root.getPreferenceManager();
+        SharedPreferences prefs = manager == null ? null : manager.getSharedPreferences();
+        accent = SettingsStyle.accentColor(prefs);
+        compact = SettingsStyle.compact(prefs);
+        reduceMotion = SettingsStyle.reduceMotion(prefs);
     }
 
     @Override
@@ -92,166 +82,202 @@ final class UrinthPreferenceAdapter extends PreferenceGroupAdapter {
         item.setTranslationY(0f);
         item.setScaleX(1f);
         item.setScaleY(1f);
-        if (preference == null || preference instanceof UrinthHeroPreference) return;
-
-        int accent = accentOf(preference);
-        if (preference instanceof PreferenceCategory) {
-            styleHeader(holder, accent);
+        item.setOnTouchListener(null);
+        if (preference == null || preference instanceof SettingsHeaderPreference) return;
+        if (preference instanceof PreferenceGroup) {
+            styleHeader(holder);
             return;
         }
-        styleRow(holder, preference, accent);
-        animateIn(item, preference, position);
+        styleRow(holder, preference, placeOf(position, preference));
+        fadeIn(item, preference, position);
     }
 
-    private int accentOf(Preference preference) {
-        Integer color = accents.get(preference);
-        return color == null ? DEFAULT_ACCENT : color;
+    // ---- grouping ----------------------------------------------------------------------------
+
+    private RowPosition placeOf(int position, Preference preference) {
+        Preference above = position > 0 ? getItem(position - 1) : null;
+        Preference below = position + 1 < getItemCount() ? getItem(position + 1) : null;
+        return SettingsStyle.rowPosition(sameGroup(above, preference), sameGroup(preference, below));
     }
 
-    private void styleHeader(PreferenceViewHolder holder, int accent) {
+    private static boolean sameGroup(Preference a, Preference b) {
+        return a != null && b != null && isRow(a) && isRow(b) && a.getParent() == b.getParent();
+    }
+
+    private static boolean isRow(Preference preference) {
+        return !(preference instanceof PreferenceGroup) && !(preference instanceof SettingsHeaderPreference);
+    }
+
+    // ---- section header ----------------------------------------------------------------------
+
+    private void styleHeader(PreferenceViewHolder holder) {
         TextView title = (TextView) holder.findViewById(android.R.id.title);
-        if (title != null) title.setTextColor(accent);
+        if (title != null) title.setTextColor(SettingsStyle.HEADING);
+        View iconView = holder.findViewById(android.R.id.icon);
+        if (iconView instanceof ImageView) {
+            ((ImageView) iconView).setImageTintList(ColorStateList.valueOf(accent));
+        }
+        // The older header layout (still used by the sub-screens) has a bar and a line.
         View bar = holder.findViewById(R.id.urinth_header_bar);
         if (bar != null) bar.setBackgroundTintList(ColorStateList.valueOf(accent));
         View line = holder.findViewById(R.id.urinth_header_line);
-        if (line != null) {
-            line.setBackgroundTintList(ColorStateList.valueOf(withAlpha(accent, 0xAA)));
-            // The line draws itself out from the bar, once, the first time the section appears.
-            line.animate().cancel();
-            line.setPivotX(0f);
-            line.setScaleX(1f);
-            if (entered.add(holderKey(holder))) {
-                line.setScaleX(0f);
-                line.animate().scaleX(1f).setStartDelay(160).setDuration(700)
-                        .setInterpolator(new DecelerateInterpolator(1.8f)).start();
-            }
-        }
-        if (bar != null) {
-            bar.animate().cancel();
-            bar.setScaleY(1f);
-            if (!headersPulsed.contains(holderKey(holder))) {
-                headersPulsed.add(holderKey(holder));
-                bar.setScaleY(0.2f);
-                bar.animate().scaleY(1f).setDuration(520).setInterpolator(new DecelerateInterpolator(1.8f)).start();
-            }
-        }
+        if (line != null) line.setBackgroundTintList(ColorStateList.valueOf(SettingsStyle.withAlpha(accent, 0xAA)));
     }
 
-    /** Headers are recycled too, so each one is remembered by the text it shows. */
-    private Object holderKey(PreferenceViewHolder holder) {
-        TextView title = (TextView) holder.findViewById(android.R.id.title);
-        return "header:" + (title == null ? "" : title.getText());
-    }
+    // ---- rows --------------------------------------------------------------------------------
 
-    private void styleRow(PreferenceViewHolder holder, Preference preference, int accent) {
+    private void styleRow(PreferenceViewHolder holder, Preference preference, RowPosition place) {
         View item = holder.itemView;
+        float density = item.getResources().getDisplayMetrics().density;
+        boolean enabled = preference.isEnabled();
+        boolean danger = isDanger(preference);
         boolean on = preference instanceof SwitchPreferenceCompat && ((SwitchPreferenceCompat) preference).isChecked();
-        item.setBackground(cardFor(item, accent, on));
+        int tint = danger ? SettingsStyle.DANGER : accent;
+        int chip = dp(compact ? 32 : 38, density);
+        int pad = dp(14, density);
+        boolean hasIcon = preference.getIcon() != null;
+
+        item.setBackground(rowBackground(place, hasIcon, chip, density));
+        item.setMinimumHeight(dp(compact ? 52 : 64, density));
 
         TextView title = (TextView) holder.findViewById(android.R.id.title);
-        if (title != null) title.setTextColor(TITLE_COLOR);
+        if (title != null) {
+            title.setTextColor(!enabled ? SettingsStyle.TEXT_DISABLED : danger ? SettingsStyle.DANGER : SettingsStyle.TEXT);
+            title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f);
+            title.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        }
         TextView summary = (TextView) holder.findViewById(android.R.id.summary);
-        if (summary != null) summary.setTextColor(SUMMARY_COLOR);
-
-        ImageView icon = (ImageView) holder.findViewById(android.R.id.icon);
-        if (icon != null && icon.getDrawable() != null) {
-            float density = item.getResources().getDisplayMetrics().density;
-            GradientDrawable chip = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
-                    new int[]{withAlpha(accent, on ? 0x2E : 0x1F), withAlpha(accent, on ? 0x2E : 0x1F)});
-            chip.setCornerRadius(10f * density);
-            
-            icon.setBackground(chip);
-            int pad = Math.round(7f * density);
-            icon.setPadding(pad, pad, pad, pad);
-            icon.setImageTintList(ColorStateList.valueOf(accent));
+        if (summary != null) {
+            summary.setTextColor(enabled ? SettingsStyle.MUTED : SettingsStyle.TEXT_DISABLED);
+            summary.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
         }
 
-        if (preference instanceof CustomSeekBarPreference) {
-            TextView value = (TextView) holder.findViewById(R.id.seekbar_value);
-            if (value != null) {
-                float density = item.getResources().getDisplayMetrics().density;
-                value.setBackgroundResource(R.drawable.urinth_pref_value_pill);
-                value.setTextColor(accent);
-                value.setTypeface(value.getTypeface(), android.graphics.Typeface.BOLD);
-                int sideways = Math.round(12f * density);
-                int upright = Math.round(4f * density);
-                value.setPadding(sideways, upright, sideways, upright);
-                value.setBackgroundTintList(null);
+        // The library's own row layout: tighten its spacing. Rows with their own layout keep theirs.
+        View frame = holder.findViewById(androidx.preference.R.id.icon_frame);
+        if (frame != null) {
+            item.setPaddingRelative(pad, 0, pad, 0);
+            frame.setMinimumWidth(chip + pad);
+            frame.setPaddingRelative(0, 0, pad, 0);
+            if (title != null && title.getParent() instanceof View) {
+                View box = (View) title.getParent();
+                int vertical = dp(compact ? 8 : 14, density);
+                box.setPaddingRelative(box.getPaddingStart(), vertical, box.getPaddingEnd(), vertical);
             }
         }
 
-        pulseIfTurnedOn(item, preference, on);
-        addPressEffect(item);
+        styleIcon(holder, hasIcon, chip, density, tint, enabled, on);
+        styleSwitch(holder);
+        styleSlider(holder, preference, density);
     }
 
-    /**
-     * The card of a row: dark glass tinted with the section's colour, a thin edge in that colour,
-     * and, for a switch that is on, a brighter edge and glow.
-     */
-    private static RippleDrawable cardFor(View item, int accent, boolean on) {
-        float density = item.getResources().getDisplayMetrics().density;
-        GradientDrawable shape = new GradientDrawable();
-        shape.setColor(on ? blend(0xFFFFFFFF, accent, 0.07f) : 0xFFFFFFFF);
-        shape.setCornerRadius(16f * density);
-        shape.setStroke(Math.max(1, Math.round(density)), on ? withAlpha(accent, 0x70) : 0xFFE6ECF2);
+    private static boolean isDanger(Preference preference) {
+        return "clearMetadataCache".equals(preference.getKey()) || preference instanceof GamepadRemapPreference;
+    }
+
+    /** One card slice: a border, the white fill inside it, a divider under the row when another row follows, and a ripple. */
+    private Drawable rowBackground(RowPosition place, boolean hasIcon, int chip, float density) {
+        float radius = 16f * density;
+        int border = Math.max(1, Math.round(density * 0.6f));
+
+        GradientDrawable outer = new GradientDrawable();
+        outer.setColor(SettingsStyle.BORDER);
+        outer.setCornerRadii(SettingsStyle.corners(place, radius));
+        GradientDrawable inner = new GradientDrawable();
+        inner.setColor(SettingsStyle.CARD);
+        inner.setCornerRadii(SettingsStyle.corners(place, Math.max(0f, radius - border)));
+
+        // The divider needs LayerDrawable.setLayerGravity, which exists from Android 6.
+        boolean divider = Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !SettingsStyle.hasBottomEdge(place);
+        Drawable[] layers;
+        if (divider) {
+            GradientDrawable line = new GradientDrawable();
+            line.setColor(SettingsStyle.DIVIDER);
+            layers = new Drawable[]{outer, inner, line};
+        } else {
+            layers = new Drawable[]{outer, inner};
+        }
+        LayerDrawable card = new LayerDrawable(layers);
+        card.setLayerInset(1, border, SettingsStyle.hasTopEdge(place) ? border : 0,
+                border, SettingsStyle.hasBottomEdge(place) ? border : 0);
+        if (divider) {
+            int start = dp(14, density) + (hasIcon ? chip + dp(14, density) : 0);
+            card.setLayerInset(2, start, 0, dp(14, density), 0);
+            card.setLayerGravity(2, Gravity.BOTTOM);
+            card.setLayerHeight(2, Math.max(1, Math.round(density * 0.6f)));
+        }
+
         GradientDrawable mask = new GradientDrawable();
         mask.setColor(Color.WHITE);
-        mask.setCornerRadius(16f * density);
-        return new RippleDrawable(ColorStateList.valueOf(withAlpha(accent, 0x30)), shape, mask);
+        mask.setCornerRadii(SettingsStyle.corners(place, radius));
+        return new RippleDrawable(ColorStateList.valueOf(SettingsStyle.withAlpha(accent, 0x1F)), card, mask);
     }
 
-    private static int blend(int base, int tint, float amount) {
-        int r = Math.round(Color.red(base) * (1 - amount) + Color.red(tint) * amount);
-        int g = Math.round(Color.green(base) * (1 - amount) + Color.green(tint) * amount);
-        int b = Math.round(Color.blue(base) * (1 - amount) + Color.blue(tint) * amount);
-        return Color.rgb(r, g, b);
+    private void styleIcon(PreferenceViewHolder holder, boolean hasIcon, int chip, float density,
+                           int tint, boolean enabled, boolean on) {
+        View view = holder.findViewById(android.R.id.icon);
+        if (!(view instanceof ImageView) || !hasIcon) return;
+        ImageView icon = (ImageView) view;
+        ViewGroup.LayoutParams params = icon.getLayoutParams();
+        if (params != null && (params.width != chip || params.height != chip)) {
+            params.width = chip;
+            params.height = chip;
+            icon.setLayoutParams(params);
+        }
+        icon.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        int pad = dp(compact ? 7 : 8, density);
+        icon.setPadding(pad, pad, pad, pad);
+        GradientDrawable chipBackground = new GradientDrawable();
+        chipBackground.setColor(enabled ? SettingsStyle.withAlpha(tint, on ? 0x2E : 0x1A) : SettingsStyle.DIVIDER);
+        chipBackground.setCornerRadius(dp(10, density));
+        icon.setBackground(chipBackground);
+        icon.setImageTintList(ColorStateList.valueOf(enabled ? tint : SettingsStyle.TEXT_DISABLED));
     }
 
-    /** One small pulse when a switch has just been turned on. */
-    private void pulseIfTurnedOn(View item, Preference preference, boolean on) {
-        if (!(preference instanceof SwitchPreferenceCompat)) return;
-        boolean was = lastOn.contains(preference);
-        if (on) lastOn.add(preference); else lastOn.remove(preference);
-        if (on && !was && entered.contains(preference)) {
-            item.animate().scaleX(1.02f).scaleY(1.02f).setDuration(180)
-                    .withEndAction(() -> item.animate().scaleX(1f).scaleY(1f).setDuration(280).start())
-                    .start();
+    private void styleSwitch(PreferenceViewHolder holder) {
+        View view = holder.findViewById(androidx.preference.R.id.switchWidget);
+        if (!(view instanceof SwitchCompat)) return;
+        SwitchCompat toggle = (SwitchCompat) view;
+        int[][] states = {{android.R.attr.state_checked}, new int[0]};
+        toggle.setThumbTintList(new ColorStateList(states, new int[]{accent, 0xFFFFFFFF}));
+        toggle.setTrackTintList(new ColorStateList(states,
+                new int[]{SettingsStyle.withAlpha(accent, 0xB0), SettingsStyle.TRACK_OFF}));
+    }
+
+    private void styleSlider(PreferenceViewHolder holder, Preference preference, float density) {
+        if (!(preference instanceof CustomSeekBarPreference)) return;
+        View bar = holder.findViewById(androidx.preference.R.id.seekbar);
+        if (bar instanceof SeekBar) {
+            SeekBar seekBar = (SeekBar) bar;
+            ColorStateList color = ColorStateList.valueOf(accent);
+            seekBar.setProgressTintList(color);
+            seekBar.setThumbTintList(color);
+            seekBar.setProgressBackgroundTintList(ColorStateList.valueOf(SettingsStyle.TRACK_BACKGROUND));
+        }
+        View valueView = holder.findViewById(androidx.preference.R.id.seekbar_value);
+        if (valueView instanceof TextView) {
+            TextView value = (TextView) valueView;
+            GradientDrawable pill = new GradientDrawable();
+            pill.setColor(SettingsStyle.withAlpha(accent, 0x1A));
+            pill.setCornerRadius(dp(20, density));
+            value.setBackground(pill);
+            value.setTextColor(accent);
+            value.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+            value.setPaddingRelative(dp(12, density), dp(4, density), dp(12, density), dp(4, density));
         }
     }
 
-    private void animateIn(View item, Preference preference, int position) {
-        if (!entered.add(preference)) return;
-        float density = item.getResources().getDisplayMetrics().density;
+    /** A row fades in the first time it is shown; scrolling it back later does not repeat it. */
+    private void fadeIn(View item, Preference preference, int position) {
+        if (reduceMotion || !entered.add(preference)) return;
         item.setAlpha(0f);
-        item.setTranslationY(22f * density);
-        item.setScaleX(0.96f);
-        item.setScaleY(0.96f);
-        item.animate().alpha(1f).translationY(0f).scaleX(1f).scaleY(1f)
-                .setStartDelay(60L + (position % MAX_STAGGER_STEPS) * 55L)
-                .setDuration(600)
-                .setInterpolator(new android.view.animation.PathInterpolator(0.05f, 0.7f, 0.1f, 1f))
+        item.animate().alpha(1f)
+                .setStartDelay(Math.min(position, MAX_STAGGER_STEPS) * 20L)
+                .setDuration(200)
+                .setInterpolator(new DecelerateInterpolator(1.4f))
                 .start();
     }
 
-    @SuppressLint("ClickableViewAccessibility")
-    private void addPressEffect(View item) {
-        item.setOnTouchListener((view, event) -> {
-            switch (event.getActionMasked()) {
-                case MotionEvent.ACTION_DOWN:
-                    view.animate().scaleX(0.985f).scaleY(0.985f).setDuration(140).start();
-                    break;
-                case MotionEvent.ACTION_UP:
-                case MotionEvent.ACTION_CANCEL:
-                    view.animate().scaleX(1f).scaleY(1f).setDuration(300).setInterpolator(new android.view.animation.PathInterpolator(0.05f, 0.7f, 0.1f, 1f)).start();
-                    break;
-                default:
-                    break;
-            }
-            return false; // the press itself is still handled by the row
-        });
-    }
-
-    private static int withAlpha(int color, int alpha) {
-        return Color.argb(alpha, Color.red(color), Color.green(color), Color.blue(color));
+    private static int dp(int value, float density) {
+        return Math.round(value * density);
     }
 }

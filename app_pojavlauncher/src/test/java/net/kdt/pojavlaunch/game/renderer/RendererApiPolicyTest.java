@@ -141,4 +141,13 @@ public class RendererApiPolicyTest {
         assertNull(RendererApiPolicy.formatVulkanVersion(0));
         assertNull(RendererApiPolicy.formatVulkanVersion(-5));
     }
+    @Test
+    public void shortNamesDropTheNotesOfTheDisplayName() {
+        assertEquals("GL4ES", RendererApiPolicy.shortName("GL4ES (OpenGL ES 2) - 1.21.4 and lower"));
+        assertEquals("Zink", RendererApiPolicy.shortName("Zink (Vulkan) - all versions"));
+        assertEquals("Legacy Zink", RendererApiPolicy.shortName("Legacy Zink (Vulkan) - all versions, low performance"));
+        assertEquals("Performance Mode", RendererApiPolicy.shortName("Performance Mode"));
+        assertEquals("MobileGlues", RendererApiPolicy.shortName("  MobileGlues "));
+        assertEquals("", RendererApiPolicy.shortName(null));
+    }
 }

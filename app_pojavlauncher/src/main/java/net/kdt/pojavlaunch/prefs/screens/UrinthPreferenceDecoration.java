@@ -6,19 +6,17 @@ import android.view.View;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
-/** Spacing around the settings cards, so each row reads as its own card. */
+/** Side margins of the settings list, so the white cards sit inside the page with room around them. */
 final class UrinthPreferenceDecoration extends RecyclerView.ItemDecoration {
     private final int sideways;
-    private final int upright;
 
     UrinthPreferenceDecoration(float density) {
-        sideways = Math.round(8f * density);
-        upright = Math.round(3f * density);
+        sideways = Math.round(16f * density);
     }
 
     @Override
     public void getItemOffsets(@NonNull Rect outRect, @NonNull View view,
                                @NonNull RecyclerView parent, @NonNull RecyclerView.State state) {
-        outRect.set(sideways, upright, sideways, upright);
+        outRect.set(sideways, 0, sideways, 0);
     }
 }

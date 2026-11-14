@@ -1,389 +1,483 @@
 <?xml version="1.0" encoding="utf-8"?>
-<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app2="http://schemas.android.com/apk/res-auto">
+<!-- The full settings list. Every row has an icon (res/drawable/ic_set_*), sections use the clean
+     header layout, and the white card look is drawn by UrinthPreferenceAdapter.
+     Keys are read by LauncherPreferenceFragment.setupAllSettings(): keep them. -->
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app2="http://schemas.android.com/apk/res-auto">
 
+    <PreferenceCategory
+        android:layout="@layout/preference_category_clean"
+        android:icon="@drawable/ic_set_palette"
+        android:title="@string/urinth_set_cat_appearance">
 
-        
-
-        
-
-        
-
-
-        
-<SwitchPreferenceCompat
-        android:title="@string/preference_force_english_title"
-        android:key="force_english"
-        android:summary="@string/preference_force_english_description"
-        android:icon="@drawable/ic_modrinth_language"/>
-
-    <Preference
-        android:title="@string/preference_ask_for_notification_title"
-        android:summary="@string/preference_ask_for_notification_description"
-        android:key="notification_permission_request"
-        android:icon="@drawable/ic_modrinth_bell"
-        />
-
-<PreferenceCategory android:layout="@layout/preference_category_modrinth" android:title="@string/preference_category_video" >
         <androidx.preference.ListPreference
-            android:title="@string/mcl_setting_category_renderer"
-            android:key="renderer"
-            android:defaultValue="opengles2"
-            android:icon="@drawable/ic_modrinth_video"
-            app2:useSimpleSummaryProvider="true"/>
-
-        <androidx.preference.SwitchPreferenceCompat
+            android:defaultValue="emerald"
+            android:entries="@array/urinth_set_accent_names"
+            android:entryValues="@array/urinth_set_accent_values"
+            android:icon="@drawable/ic_set_palette"
+            android:key="ui_accent"
+            android:title="@string/urinth_set_accent_title"
+            app2:useSimpleSummaryProvider="true" />
+        <SwitchPreferenceCompat
             android:defaultValue="false"
+            android:icon="@drawable/ic_set_tune"
+            android:key="ui_compact"
+            android:summary="@string/urinth_set_compact_summary"
+            android:title="@string/urinth_set_compact_title" />
+        <SwitchPreferenceCompat
+            android:defaultValue="false"
+            android:icon="@drawable/ic_set_motion"
+            android:key="ui_reduce_motion"
+            android:summary="@string/urinth_set_motion_summary"
+            android:title="@string/urinth_set_motion_title" />
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:layout="@layout/preference_category_clean"
+        android:icon="@drawable/ic_set_info"
+        android:title="@string/urinth_set_cat_general">
+
+        <SwitchPreferenceCompat
+            android:icon="@drawable/ic_set_language"
+            android:key="force_english"
+            android:summary="@string/preference_force_english_description"
+            android:title="@string/preference_force_english_title" />
+        <Preference
+            android:icon="@drawable/ic_set_bell"
+            android:key="notification_permission_request"
+            android:summary="@string/preference_ask_for_notification_description"
+            android:title="@string/preference_ask_for_notification_title" />
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:layout="@layout/preference_category_clean"
+        android:icon="@drawable/ic_set_display"
+        android:title="@string/urinth_set_cat_graphics">
+
+        <net.kdt.pojavlaunch.prefs.screens.GraphicsApiPreference
+            android:icon="@drawable/ic_set_renderer"
+            android:key="graphics_api"
+            android:summary="@string/urinth_set_api_summary"
+            android:title="@string/urinth_set_api_title" />
+        <SwitchPreferenceCompat
+            android:defaultValue="true"
+            android:icon="@drawable/ic_set_bolt"
+            android:key="performanceMode"
+            android:summary="@string/urinth_set_perf_summary"
+            android:title="@string/urinth_set_perf_title" />
+        <androidx.preference.ListPreference
+            android:defaultValue="opengles2"
+            android:icon="@drawable/ic_set_renderer"
+            android:key="renderer"
+            android:title="@string/mcl_setting_category_renderer"
+            app2:useSimpleSummaryProvider="true" />
+        <Preference
+            android:icon="@drawable/ic_set_cpu"
+            android:key="graphics_info"
+            android:persistent="false"
+            app2:selectable="false"
+            android:title="@string/urinth_set_gpu_title" />
+        <SwitchPreferenceCompat
+            android:defaultValue="false"
+            android:icon="@drawable/ic_set_notch"
             android:key="ignoreNotch"
             android:summary="@string/mcl_setting_subtitle_ignore_notch"
-            android:title="@string/mcl_setting_title_ignore_notch"
-            android:icon="@drawable/ic_modrinth_video"
-            />
-
+            android:title="@string/mcl_setting_title_ignore_notch" />
         <net.kdt.pojavlaunch.prefs.CustomSeekBarPreference
+            android:icon="@drawable/ic_set_resolution"
             android:key="resolutionRatio"
             android:summary="@string/mcl_setting_subtitle_resolution_scaler"
             android:title="@string/mcl_setting_title_resolution_scaler"
-            app2:showSeekBarValue="true"
-            app2:selectable="false"
             app2:min="@integer/resolution_seekbar_min"
             app2:seekBarIncrement="@integer/resolution_seekbar_increment"
-            android:icon="@drawable/ic_modrinth_video"
-            />
-
-        <androidx.preference.SwitchPreferenceCompat
-            android:title="@string/preference_sustained_performance_title"
-            android:summary="@string/preference_sustained_performance_description"
-            android:key="sustainedPerformance"
-            android:defaultValue="false"
-            />
-
-        <androidx.preference.SwitchPreferenceCompat
-            android:defaultValue="false"
-            android:key="alternate_surface"
-            android:summary="@string/mcl_setting_subtitle_use_surface_view"
-            android:title="@string/mcl_setting_title_use_surface_view"
-            />
-        <androidx.preference.SwitchPreferenceCompat
-            android:defaultValue="false"
-            android:key="force_vsync"
-            android:summary="@string/preference_force_vsync_description"
-            android:title="@string/preference_force_vsync_title"
-            />
-        <androidx.preference.SwitchPreferenceCompat
-            android:defaultValue="false"
-            android:key="use_angle"
-            android:summary="@string/preference_use_angle_description"
-            android:title="@string/preference_use_angle_title"
-            />
+            app2:selectable="false"
+            app2:showSeekBarValue="true" />
         <SwitchPreferenceCompat
             android:defaultValue="false"
-            android:icon="@drawable/ic_modrinth_video"
+            android:icon="@drawable/ic_set_speed"
+            android:key="sustainedPerformance"
+            android:summary="@string/preference_sustained_performance_description"
+            android:title="@string/preference_sustained_performance_title" />
+        <SwitchPreferenceCompat
+            android:defaultValue="false"
+            android:icon="@drawable/ic_set_surface"
+            android:key="alternate_surface"
+            android:summary="@string/mcl_setting_subtitle_use_surface_view"
+            android:title="@string/mcl_setting_title_use_surface_view" />
+        <SwitchPreferenceCompat
+            android:defaultValue="false"
+            android:icon="@drawable/ic_set_sync"
+            android:key="force_vsync"
+            android:summary="@string/preference_force_vsync_description"
+            android:title="@string/preference_force_vsync_title" />
+        <SwitchPreferenceCompat
+            android:defaultValue="false"
+            android:icon="@drawable/ic_set_triangle"
+            android:key="use_angle"
+            android:summary="@string/preference_use_angle_description"
+            android:title="@string/preference_use_angle_title" />
+        <SwitchPreferenceCompat
+            android:defaultValue="false"
+            android:icon="@drawable/ic_set_vulkan"
             android:key="zinkPreferSystemDriver"
             android:summary="@string/preference_vulkan_driver_system_description"
-            android:title="@string/preference_vulkan_driver_system_title"/>
+            android:title="@string/preference_vulkan_driver_system_title" />
     </PreferenceCategory>
 
-<Preference
-        android:title="@string/preference_edit_controls_title"
-        android:summary="@string/preference_edit_controls_summary"
-        app2:icon="@drawable/ic_modrinth_controls">
-        <intent android:targetPackage="@string/application_package" android:targetClass="net.kdt.pojavlaunch.CustomControlsActivity" android:action=".CustomControlsActivity"/>
-    </Preference>
-
-    <PreferenceCategory android:layout="@layout/preference_category_modrinth"
+    <PreferenceCategory
+        android:layout="@layout/preference_category_clean"
+        android:icon="@drawable/ic_set_touch"
         android:title="@string/preference_category_gestures">
 
-        <androidx.preference.SwitchPreferenceCompat
+        <SwitchPreferenceCompat
             android:defaultValue="false"
-            android:icon="@drawable/ic_modrinth_controls"
+            android:icon="@drawable/ic_set_touch"
             android:key="disableGestures"
             android:summary="@string/mcl_disable_gestures_subtitle"
             android:title="@string/mcl_disable_gestures" />
-
-        <androidx.preference.SwitchPreferenceCompat
+        <SwitchPreferenceCompat
             android:defaultValue="false"
+            android:icon="@drawable/ic_set_swap"
             android:key="disableDoubleTap"
             android:summary="@string/mcl_disable_swap_hand_subtitle"
-            android:title="@string/mcl_disable_swap_hand"
-            android:icon="@drawable/ic_modrinth_controls"/>
-
+            android:title="@string/mcl_disable_swap_hand" />
         <net.kdt.pojavlaunch.prefs.CustomSeekBarPreference
+            android:icon="@drawable/ic_set_timer"
             android:key="timeLongPressTrigger"
+            android:max="@integer/gesture_delay_seekbar_max"
             android:summary="@string/mcl_setting_subtitle_longpresstrigger"
             android:title="@string/mcl_setting_title_longpresstrigger"
-            app2:showSeekBarValue="true"
-            app2:selectable="false"
             app2:min="@integer/gesture_delay_seekbar_min"
-            android:max="@integer/gesture_delay_seekbar_max"
             app2:seekBarIncrement="@integer/gesture_delay_seekbar_increment"
-            android:icon="@drawable/ic_modrinth_controls"
-            />
-
+            app2:selectable="false"
+            app2:showSeekBarValue="true" />
     </PreferenceCategory>
 
-    <PreferenceCategory android:layout="@layout/preference_category_modrinth"
+    <PreferenceCategory
+        android:layout="@layout/preference_category_clean"
+        android:icon="@drawable/ic_set_grid"
         android:title="@string/preference_category_buttons">
 
+        <Preference
+            android:icon="@drawable/ic_set_edit"
+            android:summary="@string/preference_edit_controls_summary"
+            android:title="@string/preference_edit_controls_title">
+            <intent
+                android:action=".CustomControlsActivity"
+                android:targetClass="net.kdt.pojavlaunch.CustomControlsActivity"
+                android:targetPackage="@string/application_package" />
+        </Preference>
         <net.kdt.pojavlaunch.prefs.CustomSeekBarPreference
+            android:icon="@drawable/ic_set_grid"
             android:key="buttonscale"
-            android:title="@string/mcl_setting_title_buttonscale"
-            android:summary="@string/mcl_setting_subtitle_buttonscale"
-            app2:showSeekBarValue="true"
-            app2:selectable="false"
-            app2:min="@integer/button_scale_seekbar_min"
             android:max="@integer/button_scale_seekbar_max"
+            android:summary="@string/mcl_setting_subtitle_buttonscale"
+            android:title="@string/mcl_setting_title_buttonscale"
+            app2:min="@integer/button_scale_seekbar_min"
             app2:seekBarIncrement="@integer/button_scale_seekbar_increment"
-            android:icon="@drawable/ic_modrinth_controls"
-            />
-        <net.kdt.pojavlaunch.prefs.CustomSeekBarPreference
-            android:key="buttonTransparency"
-            android:title="@string/preference_button_transparency"
-            android:summary="@string/preference_button_transparency_summary"
-            app2:showSeekBarValue="true"
             app2:selectable="false"
-            app2:min="0"
+            app2:showSeekBarValue="true" />
+        <net.kdt.pojavlaunch.prefs.CustomSeekBarPreference
+            android:icon="@drawable/ic_set_opacity"
+            android:key="buttonTransparency"
             android:max="100"
+            android:summary="@string/preference_button_transparency_summary"
+            android:title="@string/preference_button_transparency"
+            app2:min="0"
             app2:seekBarIncrement="@integer/button_scale_seekbar_increment"
-            />
+            app2:selectable="false"
+            app2:showSeekBarValue="true" />
         <SwitchPreferenceCompat
-            android:key="buttonAllCaps"
             android:defaultValue="true"
-            android:title="@string/mcl_setting_title_buttonallcaps"
+            android:icon="@drawable/ic_set_text"
+            android:key="buttonAllCaps"
             android:summary="@string/mcl_setting_subtitle_buttonallcaps"
-            android:icon="@drawable/ic_modrinth_controls"
-            />
-
+            android:title="@string/mcl_setting_title_buttonallcaps" />
+        <SwitchPreferenceCompat
+            android:defaultValue="false"
+            android:icon="@drawable/ic_set_haptic"
+            android:key="buttonHaptics"
+            android:summary="@string/urinth_set_haptics_summary"
+            android:title="@string/urinth_set_haptics_title" />
+        <net.kdt.pojavlaunch.prefs.CustomSeekBarPreference
+            android:defaultValue="15"
+            android:dependency="buttonHaptics"
+            android:icon="@drawable/ic_set_timer"
+            android:key="buttonHapticsMs"
+            android:max="40"
+            android:summary="@string/urinth_set_haptics_ms_summary"
+            android:title="@string/urinth_set_haptics_ms_title"
+            app2:min="5"
+            app2:seekBarIncrement="1"
+            app2:selectable="false"
+            app2:showSeekBarValue="true" />
     </PreferenceCategory>
 
-    <PreferenceCategory android:layout="@layout/preference_category_modrinth"
+    <PreferenceCategory
+        android:layout="@layout/preference_category_clean"
+        android:icon="@drawable/ic_set_mouse"
         android:title="@string/preference_category_virtual_mouse">
 
         <net.kdt.pojavlaunch.prefs.CustomSeekBarPreference
+            android:icon="@drawable/ic_set_pointer"
             android:key="mousescale"
+            android:max="@integer/mouse_scale_seekbar_max"
             android:summary="@string/mcl_setting_subtitle_mousescale"
             android:title="@string/mcl_setting_title_mousescale"
-
-            app2:selectable="false"
             app2:min="@integer/mouse_scale_seekbar_min"
-            android:max="@integer/mouse_scale_seekbar_max"
             app2:seekBarIncrement="@integer/mouse_scale_seekbar_increment"
-            app2:showSeekBarValue="true"
-            android:icon="@drawable/ic_modrinth_sliders"
-            />
-
+            app2:selectable="false"
+            app2:showSeekBarValue="true" />
         <net.kdt.pojavlaunch.prefs.CustomSeekBarPreference
+            android:icon="@drawable/ic_set_speed"
             android:key="mousespeed"
+            android:max="@integer/mouse_speed_seekbar_max"
             android:summary="@string/mcl_setting_subtitle_mousespeed"
             android:title="@string/mcl_setting_title_mousespeed"
-            android:icon="@drawable/ic_modrinth_sliders"
-            app2:selectable="false"
             app2:min="@integer/mouse_speed_seekbar_min"
-            android:max="@integer/mouse_speed_seekbar_max"
             app2:seekBarIncrement="@integer/mouse_speed_seekbar_increment"
+            app2:selectable="false"
             app2:showSeekBarValue="true" />
         <SwitchPreferenceCompat
+            android:icon="@drawable/ic_set_mouse"
             android:key="mouse_start"
-            android:title="@string/preference_mouse_start_title"
             android:summary="@string/preference_mouse_start_description"
-            android:icon="@drawable/ic_modrinth_sliders"/>
+            android:title="@string/preference_mouse_start_title" />
     </PreferenceCategory>
 
-    <PreferenceCategory android:layout="@layout/preference_category_modrinth"
+    <PreferenceCategory
         android:key="gyroCategory"
-        android:title="@string/preference_category_gyro_controls"
-        >
+        android:layout="@layout/preference_category_clean"
+        android:icon="@drawable/ic_set_gyro"
+        android:title="@string/preference_category_gyro_controls">
+
         <SwitchPreferenceCompat
+            android:icon="@drawable/ic_set_gyro"
             android:key="enableGyro"
-            android:title="@string/preference_enable_gyro_title"
-            android:summary="@string/preference_enable_gyro_description"/>
+            android:summary="@string/preference_enable_gyro_description"
+            android:title="@string/preference_enable_gyro_title" />
         <net.kdt.pojavlaunch.prefs.CustomSeekBarPreference
+            android:icon="@drawable/ic_set_speed"
             android:key="gyroSensitivity"
-            android:title="@string/preference_gyro_sensitivity_title"
-            android:summary="@string/preference_gyro_sensitivity_description"
-            app2:selectable="false"
-            app2:min="@integer/gyro_speed_seekbar_min"
             android:max="@integer/gyro_speed_seekbar_max"
+            android:summary="@string/preference_gyro_sensitivity_description"
+            android:title="@string/preference_gyro_sensitivity_title"
+            app2:min="@integer/gyro_speed_seekbar_min"
             app2:seekBarIncrement="@integer/gyro_speed_seekbar_increment"
-            app2:showSeekBarValue="true"/>
-        <net.kdt.pojavlaunch.prefs.CustomSeekBarPreference
-            android:key="gyroSampleRate"
-            android:title="@string/preference_gyro_sample_rate_title"
-            android:summary="@string/preference_gyro_sample_rate_description"
-            app2:min="@integer/gyro_rate_seekbar_min"
-            android:max="@integer/gyro_rate_seekbar_max"
             app2:selectable="false"
-            app2:showSeekBarValue="true"/>
-        <SwitchPreferenceCompat
-            android:key="gyroSmoothing"
-            android:title="@string/preference_gyro_smoothing_title"
-            android:summary="@string/preference_gyro_smoothing_description"
-            android:defaultValue="true"
-            />
-        <SwitchPreferenceCompat
-            android:key="gyroInvertX"
-            android:title="@string/preference_gyro_invert_x_axis"
-            android:summary="@string/preference_gyro_invert_x_axis_description"/>
-        <SwitchPreferenceCompat
-            android:key="gyroInvertY"
-            android:title="@string/preference_gyro_invert_y_axis"
-            android:summary="@string/preference_gyro_invert_y_axis_description"/>
-
-    </PreferenceCategory>
-
-    <PreferenceCategory android:layout="@layout/preference_category_modrinth"
-        android:title="@string/preference_category_controller_settings"
-        >
-        <Preference
-            android:title="@string/preference_remap_controller_title"
-            android:summary="@string/preference_remap_controller_description"
-            android:fragment="net.kdt.pojavlaunch.fragments.GamepadMapperFragment"/>
-        <net.kdt.pojavlaunch.prefs.GamepadRemapPreference
-            android:title="@string/preference_wipe_controller_title"
-            android:summary="@string/preference_wipe_controller_description"
-            />
+            app2:showSeekBarValue="true" />
         <net.kdt.pojavlaunch.prefs.CustomSeekBarPreference
-            android:key="gamepad_deadzone_scale"
-            android:title="@string/preference_deadzone_scale_title"
-            android:summary="@string/preference_deadzone_scale_description"
-            app2:showSeekBarValue="true"
-            app2:min="@integer/gamepad_deadzone_seekbar_min"
-            android:max="@integer/gamepad_deadzone_seekbar_max"
-            app2:seekBarIncrement="@integer/gamepad_deadzone_seekbar_increment"
-            />
-
-    </PreferenceCategory>
-
-    <PreferenceCategory android:layout="@layout/preference_category_modrinth" android:title="@string/preference_category_keyboard">
+            android:icon="@drawable/ic_set_timer"
+            android:key="gyroSampleRate"
+            android:max="@integer/gyro_rate_seekbar_max"
+            android:summary="@string/preference_gyro_sample_rate_description"
+            android:title="@string/preference_gyro_sample_rate_title"
+            app2:min="@integer/gyro_rate_seekbar_min"
+            app2:selectable="false"
+            app2:showSeekBarValue="true" />
         <SwitchPreferenceCompat
-            android:key="keyboardAutoPanning"
-            android:title="@string/preference_keyboard_autopan_title"
-            android:summary="@string/preference_keyboard_autopan_summary"
-            />
+            android:defaultValue="true"
+            android:icon="@drawable/ic_set_motion"
+            android:key="gyroSmoothing"
+            android:summary="@string/preference_gyro_smoothing_description"
+            android:title="@string/preference_gyro_smoothing_title" />
+        <SwitchPreferenceCompat
+            android:icon="@drawable/ic_set_swap"
+            android:key="gyroInvertX"
+            android:summary="@string/preference_gyro_invert_x_axis_description"
+            android:title="@string/preference_gyro_invert_x_axis" />
+        <SwitchPreferenceCompat
+            android:icon="@drawable/ic_set_swap"
+            android:key="gyroInvertY"
+            android:summary="@string/preference_gyro_invert_y_axis_description"
+            android:title="@string/preference_gyro_invert_y_axis" />
     </PreferenceCategory>
 
-<PreferenceCategory android:layout="@layout/preference_category_modrinth" android:title="@string/preference_category_java_tweaks">
+    <PreferenceCategory
+        android:layout="@layout/preference_category_clean"
+        android:icon="@drawable/ic_set_gamepad"
+        android:title="@string/preference_category_controller_settings">
+
         <Preference
+            android:fragment="net.kdt.pojavlaunch.fragments.GamepadMapperFragment"
+            android:icon="@drawable/ic_set_gamepad"
+            android:summary="@string/preference_remap_controller_description"
+            android:title="@string/preference_remap_controller_title" />
+        <net.kdt.pojavlaunch.prefs.GamepadRemapPreference
+            android:icon="@drawable/ic_set_trash"
+            android:summary="@string/preference_wipe_controller_description"
+            android:title="@string/preference_wipe_controller_title" />
+        <net.kdt.pojavlaunch.prefs.CustomSeekBarPreference
+            android:icon="@drawable/ic_set_tune"
+            android:key="gamepad_deadzone_scale"
+            android:max="@integer/gamepad_deadzone_seekbar_max"
+            android:summary="@string/preference_deadzone_scale_description"
+            android:title="@string/preference_deadzone_scale_title"
+            app2:min="@integer/gamepad_deadzone_seekbar_min"
+            app2:seekBarIncrement="@integer/gamepad_deadzone_seekbar_increment"
+            app2:showSeekBarValue="true" />
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:layout="@layout/preference_category_clean"
+        android:icon="@drawable/ic_set_keyboard"
+        android:title="@string/preference_category_keyboard">
+
+        <SwitchPreferenceCompat
+            android:icon="@drawable/ic_set_keyboard"
+            android:key="keyboardAutoPanning"
+            android:summary="@string/preference_keyboard_autopan_summary"
+            android:title="@string/preference_keyboard_autopan_title" />
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:layout="@layout/preference_category_clean"
+        android:icon="@drawable/ic_set_java"
+        android:title="@string/preference_category_java_tweaks">
+
+        <Preference
+            android:icon="@drawable/ic_set_java"
             android:key="install_jre"
-            android:icon="@drawable/ic_modrinth_java"
             android:persistent="false"
             android:summary="@string/multirt_subtitle"
-            android:title="@string/multirt_title"/>
-
+            android:title="@string/multirt_title" />
         <androidx.preference.EditTextPreference
             android:dialogTitle="@string/mcl_setting_title_javaargs"
-            android:icon="@drawable/ic_modrinth_java"
+            android:icon="@drawable/ic_set_terminal"
             android:key="javaArgs"
             android:singleLine="true"
             android:summary="@string/mcl_setting_subtitle_javaargs"
             android:title="@string/mcl_setting_title_javaargs" />
-
         <net.kdt.pojavlaunch.prefs.CustomSeekBarPreference
+            android:icon="@drawable/ic_set_memory"
             android:key="allocation"
-            android:icon="@drawable/ic_modrinth_java"
             android:summary="@string/mcl_memory_allocation_subtitle"
             android:title="@string/mcl_memory_allocation"
-            app2:showSeekBarValue="true"
             app2:min="@integer/memory_seekbar_min"
             app2:seekBarIncrement="@integer/memory_seekbar_increment"
-            app2:selectable="false"/>
-
+            app2:selectable="false"
+            app2:showSeekBarValue="true" />
         <SwitchPreferenceCompat
             android:defaultValue="true"
-            android:icon="@drawable/ic_modrinth_java"
+            android:icon="@drawable/ic_set_shield"
             android:key="java_sandbox"
             android:summary="@string/mcl_setting_java_sandbox_subtitle"
             android:title="@string/mcl_setting_java_sandbox" />
-
     </PreferenceCategory>
 
-<PreferenceCategory android:layout="@layout/preference_category_modrinth" android:title="@string/preference_category_miscellaneous">
+    <PreferenceCategory
+        android:layout="@layout/preference_category_clean"
+        android:icon="@drawable/ic_set_tune"
+        android:title="@string/preference_category_miscellaneous">
+
         <SwitchPreferenceCompat
             android:defaultValue="true"
-            android:icon="@drawable/ic_modrinth_sliders"
+            android:icon="@drawable/ic_set_shield"
             android:key="checkGameFiles"
             android:summary="@string/preference_verify_game_files_description"
             android:title="@string/preference_verify_game_files_title" />
-
         <SwitchPreferenceCompat
             android:defaultValue="true"
-            android:icon="@drawable/ic_modrinth_sliders"
+            android:icon="@drawable/ic_set_bolt"
             android:key="fastStartupCheck"
             android:summary="@string/preference_go_vroom_description"
             android:title="@string/preference_go_vroom_title" />
         <androidx.preference.ListPreference
             android:defaultValue="default"
-            android:icon="@drawable/ic_modrinth_sliders"
-            android:key="downloadSource"
             android:entries="@array/download_source_names"
             android:entryValues="@array/download_source_values"
-            android:title="@string/preference_download_source_title"
+            android:icon="@drawable/ic_set_download"
+            android:key="downloadSource"
             android:summary="@string/preference_download_source_description"
-            app2:useSimpleSummaryProvider="true"/>
+            android:title="@string/preference_download_source_title"
+            app2:useSimpleSummaryProvider="true" />
         <SwitchPreferenceCompat
             android:defaultValue="true"
-            android:icon="@drawable/ic_modrinth_sliders"
+            android:icon="@drawable/ic_set_check"
             android:key="verifyManifest"
-            android:title="@string/preference_verify_manifest_title"
-            android:summary="@string/preference_verify_manifest_description"/>
+            android:summary="@string/preference_verify_manifest_description"
+            android:title="@string/preference_verify_manifest_title" />
         <Preference
+            android:icon="@drawable/ic_set_mic"
             android:key="microphoneAccessRequest"
-            android:icon="@drawable/ic_modrinth_sliders"
-            android:title="@string/preference_microphone_access_title"
-            android:summary="@string/preference_microphone_access_description" />
+            android:summary="@string/preference_microphone_access_description"
+            android:title="@string/preference_microphone_access_title" />
         <Preference
+            android:icon="@drawable/ic_set_folder"
             android:key="runDataMigration"
-            android:icon="@drawable/ic_modrinth_sliders"
-            android:title="@string/preference_data_migration_title"
-            android:summary="@string/preference_data_migration_summary" />
+            android:summary="@string/preference_data_migration_summary"
+            android:title="@string/preference_data_migration_title" />
         <Preference
+            android:icon="@drawable/ic_set_trash"
             android:key="clearMetadataCache"
-            android:title="@string/preference_metadata_clear"
-            android:summary="@string/preference_metadata_clear_summary" />
+            android:summary="@string/preference_metadata_clear_summary"
+            android:title="@string/preference_metadata_clear" />
         <SwitchPreferenceCompat
             android:defaultValue="true"
-            android:icon="@drawable/ic_modrinth_sliders"
+            android:icon="@drawable/ic_set_warning"
             android:key="showMemoryWarning"
-            android:title="@string/preference_show_memory_warning_title"
-            android:summary="@string/preference_show_memory_warning_summary"/>
-
+            android:summary="@string/preference_show_memory_warning_summary"
+            android:title="@string/preference_show_memory_warning_title" />
     </PreferenceCategory>
 
-<PreferenceCategory android:layout="@layout/preference_category_modrinth" android:title="@string/preference_category_experimental_settings">
+    <PreferenceCategory
+        android:layout="@layout/preference_category_clean"
+        android:icon="@drawable/ic_set_flask"
+        android:title="@string/preference_category_experimental_settings">
 
         <SwitchPreferenceCompat
+            android:icon="@drawable/ic_set_code"
             android:key="dump_shaders"
-            android:title="@string/preference_shader_dump_title"
             android:summary="@string/preference_shader_dump_description"
-            />
+            android:title="@string/preference_shader_dump_title" />
         <SwitchPreferenceCompat
             android:defaultValue="false"
+            android:icon="@drawable/ic_set_cpu"
             android:key="bigCoreAffinity"
-            android:title="@string/preference_force_big_core_title"
-            android:summary="@string/preference_force_big_core_desc" />
+            android:summary="@string/preference_force_big_core_desc"
+            android:title="@string/preference_force_big_core_title" />
         <SwitchPreferenceCompat
             android:defaultValue="false"
+            android:icon="@drawable/ic_set_memory"
             android:key="freedrenoSysmem"
-            android:title="@string/preference_sysmem_title"
             android:summary="@string/preference_sysmem_summary"
-            />
+            android:title="@string/preference_sysmem_title" />
         <SwitchPreferenceCompat
             android:defaultValue="false"
+            android:icon="@drawable/ic_set_audio"
             android:key="alsoftForceOpenSL"
-            android:icon="@drawable/ic_modrinth_experimental"
-            android:title="@string/preference_alsoft_opensl_title"
             android:summary="@string/preference_alsoft_opensl_summary"
-            />
+            android:title="@string/preference_alsoft_opensl_title" />
         <SwitchPreferenceCompat
             android:defaultValue="true"
-            android:icon="@drawable/ic_microphone"
+            android:icon="@drawable/ic_set_mic"
             android:key="voiceChatCleanup"
-            android:title="@string/preference_voice_chat_cleanup_title"
-            android:summary="@string/preference_voice_chat_cleanup_summary" />
+            android:summary="@string/preference_voice_chat_cleanup_summary"
+            android:title="@string/preference_voice_chat_cleanup_title" />
         <SwitchPreferenceCompat
             android:defaultValue="false"
+            android:icon="@drawable/ic_set_cpu"
             android:key="ubwcWorkaround"
-            android:title="@string/preference_ubwc_title"
             android:summary="@string/preference_ubwc_summary"
-            />
+            android:title="@string/preference_ubwc_title" />
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:layout="@layout/preference_category_clean"
+        android:icon="@drawable/ic_set_info"
+        android:title="@string/urinth_set_cat_about">
+
+        <Preference
+            android:icon="@drawable/ic_set_info"
+            android:key="app_version"
+            android:persistent="false"
+            app2:selectable="false"
+            android:title="@string/urinth_set_version_title" />
+        <Preference
+            android:icon="@drawable/ic_set_copy"
+            android:key="copy_system_info"
+            android:persistent="false"
+            android:summary="@string/urinth_set_copy_summary"
+            android:title="@string/urinth_set_copy_title" />
     </PreferenceCategory>
 </PreferenceScreen>

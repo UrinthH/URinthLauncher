@@ -149,4 +149,14 @@ public final class RendererApiPolicy {
         if (major == 0) return null;
         return major + "." + minor;
     }
+    /** A renderer's name without the notes in its display name: "Zink (Vulkan) - all versions" gives "Zink". */
+    public static String shortName(String name) {
+        if (name == null) return "";
+        int cut = name.length();
+        int paren = name.indexOf(" (");
+        if (paren > 0) cut = Math.min(cut, paren);
+        int dash = name.indexOf(" - ");
+        if (dash > 0) cut = Math.min(cut, dash);
+        return name.substring(0, cut).trim();
+    }
 }

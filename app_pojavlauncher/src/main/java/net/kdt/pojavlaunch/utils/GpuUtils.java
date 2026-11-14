@@ -148,6 +148,26 @@ public class GpuUtils {
         return false;
     }
 
+    /**
+     * The Vulkan version the phone reports (major in the top bits, see
+     * {@code RendererApiPolicy.formatVulkanVersion}), or 0 when it reports none.
+     */
+    public static int vulkanVersion(PackageManager packageManager) {
+        if (SDK_INT < Build.VERSION_CODES.N) return 0;
+        try {
+            android.content.pm.FeatureInfo[] features = packageManager.getSystemAvailableFeatures();
+            if (features == null) return 0;
+            for (android.content.pm.FeatureInfo feature : features) {
+                if (feature != null && PackageManager.FEATURE_VULKAN_HARDWARE_VERSION.equals(feature.name)) {
+                    return feature.version;
+                }
+            }
+        } catch (RuntimeException e) {
+            Log.w("GpuUtils", "Could not read the Vulkan version", e);
+        }
+        return 0;
+    }
+
     public static boolean checkChromebook(PackageManager packageManager) {
         return packageManager.hasSystemFeature("org.chromium.arc")
                 || packageManager.hasSystemFeature("org.chromium.arc.device_management")
