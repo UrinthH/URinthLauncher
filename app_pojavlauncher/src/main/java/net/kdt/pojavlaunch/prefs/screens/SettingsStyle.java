@@ -6,7 +6,7 @@ import android.content.SharedPreferences;
  * Colours, the accent choices and the grouping rule of the Settings screen. Everything that is
  * only arithmetic lives here, away from the views, so it can be unit-tested without a device.
  */
-final class SettingsStyle {
+public final class SettingsStyle {
     private SettingsStyle() {}
 
     static final String KEY_ACCENT = "ui_accent";
@@ -82,7 +82,8 @@ final class SettingsStyle {
         return ACCENT_COLORS[0];
     }
 
-    static int accentColor(SharedPreferences prefs) {
+    /** The accent colour chosen under Settings > Appearance (the default one when nothing is stored). */
+    public static int accentColor(SharedPreferences prefs) {
         return accentColor(prefs == null ? null : prefs.getString(KEY_ACCENT, DEFAULT_ACCENT));
     }
 
@@ -92,6 +93,15 @@ final class SettingsStyle {
 
     static boolean compact(SharedPreferences prefs) {
         return prefs != null && prefs.getBoolean(KEY_COMPACT, false);
+    }
+
+    /**
+     * Extra margin for each side of the settings list that keeps the cards within {@code maxContent}
+     * pixels (a phone held sideways, a tablet); 0 when the list is narrower than that.
+     */
+    static int extraSide(int listWidth, int sideways, int maxContent) {
+        int content = listWidth - 2 * sideways;
+        return content > maxContent ? (content - maxContent) / 2 : 0;
     }
 
     /** The colour with a new alpha (0 to 255), keeping its red, green and blue. */

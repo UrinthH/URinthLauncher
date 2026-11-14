@@ -717,7 +717,7 @@
     <string name="urinth_set_api_opengl">OpenGL</string>
     <string name="urinth_set_api_vulkan">Vulkan</string>
     <string name="urinth_set_perf_title">Performance Mode</string>
-    <string name="urinth_set_perf_summary">Runs the game on the LTW OpenGL renderer with the thermal guard and render-thread scheduling. Turn it off to pick another renderer or to use Vulkan.</string>
+    <string name="urinth_set_perf_summary">LTW renderer with the thermal guard and render-thread scheduling. Turn off to pick another renderer or use Vulkan.</string>
     <string name="urinth_set_gpu_title">Graphics hardware</string>
     <string name="urinth_set_gpu_unknown">Unknown graphics chip</string>
     <string name="urinth_set_gpu_summary">%1$s · OpenGL ES %2$d · %3$s</string>

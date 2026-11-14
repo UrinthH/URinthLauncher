@@ -89,4 +89,15 @@ public class SettingsStyleTest {
         assertEquals(21.0, SettingsStyle.contrast(0xFF000000, 0xFFFFFFFF), 0.01);
         assertEquals(1.0, SettingsStyle.contrast(0xFF777777, 0xFF777777), 0.0001);
     }
+
+    @Test
+    public void wideListsKeepTheCardsInTheMiddleAtAComfortableWidth() {
+        // 16 px each side, cards at most 720 px wide.
+        assertEquals(0, SettingsStyle.extraSide(0, 16, 720));
+        assertEquals(0, SettingsStyle.extraSide(500, 16, 720));
+        assertEquals(0, SettingsStyle.extraSide(752, 16, 720));
+        assertEquals(100, SettingsStyle.extraSide(952, 16, 720));
+        // The content then measures 720: 1000 - 2 * (16 + 124) = 720.
+        assertEquals(124, SettingsStyle.extraSide(1000, 16, 720));
+    }
 }

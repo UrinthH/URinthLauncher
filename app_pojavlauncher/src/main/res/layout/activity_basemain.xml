@@ -120,11 +120,18 @@
 	</FrameLayout>
 
 	<ListView
-		android:layout_width="200dp"
+		android:layout_width="240dp"
 		android:layout_height="match_parent"
 		android:layout_gravity="right"
-		android:background="?attr/colorBackgroundFloating"
+		android:background="@drawable/game_menu_bg"
+		android:clipToPadding="false"
+		android:divider="@null"
+		android:dividerHeight="0dp"
 		android:fitsSystemWindows="false"
+		android:listSelector="@android:color/transparent"
+		android:paddingTop="14dp"
+		android:paddingBottom="14dp"
+		android:scrollbars="none"
 		android:id="@+id/main_navigation_view"/>
 
 </androidx.drawerlayout.widget.DrawerLayout>

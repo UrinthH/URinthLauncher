@@ -112,6 +112,10 @@ public class GameActivity extends BaseActivity implements ControlButtonMenuListe
     private LoggerView loggerView;
     private DrawerLayout drawerLayout;
     private ListView navDrawer;
+    /** Icons of the side menu, in the order of the menu_ingame array (Force close is the first one and is drawn red). */
+    private static final int[] GAME_MENU_ICONS = {
+            R.drawable.ic_set_warning, R.drawable.ic_set_logfile, R.drawable.ic_set_keyboard,
+            R.drawable.ic_set_tune, R.drawable.ic_set_edit};
     private View mDrawerPullButton;
     private GyroControl mGyroControl = null;
     private VoiceChatAudio mVoiceChatAudio;
@@ -262,8 +266,8 @@ public class GameActivity extends BaseActivity implements ControlButtonMenuListe
             return insets;
         });
 
-        ingameControlsEditorArrayAdapter = new ArrayAdapter<>(this,
-                android.R.layout.simple_list_item_1, getResources().getStringArray(R.array.menu_customcontrol));
+        ingameControlsEditorArrayAdapter = new GameMenuAdapter(this,
+                getResources().getStringArray(R.array.menu_customcontrol), null, -1);
         ingameControlsEditorListener = (parent, view, position, id) -> {
             switch(position) {
                 case 0: mControlLayout.addControlButton(new ControlData("New")); break;
@@ -394,8 +398,8 @@ public class GameActivity extends BaseActivity implements ControlButtonMenuListe
             setTitle("MojoLauncher (" + version + ")");
 
             // Menu
-            gameActionArrayAdapter = new ArrayAdapter<>(this,
-                    android.R.layout.simple_list_item_1, getResources().getStringArray(R.array.menu_ingame));
+            gameActionArrayAdapter = new GameMenuAdapter(this,
+                    getResources().getStringArray(R.array.menu_ingame), GAME_MENU_ICONS, 0);
             gameActionClickListener = (parent, view, position, id) -> {
                 switch(position) {
                      case 0: dialogForceClose(GameActivity.this); break;
