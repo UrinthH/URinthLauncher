@@ -1,0 +1,35 @@
+name: probe
+on:
+  push:
+    branches: [claude/probe-mesa]
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Look at the upstream Mesa and plugin sources
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "=== mesa-unified2 repo"
+          gh api repos/MojoLauncher/mesa-unified2 --jq '{private,visibility,default_branch,pushed_at}' 2>&1 | head -5 || true
+          echo "=== mesa-unified2 artifacts"
+          gh api "repos/MojoLauncher/mesa-unified2/actions/artifacts?per_page=10" --jq '.artifacts[] | "\(.name) expired=\(.expired) \(.size_in_bytes) \(.created_at) \(.workflow_run.head_branch)"' 2>&1 | head -12 || true
+          echo "=== MojoLauncher org repos"
+          gh repo list MojoLauncher --limit 60 --json name,description,isPrivate -q '.[] | "\(.name) | \(.description)"' 2>&1 | head -60 || true
+          echo "=== MojoLauncher releases"
+          gh release list -R MojoLauncher/MojoLauncher --limit 8 2>&1 | head -10 || true
+          for tag in justicia nightly; do
+            echo "=== assets of $tag"
+            gh release view $tag -R MojoLauncher/MojoLauncher --json assets -q '.assets[] | "\(.name) \(.size)"' 2>&1 | head -30 || true
+          done
+      - name: Look inside the official APK for Mesa libraries
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p /tmp/mojo && cd /tmp/mojo
+          gh release download justicia -R MojoLauncher/MojoLauncher -p '*.apk' -D . 2>&1 | tail -3 || true
+          ls -la /tmp/mojo
+          for f in /tmp/mojo/*.apk; do
+            echo "=== $f"
+            unzip -l "$f" | grep -i -E "mesa|zink|legacy|OSMesa|vulkan|libEGL|angle|ltw|gl4es" | head -40
+          done
