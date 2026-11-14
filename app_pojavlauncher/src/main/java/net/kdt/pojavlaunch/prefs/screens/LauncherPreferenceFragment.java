@@ -283,8 +283,7 @@ public class LauncherPreferenceFragment extends PreferenceFragmentCompat impleme
                 showMessage(R.string.urinth_set_vulkan_none_title, getString(R.string.urinth_set_vulkan_none_message));
                 break;
             case NO_VULKAN_RENDERER:
-                showMessage(R.string.urinth_set_vulkan_none_title,
-                        getString(R.string.urinth_set_vulkan_no_renderer_message, vulkanLabel(pm)));
+                showVulkanPluginDialog(pm);
                 break;
             case NO_OPENGL_RENDERER:
                 showMessage(R.string.urinth_set_renderer_unavailable_title, getString(R.string.urinth_set_opengl_none_message));
@@ -294,6 +293,29 @@ public class LauncherPreferenceFragment extends PreferenceFragmentCompat impleme
 
     private static String lastKey(GraphicsApi api) {
         return api == GraphicsApi.VULKAN ? RendererApiPolicy.KEY_LAST_VULKAN : RendererApiPolicy.KEY_LAST_OPENGL;
+    }
+
+    /** MojoLauncher's Zink plugin (Legacy Zink for Mali GPUs): package git.mojo.zink, about 8.5 MB, Android 10 or newer. */
+    private static final String ZINK_PLUGIN_URL =
+            "https://github.com/MojoLauncher/ZinkPlugin/releases/download/rel/MJZinkPlugin-debug.apk";
+
+    /**
+     * Says which plugin app adds a Vulkan renderer on this phone. For a Mali GPU it offers the
+     * download of the Zink plugin; the screen refreshes when the player comes back (see onResume).
+     */
+    private void showVulkanPluginDialog(PackageManager pm) {
+        GpuUtils.GLInfo gl = GpuUtils.getGlInfo();
+        boolean mali = gl != null && gl.isMali();
+        AlertDialog.Builder dialog = new AlertDialog.Builder(requireContext())
+                .setTitle(R.string.urinth_set_vulkan_none_title)
+                .setMessage(getString(mali ? R.string.urinth_set_vulkan_plugin_mali : R.string.urinth_set_vulkan_plugin_other,
+                        vulkanLabel(pm)))
+                .setPositiveButton(android.R.string.ok, null);
+        if (mali) {
+            dialog.setNeutralButton(R.string.urinth_set_vulkan_get_plugin,
+                    (d, w) -> Tools.openURL(getLauncherActivity(), ZINK_PLUGIN_URL));
+        }
+        dialog.show();
     }
 
     private void showMessage(int title, CharSequence message) {

@@ -734,11 +734,13 @@
     <string name="urinth_set_status_vulkan_no_hardware">This phone does not report Vulkan support.</string>
     <string name="urinth_set_status_perf_vulkan">Performance Mode stays on with Vulkan.</string>
     <string name="urinth_set_status_instance_override">Your selected instance \"%1$s\" uses its own renderer (%2$s), so this choice does not apply to it. Open the instance editor and set its renderer to Default, or pick Vulkan there.</string>
-    <string name="urinth_set_status_vulkan_no_renderer">%1$s found, but no Vulkan renderer is installed. Zink comes from a Mesa renderer plugin app (package git.mojo.mesa, or the FCL or Mio Mesa plugin) on Android 10 or newer.</string>
+    <string name="urinth_set_status_vulkan_no_renderer">%1$s found, but no Vulkan renderer plugin is installed. Tap Vulkan to see which one to install.</string>
 
     <string name="urinth_set_vulkan_none_title">Vulkan is not available</string>
     <string name="urinth_set_vulkan_none_message">This phone does not report Vulkan support, so no Vulkan renderer can run here. OpenGL stays selected.</string>
-    <string name="urinth_set_vulkan_no_renderer_message">This phone supports %1$s, but no Vulkan renderer is installed. Zink comes from a Mesa renderer plugin app: git.mojo.mesa, or the FCL or Mio Mesa plugin. It needs Android 10 or newer. Install one, then come back and tap Vulkan. Performance Mode can stay on.</string>
+    <string name="urinth_set_vulkan_plugin_mali">This phone has %1$s and a Mali GPU. For Mali the launcher uses Legacy Zink, which comes from the small Zink plugin app made for MojoLauncher (package git.mojo.zink, about 9 MB, Android 10 or newer).\n\nTap Get plugin, open the downloaded file to install it, then come back here and tap Vulkan. Performance Mode can stay on.</string>
+    <string name="urinth_set_vulkan_plugin_other">This phone has %1$s, but no Vulkan renderer plugin is installed. Zink comes from a Mesa renderer plugin app: git.mojo.mesa, or the FCL or Mio Mesa plugin. It needs Android 10 or newer. Install one, then come back here and tap Vulkan. Performance Mode can stay on.</string>
+    <string name="urinth_set_vulkan_get_plugin">Get plugin</string>
     <string name="urinth_set_opengl_none_message">No OpenGL renderer can start on this phone right now.</string>
     <string name="urinth_set_renderer_unavailable_title">Renderer not available</string>
     <string name="urinth_set_renderer_unavailable_message">%1$s cannot start right now. It needs a renderer plugin app that is not installed, or Android or Vulkan support that this phone does not report.</string>
