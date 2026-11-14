@@ -15,6 +15,7 @@ import android.util.Log;
 import net.kdt.pojavlaunch.*;
 import net.kdt.pojavlaunch.utils.ButtonHaptics;
 import net.kdt.pojavlaunch.game.renderer.PerformanceRendererPolicy;
+import net.kdt.pojavlaunch.game.renderer.RendererApiPolicy;
 import net.kdt.pojavlaunch.game.renderer.RendererCache;
 import net.kdt.pojavlaunch.multirt.MultiRTUtils;
 import net.kdt.pojavlaunch.utils.GpuUtils;
@@ -259,9 +260,9 @@ public class LauncherPreferences {
      * on through the default below. A phone that already had the launcher gets it switched on once, the
      * first time this version starts (the key above marks that as done), because the old default was
      * off and most players never found the switch. After that the switch on the home screen decides,
-     * and turning it off stays off. The renderer follows the switch (see
-     * {@link #syncRendererWithPerformanceMode}), and the renderer chosen before is remembered and put
-     * back when the mode is turned off.
+     * and turning it off stays off. An OpenGL renderer follows the switch (see
+     * {@link #syncRendererWithPerformanceMode}): the OpenGL renderer chosen before is remembered and
+     * put back when the mode is turned off. A Vulkan renderer is never changed by the switch.
      */
     private static boolean performanceModeIsOn() {
         SharedPreferences prefs = DEFAULT_PREF;
@@ -276,9 +277,10 @@ public class LauncherPreferences {
     }
 
     /**
-     * Turn Performance Mode on or off. Besides the switch itself this keeps the renderer in step:
-     * on selects the Performance Mode renderer (remembering the previous choice), off puts the
-     * previous choice back. The Settings list follows the same switch (see RendererCache.forSettings).
+     * Turn Performance Mode on or off. Besides the switch itself this keeps an OpenGL renderer in
+     * step: on selects the Performance Mode renderer (remembering the previous choice), off puts the
+     * previous choice back. A Vulkan renderer (Zink) stays selected either way, so Performance Mode
+     * and Vulkan work together. The Settings list follows the same rule (see RendererCache.forSettings).
      */
     public static void setPerformanceMode(boolean enabled) {
         PREF_PERFORMANCE_MODE = enabled;
@@ -286,10 +288,14 @@ public class LauncherPreferences {
         RendererCache.releaseRendererCache();
     }
 
-    /** Make the stored renderer agree with the switch, e.g. after an update or a restored backup. */
+    /**
+     * Make the stored renderer agree with the switch, e.g. after an update or a restored backup.
+     * With the mode on that means LTW or a Vulkan renderer; with it off, anything but LTW.
+     */
     private static void syncRendererWithPerformanceMode() {
-        boolean isPerformanceRenderer = PerformanceRendererPolicy.PERFORMANCE_RENDERER.equals(PREF_RENDERER);
-        if (PREF_PERFORMANCE_MODE != isPerformanceRenderer) applyRendererForPerformanceMode(PREF_PERFORMANCE_MODE);
+        if (PerformanceRendererPolicy.needsSync(PREF_PERFORMANCE_MODE, PREF_RENDERER)) {
+            applyRendererForPerformanceMode(PREF_PERFORMANCE_MODE);
+        }
     }
 
     private static void applyRendererForPerformanceMode(boolean enabled) {
@@ -299,8 +305,13 @@ public class LauncherPreferences {
         String selected;
         if (enabled) {
             remembered = PerformanceRendererPolicy.rememberedOnEnable(current, remembered);
-            selected = PerformanceRendererPolicy.PERFORMANCE_RENDERER;
+            selected = PerformanceRendererPolicy.selectionOnEnable(current);
         } else {
+            // Nothing remembered (the player went Vulkan, then back to OpenGL with the mode on):
+            // go back to the OpenGL renderer used last, which Settings keeps track of.
+            if (remembered == null && prefs != null) {
+                remembered = prefs.getString(RendererApiPolicy.KEY_LAST_OPENGL, null);
+            }
             selected = PerformanceRendererPolicy.selectionOnDisable(current, remembered);
         }
         PREF_RENDERER = selected;

@@ -1,6 +1,7 @@
 package net.kdt.pojavlaunch.game.renderer;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
@@ -119,11 +120,53 @@ public class RendererApiPolicyTest {
     }
 
     @Test
-    public void performanceModeIsTurnedOffFirstBeforeVulkanIsSelected() {
+    public void vulkanIsSelectedWithPerformanceModeStillOn() {
         List<Choice> all = Arrays.asList(gl("opengles3_ltw", true), vk("vulkan_zink", true));
         Result r = RendererApiPolicy.decideSwitch(GraphicsApi.VULKAN, GraphicsApi.OPENGL, all, null, true, true);
-        assertEquals(Outcome.TURN_OFF_PERFORMANCE_MODE, r.outcome);
+        assertEquals(Outcome.SELECT, r.outcome);
         assertEquals("vulkan_zink", r.rendererId);
+    }
+
+    @Test
+    public void withPerformanceModeOnTheOpenGlSideIsTheLtwRendererEvenIfAnotherWasUsedLast() {
+        List<Choice> all = Arrays.asList(gl("opengles2", true), gl("opengles3_ltw", true),
+                gl("plugin.mobileglues", true), vk("vulkan_zink", true));
+        Result r = RendererApiPolicy.decideSwitch(GraphicsApi.OPENGL, GraphicsApi.VULKAN, all, "plugin.mobileglues", true, true);
+        assertEquals(Outcome.SELECT, r.outcome);
+        assertEquals("opengles3_ltw", r.rendererId);
+    }
+
+    @Test
+    public void withPerformanceModeOffTheOpenGlSideIsNeverLtwBecauseItIsNotUsableThen() {
+        List<Choice> all = Arrays.asList(gl("opengles2", true), gl("opengles3_ltw", false), vk("vulkan_zink", true));
+        Result r = RendererApiPolicy.decideSwitch(GraphicsApi.OPENGL, GraphicsApi.VULKAN, all, null, false, true);
+        assertEquals(Outcome.SELECT, r.outcome);
+        assertEquals("opengles2", r.rendererId);
+    }
+
+    @Test
+    public void withPerformanceModeOnAndLtwUnusableTheOpenGlSideIsReportedNotGuessed() {
+        List<Choice> all = Arrays.asList(gl("opengles2", true), gl("opengles3_ltw", false), vk("vulkan_zink", true));
+        Result r = RendererApiPolicy.decideSwitch(GraphicsApi.OPENGL, GraphicsApi.VULKAN, all, null, true, true);
+        assertEquals(Outcome.NO_OPENGL_RENDERER, r.outcome);
+        assertNull(r.rendererId);
+    }
+
+    @Test
+    public void vulkanRenderersAreRecognisedByTheirId() {
+        assertTrue(RendererApiPolicy.isVulkan(Renderers.ZINK_RENDERER));
+        assertTrue(RendererApiPolicy.isVulkan(Renderers.LEGACYZINK_RENDERER));
+        assertFalse(RendererApiPolicy.isVulkan(Renderers.LTW_RENDERER));
+        assertFalse(RendererApiPolicy.isVulkan(Renderers.GL4ES_RENDERER));
+        assertFalse(RendererApiPolicy.isVulkan(null));
+        assertFalse(RendererApiPolicy.isVulkan(""));
+    }
+
+    @Test
+    public void theBuiltInVulkanListAndTheRememberedKeysAreConsistent() {
+        assertEquals(2, RendererApiPolicy.BUILT_IN_VULKAN.length);
+        for (String id : RendererApiPolicy.BUILT_IN_VULKAN) assertTrue(id, RendererApiPolicy.isVulkan(id));
+        assertTrue(!RendererApiPolicy.KEY_LAST_OPENGL.equals(RendererApiPolicy.KEY_LAST_VULKAN));
     }
 
     @Test

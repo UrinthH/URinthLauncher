@@ -14,9 +14,11 @@ import java.util.Locale;
  *   <li>Which API a renderer belongs to: Zink and Legacy Zink (and a renderer plugin that calls itself
  *       Vulkan or Zink) are Vulkan, everything else is OpenGL.</li>
  *   <li>What happens when the player taps the other API: pick the renderer used last with that API, or
- *       the first one that can run; ask before turning Performance Mode off (it pins the game to the
- *       OpenGL renderer LTW); say why when Vulkan cannot be used at all, instead of switching to
+ *       the first one that can run; say why when Vulkan cannot be used at all, instead of switching to
  *       something that will not start.</li>
+ *   <li>Performance Mode works with both APIs: it is not turned off for Vulkan. With the mode on, the
+ *       OpenGL side is its renderer LTW (see {@link PerformanceRendererPolicy}) and the Vulkan
+ *       renderers stay available.</li>
  * </ul>
  * Works for every Minecraft version the renderers themselves support, which includes 1.21.4 and newer
  * (Zink: every version; LTW and the plugins: 1.17 and newer; GL4ES stops at 1.21.4 and the launcher
@@ -24,6 +26,13 @@ import java.util.Locale;
  */
 public final class RendererApiPolicy {
     private RendererApiPolicy() {}
+
+    /** The Vulkan renderers built into the launcher; they run on Mesa, which comes from a plugin app. */
+    public static final String[] BUILT_IN_VULKAN = {Renderers.ZINK_RENDERER, Renderers.LEGACYZINK_RENDERER};
+
+    /** Preference keys that remember the renderer used last with each API. */
+    public static final String KEY_LAST_OPENGL = "renderer_last_opengl";
+    public static final String KEY_LAST_VULKAN = "renderer_last_vulkan";
 
     /** One renderer that Settings can offer. */
     public static final class Choice {
@@ -46,8 +55,6 @@ public final class RendererApiPolicy {
         ALREADY,
         /** Select {@link Result#rendererId}. */
         SELECT,
-        /** Select {@link Result#rendererId}, but only after Performance Mode has been turned off. */
-        TURN_OFF_PERFORMANCE_MODE,
         /** The phone does not report Vulkan support. */
         NO_VULKAN_HARDWARE,
         /** The phone has Vulkan, but no Vulkan renderer can start (the Mesa plugin app is missing). */
@@ -58,7 +65,7 @@ public final class RendererApiPolicy {
 
     public static final class Result {
         public final Outcome outcome;
-        /** The renderer to select; null unless the outcome is SELECT or TURN_OFF_PERFORMANCE_MODE. */
+        /** The renderer to select; null unless the outcome is SELECT. */
         public final String rendererId;
 
         Result(Outcome outcome, String rendererId) {
@@ -77,6 +84,11 @@ public final class RendererApiPolicy {
         }
         if (mentionsVulkan(rendererId) || mentionsVulkan(label)) return GraphicsApi.VULKAN;
         return GraphicsApi.OPENGL;
+    }
+
+    /** Is this a Vulkan renderer (Zink, Legacy Zink, or a plugin whose id says Vulkan or Zink)? */
+    public static boolean isVulkan(String rendererId) {
+        return apiOf(rendererId, null) == GraphicsApi.VULKAN;
     }
 
     private static boolean mentionsVulkan(String text) {
@@ -124,21 +136,33 @@ public final class RendererApiPolicy {
      * @param current the API of the renderer in use now
      * @param all every renderer Settings knows, usable or not
      * @param lastUsedWithTarget the renderer used last with {@code target}, or null
-     * @param performanceMode whether Performance Mode (which pins the game to LTW) is on
+     * @param performanceMode whether Performance Mode is on: its OpenGL renderer is LTW, so that is the
+     *                        only OpenGL one that can be picked; Vulkan renderers are not affected
      * @param vulkanHardware whether the phone reports Vulkan support
      */
     public static Result decideSwitch(GraphicsApi target, GraphicsApi current, List<Choice> all,
                                       String lastUsedWithTarget, boolean performanceMode, boolean vulkanHardware) {
         if (target == current) return new Result(Outcome.ALREADY, null);
+        List<Choice> offered = performanceMode ? listedWithPerformanceMode(all) : all;
         if (target == GraphicsApi.VULKAN) {
             if (!vulkanHardware) return new Result(Outcome.NO_VULKAN_HARDWARE, null);
-            String id = pick(GraphicsApi.VULKAN, all, lastUsedWithTarget);
+            String id = pick(GraphicsApi.VULKAN, offered, lastUsedWithTarget);
             if (id == null) return new Result(Outcome.NO_VULKAN_RENDERER, null);
-            return new Result(performanceMode ? Outcome.TURN_OFF_PERFORMANCE_MODE : Outcome.SELECT, id);
+            return new Result(Outcome.SELECT, id);
         }
-        String id = pick(GraphicsApi.OPENGL, all, lastUsedWithTarget);
+        String id = pick(GraphicsApi.OPENGL, offered, lastUsedWithTarget);
         if (id == null) return new Result(Outcome.NO_OPENGL_RENDERER, null);
         return new Result(Outcome.SELECT, id);
+    }
+
+    /** The choices Performance Mode lets through: its own renderer (LTW) and the Vulkan renderers. */
+    private static List<Choice> listedWithPerformanceMode(List<Choice> all) {
+        ArrayList<Choice> out = new ArrayList<>();
+        if (all == null) return out;
+        for (Choice choice : all) {
+            if (choice != null && PerformanceRendererPolicy.isListed(choice.id, true)) out.add(choice);
+        }
+        return out;
     }
 
     /** "1.1" for the encoded Vulkan version a phone reports (major in the top bits), or null when unknown. */

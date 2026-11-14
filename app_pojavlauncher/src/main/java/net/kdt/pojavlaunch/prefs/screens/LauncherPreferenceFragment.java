@@ -42,6 +42,8 @@ import git.artdeell.mojo.R;
 import net.kdt.pojavlaunch.prefs.LauncherPreferences;
 import net.kdt.pojavlaunch.Architecture;
 import net.kdt.pojavlaunch.Tools;
+import net.kdt.pojavlaunch.instances.Instance;
+import net.kdt.pojavlaunch.instances.Instances;
 import net.kdt.pojavlaunch.PojavApplication;
 import net.kdt.pojavlaunch.contracts.OpenDocumentWithExtension;
 import net.kdt.pojavlaunch.multirt.MultiRTConfigDialog;
@@ -73,8 +75,6 @@ public class LauncherPreferenceFragment extends PreferenceFragmentCompat impleme
     private UrinthPreferenceAdapter mAdapter;
     private SettingsHeaderPreference mHeader;
     private GraphicsApiPreference mApiPreference;
-    private static final String KEY_LAST_OPENGL = "renderer_last_opengl";
-    private static final String KEY_LAST_VULKAN = "renderer_last_vulkan";
     private final ActivityResultLauncher<Object> mRuntimeInstallLauncher =
             registerForActivityResult(new OpenDocumentWithExtension("xz"), data -> {
                 if (data != null) Tools.installRuntimeFromUri(getContext(), data);
@@ -279,17 +279,6 @@ public class LauncherPreferenceFragment extends PreferenceFragmentCompat impleme
             case SELECT:
                 selectRenderer(rendererId);
                 break;
-            case TURN_OFF_PERFORMANCE_MODE:
-                new AlertDialog.Builder(requireContext())
-                        .setTitle(R.string.urinth_set_perf_off_title)
-                        .setMessage(R.string.urinth_set_perf_off_message)
-                        .setPositiveButton(R.string.urinth_set_perf_off_confirm, (d, w) -> {
-                            LauncherPreferences.setPerformanceMode(false);
-                            selectRenderer(rendererId);
-                        })
-                        .setNegativeButton(android.R.string.cancel, null)
-                        .show();
-                break;
             case NO_VULKAN_HARDWARE:
                 showMessage(R.string.urinth_set_vulkan_none_title, getString(R.string.urinth_set_vulkan_none_message));
                 break;
@@ -304,7 +293,7 @@ public class LauncherPreferenceFragment extends PreferenceFragmentCompat impleme
     }
 
     private static String lastKey(GraphicsApi api) {
-        return api == GraphicsApi.VULKAN ? KEY_LAST_VULKAN : KEY_LAST_OPENGL;
+        return api == GraphicsApi.VULKAN ? RendererApiPolicy.KEY_LAST_VULKAN : RendererApiPolicy.KEY_LAST_OPENGL;
     }
 
     private void showMessage(int title, CharSequence message) {
@@ -399,13 +388,35 @@ public class LauncherPreferenceFragment extends PreferenceFragmentCompat impleme
         else if (Renderers.LTW_RENDERER.equals(current)) text.append(getString(R.string.urinth_set_note_ltw));
         else if (api == GraphicsApi.VULKAN) text.append(getString(R.string.urinth_set_note_vulkan));
         else text.append(getString(R.string.urinth_set_note_plugin));
+        if (api == GraphicsApi.VULKAN && LauncherPreferences.PREF_PERFORMANCE_MODE) {
+            text.append(' ').append(getString(R.string.urinth_set_status_perf_vulkan));
+        }
         if (api == GraphicsApi.OPENGL) {
             text.append("\n\n");
             if (!vulkanHardware) text.append(getString(R.string.urinth_set_status_vulkan_no_hardware));
             else if (!vulkanUsable) text.append(getString(R.string.urinth_set_status_vulkan_no_renderer, vulkanLabel));
             else text.append(getString(R.string.urinth_set_status_vulkan_ready, vulkanLabel));
         }
+        String override = instanceOverrideNote(choices, current);
+        if (override != null) text.append("\n\n").append(override);
         return text;
+    }
+
+    /**
+     * A line about the selected instance when it has its own renderer (set in the instance editor):
+     * such an instance ignores the choice made here, which would otherwise look like the switch not
+     * working. Null when the instance follows the launcher's renderer.
+     */
+    private String instanceOverrideNote(RendererChoices choices, String current) {
+        try {
+            Instance instance = Instances.loadSelectedInstance();
+            if (instance == null || !Tools.isValidString(instance.renderer) || instance.renderer.equals(current)) return null;
+            String name = Tools.isValidString(instance.name) ? instance.name : instance.versionId;
+            return getString(R.string.urinth_set_status_instance_override, String.valueOf(name),
+                    RendererApiPolicy.shortName(choices.nameOf(instance.renderer)));
+        } catch (RuntimeException e) {
+            return null;
+        }
     }
 
     // ---- about -------------------------------------------------------------------------------

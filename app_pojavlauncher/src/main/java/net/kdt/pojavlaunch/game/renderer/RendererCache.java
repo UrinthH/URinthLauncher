@@ -26,8 +26,9 @@ public class RendererCache {
 
     /**
      * The list shown in Settings. It follows the Performance Mode switch: with the mode on only the
-     * Performance Mode renderer is offered, with it off that renderer is left out (see
-     * {@link PerformanceRendererPolicy}). The full list stays untouched for other screens.
+     * Performance Mode renderer (LTW) is offered among the OpenGL ones, with it off that renderer is
+     * left out; Vulkan renderers are offered either way (see {@link PerformanceRendererPolicy}). The
+     * full list stays untouched for other screens.
      */
     public RendererCache forSettings(boolean performanceMode) {
         ArrayList<String> ids = new ArrayList<>(rendererIds.size());
@@ -76,6 +77,16 @@ public class RendererCache {
         for (ApkRenderSpec plugin : ApkRendererScanner.installed()) {
             rendererIds.add(plugin.tag());
             rendererNames.add(plugin.label());
+        }
+        // The Vulkan renderers (Zink, Legacy Zink) are listed only while they can start here: the
+        // phone reports Vulkan and the Mesa renderer plugin app is installed. So the instance editor
+        // can give an instance Vulkan, and never offers one that would fail to start.
+        for (String renderer : RendererApiPolicy.BUILT_IN_VULKAN) {
+            if (rendererIds.contains(renderer)) continue;
+            RenderSpec spec = GameRenderer.getKnownRenderer(renderer);
+            if (spec == null || !isCompatibleSafely(spec, context)) continue;
+            rendererIds.add(renderer);
+            rendererNames.add(resources.getString(spec.displayName()));
         }
         rendererIds.trimToSize();
         rendererNames.trimToSize();

@@ -27,6 +27,7 @@ import net.kdt.pojavlaunch.multirt.MultiRTUtils;
 import net.kdt.pojavlaunch.multirt.Runtime;
 import net.kdt.pojavlaunch.prefs.LauncherPreferences;
 import net.kdt.pojavlaunch.game.renderer.GameRenderer;
+import net.kdt.pojavlaunch.game.renderer.RendererApiPolicy;
 import net.kdt.pojavlaunch.game.renderer.RenderSpec;
 import net.kdt.pojavlaunch.utils.DateUtils;
 import net.kdt.pojavlaunch.utils.FileUtils;
@@ -307,12 +308,14 @@ public class GameRunner {
         RenderSpec renderer = gameRenderer.getCurrentRenderer();
 
         // The previous launch died while starting (see LaunchGuard). A renderer that comes from a
-        // third-party app or plugin is native code this launcher cannot vouch for, so for this
-        // launch only, use the built-in one instead, and say so. The renderer chosen in Settings
-        // is left as it was.
+        // third-party app or plugin is native code this launcher cannot vouch for, and Vulkan
+        // (Zink on Mesa) is the most demanding one, so for this launch only, use the built-in one
+        // instead, and say so. The renderer chosen in Settings is left as it was, so a Vulkan
+        // choice that works is used again on the next normal launch.
         if (LauncherPreferences.PREF_SAFE_LAUNCH
                 && (renderer instanceof ApkRenderSpec
-                    || Renderers.MOBILEGLUES_RENDERER.equals(renderer.tag()))) {
+                    || Renderers.MOBILEGLUES_RENDERER.equals(renderer.tag())
+                    || RendererApiPolicy.isVulkan(renderer.tag()))) {
             RenderSpec builtIn = GameRenderer.getKnownRenderer(Renderers.LTW_RENDERER);
             if (builtIn != null && builtIn.compatibleDevice(activity)) {
                 switchRendererIfSupported(true, builtIn, gameRenderer, instance, activity, 0);

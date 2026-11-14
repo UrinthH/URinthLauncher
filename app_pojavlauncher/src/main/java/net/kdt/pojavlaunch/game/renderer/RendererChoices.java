@@ -20,8 +20,6 @@ import java.util.Set;
  * The rules that decide what a tap on OpenGL or Vulkan does are in {@link RendererApiPolicy}.
  */
 public final class RendererChoices {
-    private static final String[] VULKAN_BUILT_IN = {Renderers.ZINK_RENDERER, Renderers.LEGACYZINK_RENDERER};
-
     /** Every renderer, usable or not, in display order. */
     public final List<Choice> all;
 
@@ -30,9 +28,10 @@ public final class RendererChoices {
     }
 
     /**
-     * @param performanceMode whether Performance Mode is on: it pins the game to LTW, so LTW can only
+     * @param performanceMode whether Performance Mode is on: its OpenGL renderer is LTW, so LTW can only
      *                        be selected while it is on (selecting it with the mode off would be
      *                        undone by {@code LauncherPreferences.syncRendererWithPerformanceMode}).
+     *                        Vulkan renderers do not depend on the mode.
      */
     public static RendererChoices load(Context context, boolean performanceMode) {
         RendererCache cache = RendererCache.getCompatibleRenderers(context);
@@ -49,7 +48,7 @@ public final class RendererChoices {
             if (PerformanceRendererPolicy.PERFORMANCE_RENDERER.equals(id) && !performanceMode) usable = false;
             out.add(new Choice(id, name, RendererApiPolicy.apiOf(id, name), usable));
         }
-        for (String id : VULKAN_BUILT_IN) {
+        for (String id : RendererApiPolicy.BUILT_IN_VULKAN) {
             if (!seen.add(id)) continue;
             RenderSpec spec = GameRenderer.getKnownRenderer(id);
             if (spec == null) continue;
@@ -80,9 +79,9 @@ public final class RendererChoices {
     }
 
     /**
-     * What the renderer setting lists while {@code api} is selected. The Performance Mode rule is the
-     * same one the renderer setting has always followed: with the mode on only LTW is offered, with it
-     * off LTW is left out.
+     * What the renderer setting lists while {@code api} is selected. For OpenGL the Performance Mode
+     * rule is the one the renderer setting has always followed: with the mode on only LTW is offered,
+     * with it off LTW is left out. The Vulkan renderers are listed with the mode on or off.
      */
     public List<Choice> listed(GraphicsApi api, boolean performanceMode) {
         ArrayList<Choice> out = new ArrayList<>();

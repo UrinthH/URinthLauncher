@@ -65,4 +65,58 @@ public class PerformanceRendererPolicyTest {
         assertEquals(Renderers.MOBILEGLUES_RENDERER,
                 PerformanceRendererPolicy.selectionOnDisable(Renderers.MOBILEGLUES_RENDERER, Renderers.GL4ES_RENDERER));
     }
+
+    @Test
+    public void vulkanRenderersAreListedWithTheModeOnAndOff() {
+        assertTrue(PerformanceRendererPolicy.isListed(Renderers.ZINK_RENDERER, true));
+        assertTrue(PerformanceRendererPolicy.isListed(Renderers.ZINK_RENDERER, false));
+        assertTrue(PerformanceRendererPolicy.isListed(Renderers.LEGACYZINK_RENDERER, true));
+        assertTrue(PerformanceRendererPolicy.isListed(Renderers.LEGACYZINK_RENDERER, false));
+    }
+
+    @Test
+    public void turningTheModeOnKeepsAVulkanRendererSelected() {
+        assertEquals(Renderers.ZINK_RENDERER, PerformanceRendererPolicy.selectionOnEnable(Renderers.ZINK_RENDERER));
+        assertEquals(Renderers.LEGACYZINK_RENDERER, PerformanceRendererPolicy.selectionOnEnable(Renderers.LEGACYZINK_RENDERER));
+    }
+
+    @Test
+    public void turningTheModeOnStillSelectsLtwForEveryOpenGlRenderer() {
+        assertEquals(PM, PerformanceRendererPolicy.selectionOnEnable(Renderers.GL4ES_RENDERER));
+        assertEquals(PM, PerformanceRendererPolicy.selectionOnEnable(Renderers.MOBILEGLUES_RENDERER));
+        assertEquals(PM, PerformanceRendererPolicy.selectionOnEnable("some_plugin_renderer"));
+        assertEquals(PM, PerformanceRendererPolicy.selectionOnEnable(PM));
+        assertEquals(PM, PerformanceRendererPolicy.selectionOnEnable(null));
+        assertEquals(PM, PerformanceRendererPolicy.selectionOnEnable(""));
+    }
+
+    @Test
+    public void aVulkanRendererIsNeverRememberedAsTheOpenGlOneToGoBackTo() {
+        assertEquals(Renderers.GL4ES_RENDERER,
+                PerformanceRendererPolicy.rememberedOnEnable(Renderers.ZINK_RENDERER, Renderers.GL4ES_RENDERER));
+        assertNull(PerformanceRendererPolicy.rememberedOnEnable(Renderers.ZINK_RENDERER, null));
+    }
+
+    @Test
+    public void turningTheModeOffKeepsAVulkanRenderer() {
+        assertEquals(Renderers.ZINK_RENDERER,
+                PerformanceRendererPolicy.selectionOnDisable(Renderers.ZINK_RENDERER, Renderers.GL4ES_RENDERER));
+        assertEquals(Renderers.ZINK_RENDERER, PerformanceRendererPolicy.selectionOnDisable(Renderers.ZINK_RENDERER, null));
+    }
+
+    @Test
+    public void theStoredRendererIsOnlyCorrectedWhenItDisagreesWithTheMode() {
+        // Mode on: LTW and Vulkan agree; every other renderer is corrected.
+        assertFalse(PerformanceRendererPolicy.needsSync(true, PM));
+        assertFalse(PerformanceRendererPolicy.needsSync(true, Renderers.ZINK_RENDERER));
+        assertFalse(PerformanceRendererPolicy.needsSync(true, Renderers.LEGACYZINK_RENDERER));
+        assertTrue(PerformanceRendererPolicy.needsSync(true, Renderers.GL4ES_RENDERER));
+        assertTrue(PerformanceRendererPolicy.needsSync(true, Renderers.MOBILEGLUES_RENDERER));
+        assertTrue(PerformanceRendererPolicy.needsSync(true, null));
+        // Mode off: only LTW is corrected.
+        assertTrue(PerformanceRendererPolicy.needsSync(false, PM));
+        assertFalse(PerformanceRendererPolicy.needsSync(false, Renderers.ZINK_RENDERER));
+        assertFalse(PerformanceRendererPolicy.needsSync(false, Renderers.GL4ES_RENDERER));
+        assertFalse(PerformanceRendererPolicy.needsSync(false, Renderers.MOBILEGLUES_RENDERER));
+    }
 }

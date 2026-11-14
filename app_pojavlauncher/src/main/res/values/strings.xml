@@ -717,7 +717,7 @@
     <string name="urinth_set_api_opengl">OpenGL</string>
     <string name="urinth_set_api_vulkan">Vulkan</string>
     <string name="urinth_set_perf_title">Performance Mode</string>
-    <string name="urinth_set_perf_summary">LTW renderer with the thermal guard and render-thread scheduling. Turn off to pick another renderer or use Vulkan.</string>
+    <string name="urinth_set_perf_summary">Thermal guard, a steadier render thread and a refresh-rate watch. With OpenGL the game runs on the LTW renderer; with Vulkan it keeps Zink.</string>
     <string name="urinth_set_gpu_title">Graphics hardware</string>
     <string name="urinth_set_gpu_unknown">Unknown graphics chip</string>
     <string name="urinth_set_gpu_summary">%1$s · OpenGL ES %2$d · %3$s</string>
@@ -732,14 +732,13 @@
     <string name="urinth_set_note_plugin">This renderer comes from a plugin app. The launcher checks that it supports the Minecraft version when the game starts.</string>
     <string name="urinth_set_status_vulkan_ready">%1$s found. Tap Vulkan to switch.</string>
     <string name="urinth_set_status_vulkan_no_hardware">This phone does not report Vulkan support.</string>
-    <string name="urinth_set_status_vulkan_no_renderer">%1$s found, but no Vulkan renderer is installed. Zink comes from the Mesa renderer plugin app (Android 10 or newer).</string>
+    <string name="urinth_set_status_perf_vulkan">Performance Mode stays on with Vulkan.</string>
+    <string name="urinth_set_status_instance_override">Your selected instance \"%1$s\" uses its own renderer (%2$s), so this choice does not apply to it. Open the instance editor and set its renderer to Default, or pick Vulkan there.</string>
+    <string name="urinth_set_status_vulkan_no_renderer">%1$s found, but no Vulkan renderer is installed. Zink comes from a Mesa renderer plugin app (package git.mojo.mesa, or the FCL or Mio Mesa plugin) on Android 10 or newer.</string>
 
-    <string name="urinth_set_perf_off_title">Turn off Performance Mode?</string>
-    <string name="urinth_set_perf_off_message">Performance Mode keeps the game on the LTW OpenGL renderer, so Vulkan cannot be used with it. Turning it off also switches off the thermal guard, the render-thread scheduling and the refresh-rate watch that it controls. You can turn it back on at any time.</string>
-    <string name="urinth_set_perf_off_confirm">Turn off and use Vulkan</string>
     <string name="urinth_set_vulkan_none_title">Vulkan is not available</string>
     <string name="urinth_set_vulkan_none_message">This phone does not report Vulkan support, so no Vulkan renderer can run here. OpenGL stays selected.</string>
-    <string name="urinth_set_vulkan_no_renderer_message">This phone supports %1$s, but no Vulkan renderer is installed. Zink comes from the Mesa renderer plugin app, which needs Android 10 or newer. Install it, then come back and tap Vulkan.</string>
+    <string name="urinth_set_vulkan_no_renderer_message">This phone supports %1$s, but no Vulkan renderer is installed. Zink comes from a Mesa renderer plugin app: git.mojo.mesa, or the FCL or Mio Mesa plugin. It needs Android 10 or newer. Install one, then come back and tap Vulkan. Performance Mode can stay on.</string>
     <string name="urinth_set_opengl_none_message">No OpenGL renderer can start on this phone right now.</string>
     <string name="urinth_set_renderer_unavailable_title">Renderer not available</string>
     <string name="urinth_set_renderer_unavailable_message">%1$s cannot start right now. It needs a renderer plugin app that is not installed, or Android or Vulkan support that this phone does not report.</string>
