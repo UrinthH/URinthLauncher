@@ -314,7 +314,7 @@
     <string name="preference_microphone_access_description">Requests system to give access to device microphone for the game</string>
 
     <string name="preference_force_big_core_title">Force the renderer to run on the big core</string>
-    <string name="preference_force_big_core_desc">Forces the game\'s render thread to run on the core with the highest maximum frequency.</string>
+    <string name="preference_force_big_core_desc">Forces the game\'s render thread to run on the core with the highest maximum frequency. Skipped when every core reports the same top speed, because the pick would be arbitrary.</string>
     <string name="version_select_hint">Select a version</string>
     <string name="forge_dl_progress">Downloading installer for %s</string>
     <string name="forge_dl_searching">Searching for Forge version number</string>
@@ -738,7 +738,7 @@
 
     <string name="urinth_set_vulkan_none_title">Vulkan is not available</string>
     <string name="urinth_set_vulkan_none_message">This phone does not report Vulkan support, so no Vulkan renderer can run here. OpenGL stays selected.</string>
-    <string name="urinth_set_vulkan_plugin_mali">This phone has %1$s and a Mali GPU. For Mali the launcher uses Legacy Zink, which comes from the small Zink plugin app made for MojoLauncher (package git.mojo.zink, about 9 MB, Android 10 or newer).\n\nTap Get plugin, open the downloaded file to install it, then come back here and tap Vulkan. Performance Mode can stay on.</string>
+    <string name="urinth_set_vulkan_plugin_mali">This phone has %1$s and a Mali GPU. For Mali the launcher uses Legacy Zink, which comes from the small Zink plugin app made for MojoLauncher (package git.mojo.zink, about 9 MB, Android 10 or newer). It is a compatibility build, slower than OpenGL, and on some Mali phones the game stays on the red loading screen. If that happens, switch back to OpenGL.\n\nTap Get plugin, open the downloaded file to install it, then come back here and tap Vulkan. Performance Mode can stay on.</string>
     <string name="urinth_set_vulkan_plugin_other">This phone has %1$s, but no Vulkan renderer plugin is installed. Zink comes from a Mesa renderer plugin app: git.mojo.mesa, or the FCL or Mio Mesa plugin. It needs Android 10 or newer. Install one, then come back here and tap Vulkan. Performance Mode can stay on.</string>
     <string name="urinth_set_vulkan_get_plugin">Get plugin</string>
     <string name="urinth_set_opengl_none_message">No OpenGL renderer can start on this phone right now.</string>

@@ -14,8 +14,14 @@ import java.io.IOException;
 import java.io.StringReader;
 
 public class GameLogExcerptTest {
+    private static final int BIG = 1_000_000;
+
+    private static String excerpt(String log, int head, int keys, int tail, int budget) throws IOException {
+        return GameLogExcerpt.fromReader(new BufferedReader(new StringReader(log)), head, keys, tail, budget);
+    }
+
     private static String excerpt(String log, int head, int tail) throws IOException {
-        return GameLogExcerpt.fromReader(new BufferedReader(new StringReader(log)), head, tail);
+        return excerpt(log, head, 10, tail, BIG);
     }
 
     private static String lines(int count) {
@@ -23,6 +29,8 @@ public class GameLogExcerptTest {
         for (int i = 1; i <= count; i++) text.append("line ").append(i).append('\n');
         return text.toString();
     }
+
+    // ---- what is kept ------------------------------------------------------------------------
 
     @Test
     public void aShortLogIsKeptWhole() throws IOException {
@@ -35,7 +43,7 @@ public class GameLogExcerptTest {
     }
 
     @Test
-    public void aLongLogKeepsTheStartAndTheEndAndSaysHowManyLinesWereLeftOut() throws IOException {
+    public void aLongLogWithNothingTellingKeepsTheStartAndTheEndAndSaysHowManyLinesWereLeftOut() throws IOException {
         assertEquals("line 1\nline 2\nline 3\n... 95 lines left out ...\nline 99\nline 100\n",
                 excerpt(lines(100), 3, 2));
     }
@@ -51,6 +59,68 @@ public class GameLogExcerptTest {
     }
 
     @Test
+    public void tellingLinesFromTheMiddleAreKeptWithTheirLineNumbers() throws IOException {
+        StringBuilder log = new StringBuilder();
+        for (int i = 1; i <= 60; i++) {
+            if (i == 20) log.append("WARNING: Some incorrect rendering might occur (Mali-G57)\n");
+            else if (i == 30) log.append("[10:35:03] [Render thread/INFO]: OpenGL Renderer: Mali-G57 (Vulkan 1.3)\n");
+            else log.append("line ").append(i).append('\n');
+        }
+        String text = excerpt(log.toString(), 3, 10, 3, BIG);
+        assertTrue(text, text.startsWith("line 1\nline 2\nline 3\n--- lines from the middle"));
+        assertTrue(text, text.contains("#20 WARNING: Some incorrect rendering might occur (Mali-G57)\n"));
+        assertTrue(text, text.contains("#30 [10:35:03] [Render thread/INFO]: OpenGL Renderer: Mali-G57 (Vulkan 1.3)\n"));
+        assertTrue(text, text.contains("--- end of the log (60 lines in all) ---\nline 58\nline 59\nline 60\n"));
+        assertTrue(text, text.indexOf("#20 ") < text.indexOf("#30 "));
+    }
+
+    @Test
+    public void aTellingLineThatIsAlreadyInTheEndIsNotShownTwice() throws IOException {
+        String text = excerpt(lines(10) + "ERROR: boom\nline 12\n", 2, 10, 3, BIG);
+        assertFalse(text, text.contains("#11"));
+        assertEquals(1, text.split("ERROR: boom", -1).length - 1);
+    }
+
+    @Test
+    public void linesThatOnlyDifferInNumbersAreShownOnce() throws IOException {
+        StringBuilder log = new StringBuilder(lines(5));
+        for (int i = 1; i <= 40; i++) {
+            log.append("[RefreshRate] the system lowered the screen to 60.0 Hz, asked for 90.0 Hz again (attempt ")
+                    .append(i % 3 + 1).append(")\n");
+        }
+        log.append(lines(20));
+        String text = excerpt(log.toString(), 2, 10, 5, BIG);
+        assertEquals(1, text.split("\\[RefreshRate\\]", -1).length - 1);
+    }
+
+    @Test
+    public void onlyTheFirstFewTellingLinesAreKept() throws IOException {
+        StringBuilder log = new StringBuilder(lines(3));
+        for (int i = 1; i <= 50; i++) log.append("ERROR: problem number-").append((char) ('a' + i % 26)).append(i % 7 == 0 ? "x" : "y").append("-").append((char) ('A' + i % 20)).append('\n');
+        log.append(lines(20));
+        String text = excerpt(log.toString(), 2, 3, 4, BIG);
+        long keyLines = 0;
+        for (String line : text.split("\n")) if (line.startsWith("#")) keyLines++;
+        assertTrue(text, keyLines <= 3);
+    }
+
+    // ---- stack traces and long lines ---------------------------------------------------------
+
+    @Test
+    public void aLongStackTraceInTheEndIsFolded() throws IOException {
+        StringBuilder log = new StringBuilder(lines(10));
+        log.append("[Render thread/ERROR]: Error while loading the narrator\n");
+        log.append("com.mojang.text2speech.Narrator$InitializeException: Failed to load library flite\n");
+        for (int i = 1; i <= 30; i++) log.append("\tat knot/com.example.Frame").append(i).append("(Frame.java:1)\n");
+        log.append("Caused by: java.lang.UnsatisfiedLinkError: Unable to load library 'flite'\n");
+        log.append("last line\n");
+        String text = excerpt(log.toString(), 2, 0, 40, BIG);
+        assertTrue(text, text.contains("\tat knot/com.example.Frame1(Frame.java:1)\n\tat knot/com.example.Frame2(Frame.java:1)\n\t... 28 more stack lines\nCaused by:"));
+        assertFalse(text, text.contains("Frame3("));
+        assertTrue(text, text.endsWith("last line\n"));
+    }
+
+    @Test
     public void aVeryLongLineIsCut() throws IOException {
         StringBuilder longLine = new StringBuilder("start ");
         for (int i = 0; i < 1000; i++) longLine.append('x');
@@ -59,6 +129,36 @@ public class GameLogExcerptTest {
         assertTrue(text.endsWith(" ... [cut]\n"));
         assertTrue(text.length() < GameLogExcerpt.MAX_LINE_CHARS + 30);
     }
+
+    // ---- the size limit ----------------------------------------------------------------------
+
+    @Test
+    public void theExcerptStaysUnderTheBudgetAndKeepsTheEnd() throws IOException {
+        StringBuilder log = new StringBuilder();
+        StringBuilder wide = new StringBuilder();
+        for (int i = 0; i < 160; i++) wide.append('w');
+        for (int i = 1; i <= 400; i++) log.append(i % 5 == 0 ? "ERROR: " + wide + i : "info " + wide + i).append('\n');
+        log.append("THE LAST LINE\n");
+        String text = excerpt(log.toString(), 40, 40, 70, 6_000);
+        assertTrue("length " + text.length(), text.length() <= 6_000);
+        assertTrue(text, text.endsWith("THE LAST LINE\n"));
+        assertTrue(text, text.startsWith("info www"));
+    }
+
+    @Test
+    public void theDefaultSizeFitsInAChatMessage() throws IOException {
+        StringBuilder log = new StringBuilder();
+        StringBuilder wide = new StringBuilder();
+        for (int i = 0; i < 400; i++) wide.append('w');
+        for (int i = 1; i <= 3000; i++) log.append(i % 3 == 0 ? "ERROR: " + wide + i : "info " + wide + i).append('\n');
+        String text = excerpt(log.toString(), GameLogExcerpt.HEAD_LINES, GameLogExcerpt.KEY_LINES,
+                GameLogExcerpt.TAIL_LINES, GameLogExcerpt.BUDGET_CHARS);
+        assertTrue("length " + text.length(), text.length() <= GameLogExcerpt.BUDGET_CHARS);
+        assertTrue(text, text.endsWith("info " + wide.substring(0, GameLogExcerpt.MAX_LINE_CHARS - 5) + " ... [cut]\n")
+                || text.endsWith("ERROR: " + wide.substring(0, GameLogExcerpt.MAX_LINE_CHARS - 7) + " ... [cut]\n"));
+    }
+
+    // ---- login tokens ------------------------------------------------------------------------
 
     @Test
     public void launchArgumentsWithATokenAreHidden() throws IOException {
@@ -95,6 +195,13 @@ public class GameLogExcerptTest {
     }
 
     @Test
+    public void aTokenOnATellingLineInTheMiddleIsHiddenToo() throws IOException {
+        String text = excerpt(lines(10) + "ERROR: login failed --accessToken midsecret\n" + lines(30), 2, 10, 3, BIG);
+        assertFalse(text.contains("midsecret"));
+        assertTrue(text, text.contains("#11 ERROR: login failed --accessToken [hidden]"));
+    }
+
+    @Test
     public void aTokenThatStartsBeforeTheCutIsNeverHalfShown() throws IOException {
         StringBuilder padding = new StringBuilder();
         for (int i = 0; i < GameLogExcerpt.MAX_LINE_CHARS - 20; i++) padding.append('p');
@@ -108,6 +215,8 @@ public class GameLogExcerptTest {
         assertEquals(line + "\n", excerpt(line + "\n", 5, 5));
     }
 
+    // ---- the file ----------------------------------------------------------------------------
+
     @Test
     public void readsALogFileAndGivesNothingForAMissingOrEmptyOne() throws IOException {
         File dir = File.createTempFile("excerpt", "dir");
@@ -116,15 +225,15 @@ public class GameLogExcerptTest {
         try {
             File log = new File(dir, "latestlog.txt");
             try (FileWriter writer = new FileWriter(log)) {
-                writer.write(lines(100));
+                writer.write(lines(30));
             }
-            assertEquals("line 1\n... 98 lines left out ...\nline 100\n", GameLogExcerpt.fromFile(log, 1, 1));
+            assertEquals(lines(30), GameLogExcerpt.fromFile(log));
 
             File empty = new File(dir, "empty.txt");
             assertTrue(empty.createNewFile());
-            assertNull(GameLogExcerpt.fromFile(empty, 5, 5));
-            assertNull(GameLogExcerpt.fromFile(new File(dir, "missing.txt"), 5, 5));
-            assertNull(GameLogExcerpt.fromFile(null, 5, 5));
+            assertNull(GameLogExcerpt.fromFile(empty));
+            assertNull(GameLogExcerpt.fromFile(new File(dir, "missing.txt")));
+            assertNull(GameLogExcerpt.fromFile(null));
         } finally {
             File[] left = dir.listFiles();
             if (left != null) for (File file : left) file.delete();

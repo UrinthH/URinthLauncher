@@ -87,7 +87,13 @@ public class JREUtils {
 
         setupFfmpegEnv(context, envMap);
 
-        if(LauncherPreferences.PREF_BIG_CORE_AFFINITY) envMap.put("POJAV_BIG_CORE_AFFINITY", "1");
+        if(LauncherPreferences.PREF_BIG_CORE_AFFINITY) {
+            // Left out when every core reports the same top speed: the library would pick one
+            // arbitrarily, and that can be a slow core.
+            BigCorePolicy.Verdict bigCore = BigCorePolicy.decide(BigCorePolicy.readMaxFrequenciesKhz());
+            Logger.appendToLog("[BigCore] " + bigCore.note);
+            if(bigCore.pin) envMap.put("POJAV_BIG_CORE_AFFINITY", "1");
+        }
         if(LauncherPreferences.PREF_ALSOFT_FORCE_OPENSL) envMap.put("ALSOFT_DRIVERS", "opensl");
 
         VoiceChatAudio.addEnvironment(envMap);

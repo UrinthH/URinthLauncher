@@ -458,8 +458,9 @@ public class LauncherPreferenceFragment extends PreferenceFragmentCompat impleme
     }
 
     /**
-     * Puts the start and the end of the last game log on the clipboard (login tokens hidden), so it
-     * can be pasted into a bug report. The log file is read off the main thread.
+     * Puts a short excerpt of the last game log on the clipboard (start, telling lines from the
+     * middle and the end, login tokens hidden), so it can be pasted into a chat. The log file is
+     * read off the main thread.
      */
     private void copyGameLog() {
         Context context = getContext();
@@ -468,7 +469,7 @@ public class LauncherPreferenceFragment extends PreferenceFragmentCompat impleme
         PojavApplication.sExecutorService.execute(() -> {
             String text;
             try {
-                text = GameLogExcerpt.fromFile(log, GameLogExcerpt.HEAD_LINES, GameLogExcerpt.TAIL_LINES);
+                text = GameLogExcerpt.fromFile(log);
             } catch (IOException e) {
                 Log.w("Settings", "The game log could not be read", e);
                 text = null;
