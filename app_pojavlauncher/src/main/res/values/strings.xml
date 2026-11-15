@@ -314,7 +314,7 @@
     <string name="preference_microphone_access_description">Requests system to give access to device microphone for the game</string>
 
     <string name="preference_force_big_core_title">Force the renderer to run on the big core</string>
-    <string name="preference_force_big_core_desc">Forces the game\'s render thread to run on the core with the highest maximum frequency. Skipped when every core reports the same top speed, because the pick would be arbitrary.</string>
+    <string name="preference_force_big_core_desc">Forces the game\'s render thread to run on the core with the highest maximum frequency (the last one, when several report the same speed).</string>
     <string name="version_select_hint">Select a version</string>
     <string name="forge_dl_progress">Downloading installer for %s</string>
     <string name="forge_dl_searching">Searching for Forge version number</string>

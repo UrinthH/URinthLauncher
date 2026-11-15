@@ -88,9 +88,11 @@ public class JREUtils {
         setupFfmpegEnv(context, envMap);
 
         if(LauncherPreferences.PREF_BIG_CORE_AFFINITY) {
-            // Left out when every core reports the same top speed: the library would pick one
-            // arbitrarily, and that can be a slow core.
-            BigCorePolicy.Verdict bigCore = BigCorePolicy.decide(BigCorePolicy.readMaxFrequenciesKhz());
+            // The game library pins the last core with the top speed. That is passed on unless the
+            // phone's core capacities show it would be a weaker core, or the library cannot read
+            // any core speed. The log line says what was found either way.
+            BigCorePolicy.Verdict bigCore = BigCorePolicy.decide(
+                    BigCorePolicy.readMaxFrequenciesKhz(), BigCorePolicy.readCapacities());
             Logger.appendToLog("[BigCore] " + bigCore.note);
             if(bigCore.pin) envMap.put("POJAV_BIG_CORE_AFFINITY", "1");
         }

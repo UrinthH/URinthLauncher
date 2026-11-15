@@ -135,8 +135,8 @@ public class LauncherPreferences {
         PREF_DUMP_SHADERS = DEFAULT_PREF.getBoolean("dump_shaders", false);
         PREF_DEADZONE_SCALE = ((float) DEFAULT_PREF.getInt("gamepad_deadzone_scale", 100))/100f;
         // Experimental and off unless the user turns it on in Settings. It pins a thread to one
-        // core picked from sysfs max frequencies, which is the wrong choice on chips whose
-        // cores all report the same maximum frequency.
+        // core picked from the sysfs max frequencies (the last core with the top speed); how much
+        // that helps depends on the phone, and BigCorePolicy logs what it found on each launch.
         PREF_BIG_CORE_AFFINITY = DEFAULT_PREF.getBoolean("bigCoreAffinity", false);
         PREF_PERFORMANCE_MODE = performanceModeIsOn();
         syncRendererWithPerformanceMode();

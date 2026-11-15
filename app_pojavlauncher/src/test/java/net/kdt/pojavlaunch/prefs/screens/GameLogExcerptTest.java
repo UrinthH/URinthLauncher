@@ -75,6 +75,21 @@ public class GameLogExcerptTest {
     }
 
     @Test
+    public void theBigCoreLinesFromTheLauncherAndTheNativeLibraryAreKept() throws IOException {
+        StringBuilder log = new StringBuilder();
+        for (int i = 1; i <= 60; i++) {
+            if (i == 15) log.append("[BigCore] core speeds: cpu0-7 1612 MHz; capacities: cpu0-5 485, cpu6-7 1024; the game library picks cpu7\n");
+            else if (i == 25) log.append("bigcore: big CPU number is 7, frequency 1612000 Hz\n");
+            else if (i == 26) log.append("bigcore: forced current thread onto big core\n");
+            else log.append("line ").append(i).append('\n');
+        }
+        String text = excerpt(log.toString(), 3, 10, 3, BIG);
+        assertTrue(text, text.contains("#15 [BigCore] core speeds: cpu0-7 1612 MHz"));
+        assertTrue(text, text.contains("#25 bigcore: big CPU number is 7"));
+        assertTrue(text, text.contains("#26 bigcore: forced current thread onto big core"));
+    }
+
+    @Test
     public void aTellingLineThatIsAlreadyInTheEndIsNotShownTwice() throws IOException {
         String text = excerpt(lines(10) + "ERROR: boom\nline 12\n", 2, 10, 3, BIG);
         assertFalse(text, text.contains("#11"));
