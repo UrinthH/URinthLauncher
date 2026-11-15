@@ -760,5 +760,9 @@
     <string name="urinth_set_copy_title">Copy system info</string>
     <string name="urinth_set_copy_summary">Device, Android, graphics and renderer details to paste into a bug report.</string>
     <string name="urinth_set_copy_done">System info copied</string>
+    <string name="urinth_set_log_title">Copy game log</string>
+    <string name="urinth_set_log_summary">The start and the end of the last game log, with login tokens hidden, to paste into a bug report.</string>
+    <string name="urinth_set_log_done">Game log copied</string>
+    <string name="urinth_set_log_none">No game log yet. Start the game once, then try again.</string>
 
 </resources>

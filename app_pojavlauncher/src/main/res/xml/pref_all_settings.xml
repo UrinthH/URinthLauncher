@@ -479,5 +479,11 @@
             android:persistent="false"
             android:summary="@string/urinth_set_copy_summary"
             android:title="@string/urinth_set_copy_title" />
+        <Preference
+            android:icon="@drawable/ic_set_logfile"
+            android:key="copy_game_log"
+            android:persistent="false"
+            android:summary="@string/urinth_set_log_summary"
+            android:title="@string/urinth_set_log_title" />
     </PreferenceCategory>
 </PreferenceScreen>

@@ -10,6 +10,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.text.TextUtils;
 import android.widget.TextView;
+import android.util.Log;
 import android.widget.Toast;
 import android.graphics.Color;
 import android.graphics.drawable.Drawable;
@@ -449,6 +450,43 @@ public class LauncherPreferenceFragment extends PreferenceFragmentCompat impleme
         requirePreference("copy_system_info").setOnPreferenceClickListener(p -> {
             copySystemInfo();
             return true;
+        });
+        requirePreference("copy_game_log").setOnPreferenceClickListener(p -> {
+            copyGameLog();
+            return true;
+        });
+    }
+
+    /**
+     * Puts the start and the end of the last game log on the clipboard (login tokens hidden), so it
+     * can be pasted into a bug report. The log file is read off the main thread.
+     */
+    private void copyGameLog() {
+        Context context = getContext();
+        if (context == null) return;
+        File log = new File(Tools.DIR_GAME_HOME, "latestlog.txt");
+        PojavApplication.sExecutorService.execute(() -> {
+            String text;
+            try {
+                text = GameLogExcerpt.fromFile(log, GameLogExcerpt.HEAD_LINES, GameLogExcerpt.TAIL_LINES);
+            } catch (IOException e) {
+                Log.w("Settings", "The game log could not be read", e);
+                text = null;
+            }
+            final String excerpt = text;
+            Activity activity = getActivity();
+            if (activity == null) return;
+            activity.runOnUiThread(() -> {
+                if (!isAdded()) return;
+                if (excerpt == null) {
+                    Toast.makeText(activity, R.string.urinth_set_log_none, Toast.LENGTH_LONG).show();
+                    return;
+                }
+                ClipboardManager clipboard = (ClipboardManager) activity.getSystemService(Context.CLIPBOARD_SERVICE);
+                if (clipboard == null) return;
+                clipboard.setPrimaryClip(ClipData.newPlainText("URinth game log", excerpt));
+                Toast.makeText(activity, R.string.urinth_set_log_done, Toast.LENGTH_SHORT).show();
+            });
         });
     }
 
