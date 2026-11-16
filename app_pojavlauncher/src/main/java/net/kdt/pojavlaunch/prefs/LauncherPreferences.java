@@ -224,10 +224,7 @@ public class LauncherPreferences {
      * The default Java arguments: a modest G1 setup for phones. -Xms and -Xmx are not part of it
      * because the launcher sets them itself (Xmx from the RAM setting, default 1024 MB; Xms 256 MB).
      */
-    public static final String DEFAULT_JAVA_ARGS =
-            "-XX:+UseG1GC -XX:MaxGCPauseMillis=100 -XX:+ParallelRefProcEnabled "
-            + "-XX:+DisableExplicitGC -XX:G1ReservePercent=15 "
-            + "-XX:InitiatingHeapOccupancyPercent=25 -XX:+UseStringDeduplication";
+    public static final String DEFAULT_JAVA_ARGS = DefaultJavaArgs.TEXT;
 
     /**
      * Put {@link #DEFAULT_JAVA_ARGS} into Settings once (gate: "defaultJavaArgsV1"), only when the

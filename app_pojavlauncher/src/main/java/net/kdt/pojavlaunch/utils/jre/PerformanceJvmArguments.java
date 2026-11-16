@@ -1,5 +1,8 @@
 package net.kdt.pojavlaunch.utils.jre;
 
+import net.kdt.pojavlaunch.prefs.DefaultJavaArgs;
+
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -7,8 +10,10 @@ import java.util.List;
  * code in it, so it can be tested on a plain JVM.
  *
  * The rule for every flag is the same: it is added only when the player's arguments do not already
- * say something about it, so a flag typed in Settings always wins. None of these change what the
- * game draws, and none of them reserve memory up front.
+ * say something about it, so a flag typed in Settings always wins. The one exception is the
+ * launcher's own default text, which Settings holds from the first start: that is not a choice the
+ * player made, so {@link #dropLauncherDefaults} clears the parts of it that fight Performance Mode
+ * first. None of these change what the game draws, and none of them reserve memory up front.
  *
  * What the numbers are based on: a player's frame-time log from this launcher showed that garbage
  * collection explains about three tenths of the time spent in hitches (a typical collection took
@@ -16,7 +21,46 @@ import java.util.List;
  * limit. So the flags aim at fewer and shorter pauses, not at a bigger heap.
  */
 final class PerformanceJvmArguments {
+    /**
+     * The arguments of the launcher's own default text ({@link DefaultJavaArgs}) that work against
+     * what Performance Mode is for, with the reason for each:
+     * <ul>
+     *   <li>MaxGCPauseMillis=100: tells G1 that a 100 ms freeze is fine (Performance Mode asks for 50).</li>
+     *   <li>InitiatingHeapOccupancyPercent=25: starts a concurrent marking cycle once old memory passes
+     *       a quarter of the maximum heap. A modded game keeps about 230 MB alive, which is right at
+     *       that line on a 1 GB heap, so cycles ran back to back in a player's log (one lasted 1.4 s
+     *       and had a 234 ms freeze in it). The JVM's own default is 45%, adjusted as it learns.</li>
+     *   <li>G1ReservePercent=15: keeps more of the heap unused than the default 10%.</li>
+     *   <li>UseStringDeduplication: extra background work on the weak cores, for a few percent of
+     *       memory that Performance Mode does not need.</li>
+     * </ul>
+     */
+    private static final String[] REPLACED_LAUNCHER_DEFAULTS = {
+            "-XX:MaxGCPauseMillis=100", "-XX:G1ReservePercent=15",
+            "-XX:InitiatingHeapOccupancyPercent=25", "-XX:+UseStringDeduplication"
+    };
+
     private PerformanceJvmArguments() {}
+
+    /**
+     * Takes out of the arguments the ones above, but only when the whole default text of the
+     * launcher is there: then the player never changed it, it is the launcher's own text and not
+     * something they chose. A player who edited the text (even one flag) keeps every flag as it
+     * is, and a flag typed on its own is never touched. Call before {@link #addTo}, which then adds
+     * Performance Mode's own value for each.
+     *
+     * @return the arguments that were taken out, in order (empty when nothing was)
+     */
+    static List<String> dropLauncherDefaults(List<String> arguments) {
+        List<String> removed = new ArrayList<>();
+        for (String token : DefaultJavaArgs.tokens()) {
+            if (!arguments.contains(token)) return removed;
+        }
+        for (String token : REPLACED_LAUNCHER_DEFAULTS) {
+            if (arguments.remove(token)) removed.add(token);
+        }
+        return removed;
+    }
 
     static void addTo(List<String> arguments) {
         // With no collector named at all, choose G1 on purpose, so the G1 settings below apply and the
@@ -54,6 +98,31 @@ final class PerformanceJvmArguments {
             arguments.add("-XX:MaxGCPauseMillis=50");
         if (!hasArgument(arguments, "-XX:+ParallelRefProcEnabled") && !hasArgument(arguments, "-XX:-ParallelRefProcEnabled"))
             arguments.add("-XX:+ParallelRefProcEnabled");
+    }
+
+    /**
+     * The heap and collector settings among the arguments, written short ("Xmx1024M", "+UseG1GC",
+     * "MaxGCPauseMillis=50") and cut into lines of at most {@code maxLineChars}, for the game log.
+     * A log that shows what was really in effect settles any question about which flag won.
+     */
+    static List<String> describeMemorySettings(List<String> arguments, int maxLineChars) {
+        List<String> lines = new ArrayList<>();
+        StringBuilder line = new StringBuilder();
+        for (String argument : arguments) {
+            String shown;
+            if (argument.startsWith("-XX:")) shown = argument.substring(4);
+            else if (argument.startsWith("-Xms") || argument.startsWith("-Xmx") || argument.startsWith("-Xmn"))
+                shown = argument.substring(1);
+            else continue;
+            if (line.length() > 0 && line.length() + 1 + shown.length() > maxLineChars) {
+                lines.add(line.toString());
+                line.setLength(0);
+            }
+            if (line.length() > 0) line.append(' ');
+            line.append(shown);
+        }
+        if (line.length() > 0) lines.add(line.toString());
+        return lines;
     }
 
     /** True when any argument starts with this text. */

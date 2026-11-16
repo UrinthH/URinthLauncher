@@ -33,8 +33,11 @@ import java.util.Set;
  * file read and a sum per sample.
  *
  * When the phone is hot ({@link ThermalGuard}) the helpers and compiler threads are lowered ahead
- * of time, since a throttled CPU is where contention starts. This class is the only place that
- * lowers thread priorities, so two parts never fight over the same thread.
+ * of time, since a throttled CPU is where contention starts. Some phones (a Unisoc T606 one did)
+ * keep no wait counters at all; there the waits cannot be watched, so the helpers and compiler
+ * threads simply stay slightly lowered for the whole game, which costs nothing while cores are
+ * free. This class is the only place that lowers thread priorities, so two parts never fight over
+ * the same thread.
  *
  * A summary line goes into the game log once a minute, so a lag report can be matched to what
  * the render thread was actually going through.
@@ -62,6 +65,8 @@ public final class RenderScheduler {
     private long mLastWaitNs = -1;
     private long mLastSampleAt;
     private int mFailedReads;
+    /** True once the phone has shown it reports no usable wait times. */
+    private boolean mWaitTimesUnavailable;
     private int mAppliedLevel = SchedulerPolicy.LEVEL_NONE;
 
     /** Kernel thread id to thread name, read once per thread. */
@@ -121,14 +126,17 @@ public final class RenderScheduler {
             Set<Integer> helpers = new HashSet<>();
             Set<Integer> compilers = new HashSet<>();
             scanThreads(helpers, compilers);
-            if (mRenderTid > 0) {
-                long wait = SchedulerPolicy.parseWaitNanos(readFile(new File("/proc/self/task/" + mRenderTid + "/schedstat")));
+            if (mRenderTid > 0 && !mWaitTimesUnavailable) {
+                String schedstat = readFile(new File("/proc/self/task/" + mRenderTid + "/schedstat"));
+                long wait = SchedulerPolicy.hasRunTime(schedstat) ? SchedulerPolicy.parseWaitNanos(schedstat) : -1;
                 if (wait < 0) {
                     if (++mFailedReads >= GIVE_UP_AFTER_FAILED_READS) {
-                        log("This phone does not report thread wait times; the scheduler is switching itself off");
-                        mRunning = false;
-                        restoreAll();
-                        return;
+                        // No wait times means no way to tell when the render thread is being kept
+                        // waiting, so the reaction cannot be timed. The helpers stay slightly
+                        // lowered instead (see SchedulerPolicy.effectiveLevel).
+                        mWaitTimesUnavailable = true;
+                        log("This phone does not report thread wait times, so helper and JIT compiler threads stay "
+                                + "slightly lowered for the whole game instead of reacting to waits");
                     }
                 } else {
                     mFailedReads = 0;
@@ -141,7 +149,8 @@ public final class RenderScheduler {
                     mLastSampleAt = now;
                 }
             }
-            int level = Math.max(mPolicy.level, levelForHeat(ThermalGuard.currentHeatLevel()));
+            int level = SchedulerPolicy.effectiveLevel(mPolicy.level,
+                    levelForHeat(ThermalGuard.currentHeatLevel()), mWaitTimesUnavailable);
             apply(level, helpers, compilers);
             maybeSummarise();
         } catch (Throwable error) {

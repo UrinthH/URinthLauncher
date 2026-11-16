@@ -11,6 +11,7 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 
 import net.kdt.pojavlaunch.Architecture;
+import net.kdt.pojavlaunch.Logger;
 import net.kdt.pojavlaunch.Tools;
 import net.kdt.pojavlaunch.awt.AWTView;
 import net.kdt.pojavlaunch.multirt.MultiRTUtils;
@@ -165,7 +166,19 @@ public class JavaRunner {
      * player already set.
      */
     private static void addPerformanceModeArguments(List<String> arguments) {
+        List<String> replaced = PerformanceJvmArguments.dropLauncherDefaults(arguments);
         PerformanceJvmArguments.addTo(arguments);
+        try {
+            if (!replaced.isEmpty()) {
+                Logger.appendToLog("[PerformanceMode] The Java arguments in Settings are still the launcher's default text, "
+                        + "so Performance Mode uses its own memory settings instead of: " + android.text.TextUtils.join(" ", replaced));
+            }
+            for (String line : PerformanceJvmArguments.describeMemorySettings(arguments, 150)) {
+                Logger.appendToLog("[PerformanceMode] Memory settings in effect: " + line);
+            }
+        } catch (Throwable ignored) {
+            // The native logger is not ready, or already gone. The game starts either way.
+        }
     }
 
     private static File getVmPath(File runtimeHomeDir, String arch, String flavor) {

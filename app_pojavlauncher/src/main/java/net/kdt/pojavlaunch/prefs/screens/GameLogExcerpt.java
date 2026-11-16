@@ -10,16 +10,20 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
  * The text that "Copy game log" puts on the clipboard, for bug reports. It has to fit in a chat
  * message, so a long log is cut down to the parts that matter: the start (launcher, renderer and
  * driver settings), the lines from the middle that name an error or the graphics driver (each
- * kind once, with its line number), and the end (where a freeze or a crash shows). Stack traces
- * are folded, long lines are cut and anything that looks like a login token is hidden. The lines
- * are the log's own text, so they are in English.
+ * kind once, with its line number), and the end (where a freeze or a crash shows). Above them goes
+ * a short summary counted over the whole log (memory-collection pauses, how often the system
+ * lowered the screen's refresh rate), since a lag report needs those numbers and a cut-down log
+ * cannot show them. Stack traces are folded, long lines are cut and anything that looks like a
+ * login token is hidden. The lines are the log's own text, so they are in English.
  */
 final class GameLogExcerpt {
     /** Lines kept from the start of the log. */
@@ -48,7 +52,7 @@ final class GameLogExcerpt {
 
     /** A line that names an error, the graphics driver or one of the launcher's own tags. */
     private static final Pattern KEY_LINE = Pattern.compile(
-            "ERROR|FATAL|Exception|Caused by|WARNING:|(?i:crash|out ?of ?memory|shader|renderer|opengl|vulkan|zink|mesa|egl|glfw|lwjgl|bigcore)"
+            "ERROR|FATAL|Exception|Caused by|WARNING:|Pause Full|(?i:crash|out ?of ?memory|shader|renderer|opengl|vulkan|zink|mesa|egl|glfw|lwjgl|bigcore)"
                     + "|\\[(?:RefreshRate|PerformanceMode|ThermalGuard|Startup|BigCore|Perf|LaunchGuard)\\]");
     private static final Pattern STACK_FRAME = Pattern.compile("^\\s+(?:at |\\.\\.\\. \\d+ more).*");
 
@@ -75,11 +79,13 @@ final class GameLogExcerpt {
         List<Integer> candidateNumbers = new ArrayList<>();
         List<String> candidateLines = new ArrayList<>();
         Set<String> seen = new HashSet<>();
+        LogStats stats = new LogStats();
         long total = 0;
         String line;
         while ((line = reader.readLine()) != null) {
             total++;
             String raw = line.length() > MAX_SEARCH_CHARS ? line.substring(0, MAX_SEARCH_CHARS) : line;
+            stats.accept(raw);
             if (head.size() < headLines) {
                 head.add(clean(raw));
                 continue;
@@ -108,7 +114,8 @@ final class GameLogExcerpt {
             keys.add("#" + candidateNumbers.get(i) + " " + clean(candidateLines.get(i)));
         }
 
-        String text = assemble(head, keys, tailText, total, tailFirst);
+        List<String> summary = stats.summaryLines();
+        String text = assemble(summary, head, keys, tailText, total, tailFirst);
         while (text.length() > budgetChars) {
             if (!keys.isEmpty()) keys.remove(keys.size() - 1);
             else if (head.size() > 16) head.remove(head.size() - 1);
@@ -116,13 +123,19 @@ final class GameLogExcerpt {
                 tailText.remove(0);
                 tailFirst++;
             } else break;
-            text = assemble(head, keys, tailText, total, tailFirst);
+            text = assemble(summary, head, keys, tailText, total, tailFirst);
         }
         return text;
     }
 
-    private static String assemble(List<String> head, List<String> keys, List<String> tail, long total, long tailFirst) {
+    private static String assemble(List<String> summary, List<String> head, List<String> keys, List<String> tail,
+                                   long total, long tailFirst) {
         StringBuilder text = new StringBuilder();
+        if (!summary.isEmpty()) {
+            text.append("--- summary counted over the whole log ---\n");
+            for (String kept : summary) text.append(kept).append('\n');
+            text.append("--- the log itself ---\n");
+        }
         for (String kept : head) text.append(kept).append('\n');
         if (keys.isEmpty()) {
             long leftOut = tailFirst - 1 - head.size();
@@ -179,5 +192,89 @@ final class GameLogExcerpt {
         safe = WEB_TOKEN.matcher(safe).replaceAll(HIDDEN);
         safe = NAMED_TOKEN.matcher(safe).replaceAll("$1" + HIDDEN);
         return safe;
+    }
+
+    /**
+     * Numbers counted over every line of the log while it is read: the memory-collection pauses the
+     * JVM logs ("[71.2s][info][gc] GC(18) Pause Young (Mixed) ... 94.223ms") and how often the
+     * launcher noted that the system lowered the screen's refresh rate.
+     */
+    static final class LogStats {
+        private static final Pattern GC_PAUSE = Pattern.compile(
+                "^\\[(\\d+(?:\\.\\d+)?)s\\]\\[info\\s*\\]\\[gc\\s*\\]\\s+GC\\(\\d+\\)\\s+Pause\\s+(\\w+).*?\\s(\\d+(?:\\.\\d+)?)ms\\s*$");
+        private static final Pattern GC_CYCLE_END = Pattern.compile(
+                "^\\[(\\d+(?:\\.\\d+)?)s\\]\\[info\\s*\\]\\[gc\\s*\\]\\s+GC\\(\\d+\\)\\s+Concurrent Mark Cycle\\s+(\\d+(?:\\.\\d+)?)ms\\s*$");
+        private static final String REFRESH_LOWERED = "[RefreshRate] the system lowered";
+
+        private int pauses;
+        private double totalMs;
+        private double worstMs;
+        private String worstKind = "";
+        private int over50;
+        private int over100;
+        private int over200;
+        private int full;
+        private int cycles;
+        private double longestCycleMs;
+        private double lastStampSeconds;
+        private int refreshLowered;
+
+        void accept(String line) {
+            if (line.isEmpty()) return;
+            if (line.charAt(0) == '[' && line.indexOf("][gc") > 0) {
+                Matcher pause = GC_PAUSE.matcher(line);
+                if (pause.find()) {
+                    double ms = Double.parseDouble(pause.group(3));
+                    pauses++;
+                    totalMs += ms;
+                    if (ms > worstMs) {
+                        worstMs = ms;
+                        worstKind = pause.group(2);
+                    }
+                    if (ms > 50) over50++;
+                    if (ms > 100) over100++;
+                    if (ms > 200) over200++;
+                    if ("Full".equals(pause.group(2))) full++;
+                    lastStampSeconds = Math.max(lastStampSeconds, Double.parseDouble(pause.group(1)));
+                    return;
+                }
+                Matcher cycle = GC_CYCLE_END.matcher(line);
+                if (cycle.find()) {
+                    cycles++;
+                    longestCycleMs = Math.max(longestCycleMs, Double.parseDouble(cycle.group(2)));
+                    lastStampSeconds = Math.max(lastStampSeconds, Double.parseDouble(cycle.group(1)));
+                }
+                return;
+            }
+            if (line.contains(REFRESH_LOWERED)) refreshLowered++;
+        }
+
+        /** The summary lines; empty when the log holds nothing to count. */
+        List<String> summaryLines() {
+            List<String> lines = new ArrayList<>();
+            if (pauses > 0) {
+                StringBuilder text = new StringBuilder("Memory (GC) pauses: ").append(pauses);
+                if (lastStampSeconds >= 1) text.append(" in ").append(duration(lastStampSeconds));
+                text.append(", ").append(String.format(Locale.US, "%.1f", totalMs / 1000)).append(" s paused in total; worst ")
+                        .append(Math.round(worstMs)).append(" ms (").append(worstKind).append("); over 50 ms: ").append(over50)
+                        .append(", over 100 ms: ").append(over100).append(", over 200 ms: ").append(over200)
+                        .append("; full collections: ").append(full);
+                if (cycles > 0) {
+                    text.append("; background cycles: ").append(cycles).append(" (longest ")
+                            .append(Math.round(longestCycleMs)).append(" ms)");
+                }
+                lines.add(text.toString());
+            }
+            if (refreshLowered > 0) {
+                lines.add("Screen refresh rate: the system lowered it " + refreshLowered
+                        + (refreshLowered == 1 ? " time" : " times") + " (the launcher asked for it back each time)");
+            }
+            return lines;
+        }
+
+        private static String duration(double seconds) {
+            if (seconds < 120) return Math.round(seconds) + " s";
+            return Math.round(seconds / 60) + " min";
+        }
     }
 }

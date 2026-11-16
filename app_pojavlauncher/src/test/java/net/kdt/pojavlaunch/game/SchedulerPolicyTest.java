@@ -72,6 +72,39 @@ public class SchedulerPolicyTest {
     }
 
     @Test
+    public void aPhoneThatReportsNoWaitTimesKeepsTheHelpersSlightlyLoweredForTheWholeGame() {
+        assertEquals(SchedulerPolicy.LEVEL_MILD,
+                SchedulerPolicy.effectiveLevel(SchedulerPolicy.LEVEL_NONE, SchedulerPolicy.LEVEL_NONE, true));
+        // A phone that does report them still waits for the render thread to actually wait.
+        assertEquals(SchedulerPolicy.LEVEL_NONE,
+                SchedulerPolicy.effectiveLevel(SchedulerPolicy.LEVEL_NONE, SchedulerPolicy.LEVEL_NONE, false));
+        assertEquals(SchedulerPolicy.LEVEL_MILD,
+                SchedulerPolicy.effectiveLevel(SchedulerPolicy.LEVEL_MILD, SchedulerPolicy.LEVEL_NONE, false));
+    }
+
+    @Test
+    public void theMildLevelOfAPhoneWithoutWaitTimesNeverHidesAHigherNeed() {
+        assertEquals(SchedulerPolicy.LEVEL_STRONG,
+                SchedulerPolicy.effectiveLevel(SchedulerPolicy.LEVEL_NONE, SchedulerPolicy.LEVEL_STRONG, true));
+        assertEquals(SchedulerPolicy.LEVEL_STRONG,
+                SchedulerPolicy.effectiveLevel(SchedulerPolicy.LEVEL_STRONG, SchedulerPolicy.LEVEL_NONE, true));
+        assertEquals(SchedulerPolicy.LEVEL_STRONG,
+                SchedulerPolicy.effectiveLevel(SchedulerPolicy.LEVEL_MILD, SchedulerPolicy.LEVEL_STRONG, true));
+    }
+
+    @Test
+    public void aSchedstatLineFromAKernelThatDoesNotCountIsNoReading() {
+        assertTrue(SchedulerPolicy.hasRunTime("1234 5678 90\n"));
+        assertTrue(SchedulerPolicy.hasRunTime("5000000 0 12\n")); // never waited, but really counted
+        assertTrue(SchedulerPolicy.hasRunTime("1234 5"));
+        assertFalse(SchedulerPolicy.hasRunTime("0 0 0\n"));
+        assertFalse(SchedulerPolicy.hasRunTime("5000000 0 0\n")); // CPU time kept, wait counters off
+        assertFalse(SchedulerPolicy.hasRunTime(""));
+        assertFalse(SchedulerPolicy.hasRunTime("a b c"));
+        assertFalse(SchedulerPolicy.hasRunTime(null));
+    }
+
+    @Test
     public void picksTheRightThreads() {
         assertTrue(SchedulerPolicy.isRenderThread("Render thread"));
         assertFalse(SchedulerPolicy.isRenderThread("Server thread"));

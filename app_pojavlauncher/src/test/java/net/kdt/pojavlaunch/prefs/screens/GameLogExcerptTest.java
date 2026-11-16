@@ -89,6 +89,79 @@ public class GameLogExcerptTest {
         assertTrue(text, text.contains("#26 bigcore: forced current thread onto big core"));
     }
 
+    // ---- the summary counted over the whole log ----------------------------------------------
+
+    private static final String GC_YOUNG = "[71.235s][info   ][gc         ] GC(18) Pause Young (Mixed) (G1 Evacuation Pause) 424M->215M(512M) 94.223ms";
+    private static final String GC_REMARK = "[74.663s][info   ][gc         ] GC(20) Pause Remark 279M->279M(512M) 234.224ms";
+    private static final String GC_CLEANUP = "[75.081s][info   ][gc         ] GC(20) Pause Cleanup 318M->318M(512M) 1.936ms";
+    private static final String GC_CYCLE_START = "[73.661s][info   ][gc         ] GC(20) Concurrent Mark Cycle";
+    private static final String GC_CYCLE_END = "[75.092s][info   ][gc         ] GC(20) Concurrent Mark Cycle 1431.426ms";
+    private static final String REFRESH = "[RefreshRate] the system lowered the screen to 60.0 Hz, asked for 90.0 Hz again (attempt 1)";
+
+    @Test
+    public void gcPausesAreCountedOverTheWholeLogEvenWhenTheirLinesAreCutOut() throws IOException {
+        StringBuilder log = new StringBuilder();
+        for (int i = 1; i <= 80; i++) {
+            if (i == 20) log.append(GC_YOUNG).append('\n');
+            else if (i == 25) log.append(GC_CYCLE_START).append('\n');
+            else if (i == 30) log.append(GC_REMARK).append('\n');
+            else if (i == 31) log.append(GC_CLEANUP).append('\n');
+            else if (i == 32) log.append(GC_CYCLE_END).append('\n');
+            else log.append("line ").append(i).append('\n');
+        }
+        String text = excerpt(log.toString(), 3, 0, 3, BIG);
+        assertTrue(text, text.startsWith("--- summary counted over the whole log ---\nMemory (GC) pauses: 3 in 75 s, 0.3 s paused in total; "
+                + "worst 234 ms (Remark); over 50 ms: 2, over 100 ms: 1, over 200 ms: 1; full collections: 0; "
+                + "background cycles: 1 (longest 1431 ms)\n--- the log itself ---\nline 1\n"));
+        assertFalse(text, text.contains("Pause Young")); // the lines themselves were left out of the middle
+    }
+
+    @Test
+    public void aFullCollectionIsCountedAndItsLineIsKept() throws IOException {
+        String full = "[90.100s][info   ][gc         ] GC(31) Pause Full (Metadata GC Threshold) 400M->300M(512M) 812.500ms";
+        StringBuilder log = new StringBuilder();
+        for (int i = 1; i <= 60; i++) log.append(i == 25 ? full : "line " + i).append('\n');
+        String text = excerpt(log.toString(), 3, 10, 3, BIG);
+        assertTrue(text, text.contains("worst 813 ms (Full)"));
+        assertTrue(text, text.contains("full collections: 1"));
+        assertTrue(text, text.contains("#25 " + full));
+    }
+
+    @Test
+    public void refreshRateDropsAreCounted() throws IOException {
+        StringBuilder log = new StringBuilder();
+        for (int i = 1; i <= 50; i++) log.append(i % 10 == 0 ? REFRESH : "line " + i).append('\n');
+        String text = excerpt(log.toString(), 3, 0, 3, BIG);
+        assertTrue(text, text.contains("Screen refresh rate: the system lowered it 5 times (the launcher asked for it back each time)\n"));
+        assertFalse(text, text.contains("Memory (GC) pauses"));
+    }
+
+    @Test
+    public void aLogWithNothingToCountGetsNoSummary() throws IOException {
+        String text = excerpt(lines(5), 10, 10);
+        assertFalse(text, text.contains("summary counted"));
+    }
+
+    @Test
+    public void aShortLogWithGcLinesIsKeptWholeUnderItsSummary() throws IOException {
+        String log = "line 1\n" + GC_YOUNG + "\nline 3\n";
+        String text = excerpt(log, 10, 10);
+        assertEquals("--- summary counted over the whole log ---\n"
+                + "Memory (GC) pauses: 1 in 71 s, 0.1 s paused in total; worst 94 ms (Young); over 50 ms: 1, over 100 ms: 0, over 200 ms: 0; full collections: 0\n"
+                + "--- the log itself ---\n" + log, text);
+    }
+
+    @Test
+    public void theSummaryDoesNotPushTheExcerptOverTheBudget() throws IOException {
+        StringBuilder log = new StringBuilder();
+        StringBuilder wide = new StringBuilder();
+        for (int i = 0; i < 160; i++) wide.append('w');
+        for (int i = 1; i <= 400; i++) log.append(i % 7 == 0 ? GC_YOUNG : "info " + wide + i).append('\n');
+        String text = excerpt(log.toString(), 40, 40, 70, 8_000);
+        assertTrue("length " + text.length(), text.length() <= 8_000);
+        assertTrue(text, text.startsWith("--- summary counted over the whole log ---\nMemory (GC) pauses: 57"));
+    }
+
     @Test
     public void aTellingLineThatIsAlreadyInTheEndIsNotShownTwice() throws IOException {
         String text = excerpt(lines(10) + "ERROR: boom\nline 12\n", 2, 10, 3, BIG);

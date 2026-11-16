@@ -71,6 +71,35 @@ final class SchedulerPolicy {
         }
     }
 
+    /**
+     * The level to apply: the highest of what the render thread's waits call for, what the heat
+     * calls for and, on a phone that reports no wait times (so the first one can never be known),
+     * the mild level for the whole game. The mild level only matters while threads compete for a
+     * core, and it never moves a thread forward or touches the render thread itself.
+     */
+    static int effectiveLevel(int waitLevel, int heatLevel, boolean waitTimesUnavailable) {
+        int level = Math.max(waitLevel, heatLevel);
+        return waitTimesUnavailable ? Math.max(level, LEVEL_MILD) : level;
+    }
+
+    /**
+     * Whether a schedstat line comes from a kernel that is really counting. Some kernels print
+     * "0 0 0", others keep the CPU time but leave the wait time and the timeslice count at zero for
+     * every thread (the wait counters are switched off). Both parse fine, but would look like a
+     * thread that never waits, so they count as no reading at all. A thread that has been on a core
+     * has used CPU time, and a kernel that counts has also counted the times it was put there.
+     */
+    static boolean hasRunTime(String schedstat) {
+        if (schedstat == null) return false;
+        String[] parts = schedstat.trim().split("\\s+");
+        try {
+            if (Long.parseLong(parts[0]) <= 0) return false;
+            return parts.length < 3 || Long.parseLong(parts[2]) > 0;
+        } catch (NumberFormatException e) {
+            return false;
+        }
+    }
+
     /** Thread names are cut to 15 characters by the kernel, hence the short prefixes. */
     static boolean isRenderThread(String name) {
         return "Render thread".equals(name) || "Client thread".equals(name);
