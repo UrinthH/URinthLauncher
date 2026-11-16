@@ -717,7 +717,13 @@
     <string name="urinth_set_api_opengl">OpenGL</string>
     <string name="urinth_set_api_vulkan">Vulkan</string>
     <string name="urinth_set_perf_title">Performance Mode</string>
-    <string name="urinth_set_perf_summary">Thermal guard, a steadier render thread and a refresh-rate watch. With OpenGL the game runs on the LTW renderer; with Vulkan it keeps Zink.</string>
+    <string name="urinth_set_perf_summary">Thermal guard, a steadier render thread and a refresh-rate watch. With OpenGL the game runs on the LTW renderer, or on MobileGlues when its plugin app is installed (see below); with Vulkan it keeps Zink.</string>
+    <string name="urinth_set_perf_mg_title">MobileGlues in Performance Mode</string>
+    <string name="urinth_set_perf_mg_found">MobileGlues plugin found. Performance Mode starts Minecraft 1.17 and newer with it instead of LTW. Turn this off to always use LTW.</string>
+    <string name="urinth_set_perf_mg_missing">The MobileGlues plugin app is not installed, so Performance Mode uses LTW for now. Install it once and it is used from the next launch.</string>
+    <string name="urinth_set_perf_mg_off">Off: Performance Mode always uses LTW.</string>
+    <string name="urinth_set_perf_mg_get_title">Get the MobileGlues plugin</string>
+    <string name="urinth_set_perf_mg_get_summary">Opens the official download page. MobileGlues also asks for All files access when the game starts, so it can read its settings; without that it can crash with Sodium on some GPUs.</string>
     <string name="urinth_set_gpu_title">Graphics hardware</string>
     <string name="urinth_set_gpu_unknown">Unknown graphics chip</string>
     <string name="urinth_set_gpu_summary">%1$s · OpenGL ES %2$d · %3$s</string>

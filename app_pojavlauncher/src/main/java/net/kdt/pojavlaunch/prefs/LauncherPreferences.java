@@ -70,6 +70,8 @@ public class LauncherPreferences {
     public static boolean PREF_DUMP_SHADERS = false;
     public static float PREF_DEADZONE_SCALE = 1f;
     public static boolean PREF_BIG_CORE_AFFINITY = false;
+    /** Performance Mode starts the game with MobileGlues instead of LTW when the plugin app is installed. */
+    public static boolean PREF_PERF_MOBILEGLUES = true;
     /** Watch device temperature while the game runs and ease CPU/GPU load when it gets hot. */
     public static boolean PREF_PERFORMANCE_MODE = false;
     /**
@@ -138,6 +140,7 @@ public class LauncherPreferences {
         // core picked from the sysfs max frequencies (the last core with the top speed); how much
         // that helps depends on the phone, and BigCorePolicy logs what it found on each launch.
         PREF_BIG_CORE_AFFINITY = DEFAULT_PREF.getBoolean("bigCoreAffinity", false);
+        PREF_PERF_MOBILEGLUES = DEFAULT_PREF.getBoolean("perfMobileGlues", true);
         PREF_PERFORMANCE_MODE = performanceModeIsOn();
         syncRendererWithPerformanceMode();
         PREF_ZINK_PREFER_SYSTEM_DRIVER = DEFAULT_PREF.getBoolean("zinkPreferSystemDriver", false);

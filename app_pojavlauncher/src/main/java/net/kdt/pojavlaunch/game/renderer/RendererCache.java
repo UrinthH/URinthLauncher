@@ -115,6 +115,12 @@ public class RendererCache {
         }
     }
 
+    /** Whether the MobileGlues plugin app is installed and this phone can run it. */
+    public static boolean isMobileGluesUsable(Context context) {
+        return isCompatibleSafely(GameRenderer.getKnownRenderer(
+                net.kdt.pojavlaunch.game.renderer.def.Renderers.MOBILEGLUES_RENDERER), context);
+    }
+
     static boolean isCompatibleSafely(RenderSpec spec, Context context) {
         if (spec == null) return false;
         try {

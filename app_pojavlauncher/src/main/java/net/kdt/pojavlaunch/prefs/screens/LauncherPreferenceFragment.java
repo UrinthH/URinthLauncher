@@ -233,6 +233,10 @@ public class LauncherPreferenceFragment extends PreferenceFragmentCompat impleme
             LauncherPreferences.setPerformanceMode(Boolean.TRUE.equals(value));
             return true;
         });
+        requirePreference("perf_mobileglues_get").setOnPreferenceClickListener(p -> {
+            Tools.openURL(getLauncherActivity(), MOBILEGLUES_RELEASES_URL);
+            return true;
+        });
         GpuUtils.GLInfo gl = GpuUtils.getGlInfo();
         PackageManager pm = requireContext().getPackageManager();
         String vulkan = vulkanLabel(pm);
@@ -319,6 +323,24 @@ public class LauncherPreferenceFragment extends PreferenceFragmentCompat impleme
         dialog.show();
     }
 
+    /** The official MobileGlues releases page; the plugin app for launchers like this one is the APK there. */
+    private static final String MOBILEGLUES_RELEASES_URL = "https://github.com/MobileGL-Dev/MobileGlues-release/releases/latest";
+
+    /**
+     * The "MobileGlues in Performance Mode" switch says what the next launch will really use, and
+     * the "Get the plugin" row is only there while the plugin app is missing.
+     */
+    private void refreshMobileGluesRows(Context context) {
+        SwitchPreferenceCompat toggle = findPreference("perfMobileGlues");
+        Preference get = findPreference("perf_mobileglues_get");
+        if (toggle == null) return;
+        boolean usable = RendererCache.isMobileGluesUsable(context);
+        int summary = !LauncherPreferences.PREF_PERF_MOBILEGLUES ? R.string.urinth_set_perf_mg_off
+                : usable ? R.string.urinth_set_perf_mg_found : R.string.urinth_set_perf_mg_missing;
+        toggle.setSummary(summary);
+        if (get != null) get.setVisible(!usable);
+    }
+
     private void showMessage(int title, CharSequence message) {
         new AlertDialog.Builder(requireContext())
                 .setTitle(title)
@@ -368,6 +390,7 @@ public class LauncherPreferenceFragment extends PreferenceFragmentCompat impleme
 
         SwitchPreferenceCompat performance = findPreference("performanceMode");
         if (performance != null) performance.setChecked(performanceMode);
+        refreshMobileGluesRows(context);
 
         if (mHeader != null) {
             mHeader.setChips(
@@ -583,6 +606,7 @@ public class LauncherPreferenceFragment extends PreferenceFragmentCompat impleme
         switch (s) {
             case "renderer":
             case "performanceMode":
+            case "perfMobileGlues":
             case "allocation":
                 refreshGraphicsState();
                 break;

@@ -65,6 +65,18 @@
             android:key="performanceMode"
             android:summary="@string/urinth_set_perf_summary"
             android:title="@string/urinth_set_perf_title" />
+        <SwitchPreferenceCompat
+            android:defaultValue="true"
+            android:icon="@drawable/ic_set_renderer"
+            android:key="perfMobileGlues"
+            android:summary="@string/urinth_set_perf_mg_missing"
+            android:title="@string/urinth_set_perf_mg_title" />
+        <Preference
+            android:icon="@drawable/ic_set_renderer"
+            android:key="perf_mobileglues_get"
+            android:persistent="false"
+            android:summary="@string/urinth_set_perf_mg_get_summary"
+            android:title="@string/urinth_set_perf_mg_get_title" />
         <androidx.preference.ListPreference
             android:defaultValue="opengles2"
             android:icon="@drawable/ic_set_renderer"

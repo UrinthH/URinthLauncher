@@ -27,7 +27,9 @@ import net.kdt.pojavlaunch.multirt.MultiRTUtils;
 import net.kdt.pojavlaunch.multirt.Runtime;
 import net.kdt.pojavlaunch.prefs.LauncherPreferences;
 import net.kdt.pojavlaunch.game.renderer.GameRenderer;
+import net.kdt.pojavlaunch.game.renderer.PerformanceMobileGlues;
 import net.kdt.pojavlaunch.game.renderer.RendererApiPolicy;
+import net.kdt.pojavlaunch.game.renderer.RendererCache;
 import net.kdt.pojavlaunch.game.renderer.RenderSpec;
 import net.kdt.pojavlaunch.utils.DateUtils;
 import net.kdt.pojavlaunch.utils.FileUtils;
@@ -319,6 +321,25 @@ public class GameRunner {
             RenderSpec builtIn = GameRenderer.getKnownRenderer(Renderers.LTW_RENDERER);
             if (builtIn != null && builtIn.compatibleDevice(activity)) {
                 switchRendererIfSupported(true, builtIn, gameRenderer, instance, activity, 0);
+                renderer = gameRenderer.getCurrentRenderer();
+            }
+        }
+
+        // Performance Mode stands for LTW; some players get a smoother game from MobileGlues, which
+        // comes from a separate plugin app. For this launch only, and only when everything allows it
+        // (see PerformanceMobileGlues), start with MobileGlues instead, and say in the log which
+        // renderer it is and why. The renderer chosen in Settings is left as it was.
+        if (PerformanceMobileGlues.isCandidate(LauncherPreferences.PREF_PERFORMANCE_MODE,
+                LauncherPreferences.PREF_PERF_MOBILEGLUES, LauncherPreferences.PREF_SAFE_LAUNCH, renderer.tag())) {
+            PerformanceMobileGlues.Decision swap = PerformanceMobileGlues.decide(
+                    LauncherPreferences.PREF_PERFORMANCE_MODE, LauncherPreferences.PREF_PERF_MOBILEGLUES,
+                    LauncherPreferences.PREF_SAFE_LAUNCH, renderer.tag(),
+                    RendererCache.isMobileGluesUsable(activity), isMobileGluesSupportedVersion(versionInfo));
+            Logger.appendToLog("[PerformanceMode] " + swap.note);
+            RenderSpec mobileGlues = swap.useMobileGlues
+                    ? GameRenderer.getKnownRenderer(Renderers.MOBILEGLUES_RENDERER) : null;
+            if (mobileGlues != null) {
+                gameRenderer.setCurrentRenderer(mobileGlues);
                 renderer = gameRenderer.getCurrentRenderer();
             }
         }
