@@ -27,7 +27,9 @@ import net.kdt.pojavlaunch.multirt.MultiRTUtils;
 import net.kdt.pojavlaunch.multirt.Runtime;
 import net.kdt.pojavlaunch.prefs.LauncherPreferences;
 import net.kdt.pojavlaunch.game.renderer.GameRenderer;
+import net.kdt.pojavlaunch.game.renderer.MobileGluesLaunch;
 import net.kdt.pojavlaunch.game.renderer.PerformanceMobileGlues;
+import net.kdt.pojavlaunch.game.renderer.PerformanceMobileGluesGuard;
 import net.kdt.pojavlaunch.game.renderer.RendererApiPolicy;
 import net.kdt.pojavlaunch.game.renderer.RendererCache;
 import net.kdt.pojavlaunch.game.renderer.RenderSpec;
@@ -329,20 +331,27 @@ public class GameRunner {
         // comes from a separate plugin app. For this launch only, and only when everything allows it
         // (see PerformanceMobileGlues), start with MobileGlues instead, and say in the log which
         // renderer it is and why. The renderer chosen in Settings is left as it was.
+        boolean swappedToMobileGlues = false;
         if (PerformanceMobileGlues.isCandidate(LauncherPreferences.PREF_PERFORMANCE_MODE,
                 LauncherPreferences.PREF_PERF_MOBILEGLUES, LauncherPreferences.PREF_SAFE_LAUNCH, renderer.tag())) {
             PerformanceMobileGlues.Decision swap = PerformanceMobileGlues.decide(
                     LauncherPreferences.PREF_PERFORMANCE_MODE, LauncherPreferences.PREF_PERF_MOBILEGLUES,
                     LauncherPreferences.PREF_SAFE_LAUNCH, renderer.tag(),
-                    RendererCache.isMobileGluesUsable(activity), isMobileGluesSupportedVersion(versionInfo));
+                    RendererCache.isMobileGluesUsable(activity), isMobileGluesSupportedVersion(versionInfo),
+                    PerformanceMobileGluesGuard.lastSwapFailed(activity));
             Logger.appendToLog("[PerformanceMode] " + swap.note);
             RenderSpec mobileGlues = swap.useMobileGlues
                     ? GameRenderer.getKnownRenderer(Renderers.MOBILEGLUES_RENDERER) : null;
             if (mobileGlues != null) {
                 gameRenderer.setCurrentRenderer(mobileGlues);
                 renderer = gameRenderer.getCurrentRenderer();
+                swappedToMobileGlues = true;
             }
         }
+        // Note whether this launch used the swap. A game that then stops with an error code soon after
+        // starting (a mod that refuses MobileGlues, say) turns the swap off again, see
+        // PerformanceMobileGluesGuard; a launch without the swap clears any older note.
+        PerformanceMobileGluesGuard.markLaunch(activity, swappedToMobileGlues);
 
         // A renderer plugin declares the Minecraft versions it supports. Outside that range, use
         // GL4ES for this launch and say so, rather than starting a renderer that will not work.
@@ -361,10 +370,14 @@ public class GameRunner {
             return;
         }
 
-        // MobileGlues keeps its settings and log in /sdcard/MG. The game runs inside this app's process,
-        // so on Android 11+ it can only reach that folder with All files access. Ask once per launch;
-        // never block: "Continue anyway" starts the game with whatever MobileGlues can read.
-        if (Renderers.MOBILEGLUES_RENDERER.equals(renderer.tag())
+        // MobileGlues keeps its settings, log and shader cache in a folder. The launcher gives it one of
+        // its own, inside this app's storage (MobileGluesLaunch), which needs no permission. Only when
+        // that folder cannot be made does MobileGlues fall back to /sdcard/MG, which the game can only
+        // reach on Android 11+ with All files access. In that case ask once per launch; never block:
+        // "Continue anyway" starts the game with whatever MobileGlues can read.
+        boolean mobileGlues = Renderers.MOBILEGLUES_RENDERER.equals(renderer.tag());
+        boolean ownFolder = mobileGlues && MobileGluesLaunch.folder(activity) != null;
+        if (mobileGlues && !ownFolder
                 && android.os.Build.VERSION.SDK_INT >= 30
                 && !android.os.Environment.isExternalStorageManager()) {
             Logger.appendToLog("[MobileGlues] All files access is NOT granted: /sdcard/MG settings and log are unreachable");
@@ -392,7 +405,9 @@ public class GameRunner {
             if (LifecycleAwareAlertDialog.haltOnDialog(activity.getLifecycle(), activity, storageDialog)) return;
             // The person went to grant the permission: stop here, they press Play again afterwards.
             if (openedSettings[0]) return;
-        } else if (Renderers.MOBILEGLUES_RENDERER.equals(renderer.tag())) {
+        } else if (ownFolder) {
+            Logger.appendToLog("[MobileGlues] settings are kept in the launcher's own storage, so All files access is not needed");
+        } else if (mobileGlues) {
             Logger.appendToLog("[MobileGlues] storage access OK (or not needed on this Android version)");
         }
 

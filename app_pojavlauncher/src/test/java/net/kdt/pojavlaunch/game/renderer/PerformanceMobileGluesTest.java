@@ -15,7 +15,53 @@ public class PerformanceMobileGluesTest {
 
     private static PerformanceMobileGlues.Decision decide(boolean mode, boolean wanted, boolean safe, String tag,
                                                           boolean plugin, boolean version) {
-        return PerformanceMobileGlues.decide(mode, wanted, safe, tag, plugin, version);
+        return PerformanceMobileGlues.decide(mode, wanted, safe, tag, plugin, version, false);
+    }
+
+    private static PerformanceMobileGlues.Decision decideAfterAFailure(boolean mode, boolean safe, String tag) {
+        return PerformanceMobileGlues.decide(mode, true, safe, tag, true, true, true);
+    }
+
+    @Test
+    public void aLaunchThatEndedInAnErrorSoonAfterTheSwapHoldsTheSwapBack() {
+        PerformanceMobileGlues.Decision d = decideAfterAFailure(true, false, LTW);
+        assertFalse(d.useMobileGlues);
+        assertTrue(d.note, d.note.startsWith("renderer: LTW"));
+        assertTrue(d.note, d.note.contains("ended with an error"));
+        assertTrue(d.note, d.note.contains("off and on again"));
+    }
+
+    @Test
+    public void aSafeLaunchIsExplainedBeforeAnEarlierFailure() {
+        PerformanceMobileGlues.Decision d = decideAfterAFailure(true, true, LTW);
+        assertFalse(d.useMobileGlues);
+        assertTrue(d.note, d.note.contains("did not start"));
+    }
+
+    @Test
+    public void anEarlierFailureNeverTouchesALaunchTheSwapIsNotAbout() {
+        assertTrue(decideAfterAFailure(false, false, LTW).note == null);
+        assertTrue(decideAfterAFailure(true, false, Renderers.GL4ES_RENDERER).note == null);
+        assertTrue(decideAfterAFailure(true, false, null).note == null);
+    }
+
+    @Test
+    public void onlyAnErrorExitSoonAfterTheSwapCountsAsMobileGluesFailing() {
+        long start = 1_000_000L;
+        long window = PerformanceMobileGlues.FAILURE_WINDOW_MS;
+        // The crash in the player's log: the game ran about a minute, then stopped with an error code.
+        assertTrue(PerformanceMobileGlues.swapFailed(start, start + 58_000L, -1, false));
+        assertTrue(PerformanceMobileGlues.swapFailed(start, start + 58_000L, 1, false));
+        assertTrue(PerformanceMobileGlues.swapFailed(start, start + window, 1, false));
+        assertTrue(PerformanceMobileGlues.swapFailed(start, start, 1, false));
+        // Not a failure of MobileGlues: a normal exit, a signal, a long session, a launch without the swap.
+        assertFalse(PerformanceMobileGlues.swapFailed(start, start + 58_000L, 0, false));
+        assertFalse(PerformanceMobileGlues.swapFailed(start, start + 58_000L, 11, true));
+        assertFalse(PerformanceMobileGlues.swapFailed(start, start + window + 1L, 1, false));
+        assertFalse(PerformanceMobileGlues.swapFailed(0L, start + 58_000L, 1, false));
+        assertFalse(PerformanceMobileGlues.swapFailed(-5L, start, 1, false));
+        // A clock that went backwards says nothing.
+        assertFalse(PerformanceMobileGlues.swapFailed(start, start - 1L, 1, false));
     }
 
     @Test

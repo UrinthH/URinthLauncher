@@ -3,6 +3,7 @@ package net.kdt.pojavlaunch.game.renderer.impl;
 import android.content.Context;
 import android.util.Log;
 
+import net.kdt.pojavlaunch.game.renderer.MobileGluesLaunch;
 import net.kdt.pojavlaunch.game.renderer.RenderSpec;
 import net.kdt.pojavlaunch.game.renderer.def.Renderers;
 import net.kdt.pojavlaunch.game.renderer.extra.GLESProvider;
@@ -118,10 +119,16 @@ public final class MobileGluesRenderSpec implements RenderSpec {
                 context, LauncherPreferences.PREF_USE_ANGLE);
         glesProvider.setEnvironment(envMap);
         envMap.put("LIBGL_ES", "3");
-        envMap.put("POJAV_RENDERER", "opengles3");
+        // POJAV_RENDERER is deliberately not set. Nothing reads it (not this launcher, not its native
+        // code, not MobileGlues), but Sodium treats the mere presence of that variable as "this is
+        // PojavLauncher" and stops the game at start-up, which is what happened with this renderer.
+        // LTW never set it and Sodium runs on LTW.
         envMap.put("POJAVEXEC_EGL", LIBRARY);
         envMap.put("LIBGL_EGL", LIBRARY);
         envMap.put("MG_COUNT_LAUNCH", "1");
+        // The player's MobileGlues settings: a config file in the launcher's own folder, which makes
+        // MobileGlues read it instead of forcing its defaults for an unknown launcher.
+        MobileGluesLaunch.apply(context, envMap);
         Log.i(TAG, "Configured MobileGlues EGL library from external plugin path: "
                 + librarySearchPath());
     }

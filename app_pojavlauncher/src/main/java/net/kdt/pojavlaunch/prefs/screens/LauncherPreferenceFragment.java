@@ -52,7 +52,9 @@ import net.kdt.pojavlaunch.prefs.CustomSeekBarPreference;
 import net.kdt.pojavlaunch.progresskeeper.ProgressKeeper;
 import net.kdt.pojavlaunch.tasks.DataMigrator;
 import net.kdt.pojavlaunch.game.renderer.GraphicsApi;
+import net.kdt.pojavlaunch.game.renderer.MobileGluesConfig;
 import net.kdt.pojavlaunch.game.renderer.RendererApiPolicy;
+import net.kdt.pojavlaunch.game.renderer.PerformanceMobileGluesGuard;
 import net.kdt.pojavlaunch.game.renderer.RendererCache;
 import net.kdt.pojavlaunch.game.renderer.RendererChoices;
 import net.kdt.pojavlaunch.game.renderer.def.Renderers;
@@ -117,7 +119,10 @@ public class LauncherPreferenceFragment extends PreferenceFragmentCompat impleme
         boolean allSettingsPage = getClass() == LauncherPreferenceFragment.class;
         mVisibilityUpdater = allSettingsPage ? this::updateAllSettingsVisibility : this::updateVisibility;
         addPreferencesFromResource(allSettingsPage ? R.xml.pref_all_settings : R.xml.pref_main);
-        if (allSettingsPage) setupAllSettings();
+        if (allSettingsPage) {
+            setupAllSettings();
+            setupMobileGlues();
+        }
         setupNotificationRequestPreference();
         // The title and state chips on top of the full settings list (it sorts before every other row).
         if (allSettingsPage && getPreferenceScreen() != null) {
@@ -323,6 +328,78 @@ public class LauncherPreferenceFragment extends PreferenceFragmentCompat impleme
         dialog.show();
     }
 
+    /**
+     * The MobileGlues category. Each list shows what it is set to and what it does, the typed multi-draw
+     * orders are cleaned the way MobileGlues reads them, and the last row puts everything back to the
+     * defaults. The values themselves are written into MobileGlues' config file at launch
+     * (MobileGluesLaunch).
+     */
+    private void setupMobileGlues() {
+        describeList(MobileGluesConfig.KEY_GL_VERSION, R.string.urinth_mg_gl_desc);
+        describeList(MobileGluesConfig.KEY_ANGLE, R.string.urinth_mg_angle_desc);
+        describeList(MobileGluesConfig.KEY_NO_ERROR, R.string.urinth_mg_noerror_desc);
+        describeList(MobileGluesConfig.KEY_GLSL_CACHE_MB, R.string.urinth_mg_cache_desc);
+        describeList(MobileGluesConfig.KEY_ANGLE_DEPTH_FIX, R.string.urinth_mg_depthfix_desc);
+        describeList(MobileGluesConfig.KEY_FSR1, R.string.urinth_mg_fsr_desc);
+        for (int i = 0; i < MobileGluesConfig.ORDER_KEYS.length; i++) {
+            describeOrder(MobileGluesConfig.ORDER_KEYS[i], i == 0);
+        }
+        requirePreference("mg_reset").setOnPreferenceClickListener(p -> {
+            new AlertDialog.Builder(requireContext())
+                    .setTitle(R.string.urinth_mg_reset_title)
+                    .setMessage(R.string.urinth_mg_reset_confirm)
+                    .setPositiveButton(android.R.string.ok, (d, w) -> resetMobileGlues())
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .show();
+            return true;
+        });
+    }
+
+    /** A list row whose summary is the chosen entry followed by what the setting does. */
+    private void describeList(String key, int descriptionRes) {
+        ListPreference list = requirePreference(key, ListPreference.class);
+        final String description = getString(descriptionRes);
+        list.setSummaryProvider((Preference.SummaryProvider<ListPreference>) p -> {
+            CharSequence entry = p.getEntry();
+            return entry == null ? description : entry + "\n" + description;
+        });
+    }
+
+    /** A typed draw-method order: its summary shows the order (or that it is automatic), and what is typed is cleaned. */
+    private void describeOrder(String key, boolean global) {
+        EditTextPreference order = requirePreference(key, EditTextPreference.class);
+        final String empty = getString(global ? R.string.urinth_mg_order_auto : R.string.urinth_mg_order_inherit);
+        order.setSummaryProvider((Preference.SummaryProvider<EditTextPreference>) p ->
+                TextUtils.isEmpty(p.getText()) ? empty : p.getText());
+        order.setOnPreferenceChangeListener((p, value) -> {
+            String typed = String.valueOf(value);
+            MobileGluesConfig.Order cleaned = MobileGluesConfig.cleanOrder(typed, global);
+            if (!cleaned.ignored.isEmpty()) {
+                Toast.makeText(requireContext(), getString(R.string.urinth_mg_order_ignored,
+                        TextUtils.join(", ", cleaned.ignored)), Toast.LENGTH_LONG).show();
+            }
+            if (cleaned.text.equals(typed)) return true;
+            // Keep what MobileGlues will really read, not what was typed.
+            ((EditTextPreference) p).setText(cleaned.text);
+            return false;
+        });
+    }
+
+    private void resetMobileGlues() {
+        for (java.util.Map.Entry<String, Object> entry : MobileGluesConfig.defaultValues().entrySet()) {
+            Preference preference = findPreference(entry.getKey());
+            Object value = entry.getValue();
+            if (preference instanceof ListPreference) {
+                ((ListPreference) preference).setValue((String) value);
+            } else if (preference instanceof SwitchPreferenceCompat) {
+                ((SwitchPreferenceCompat) preference).setChecked((Boolean) value);
+            } else if (preference instanceof EditTextPreference) {
+                ((EditTextPreference) preference).setText((String) value);
+            }
+        }
+        Toast.makeText(requireContext(), R.string.urinth_mg_reset_done, Toast.LENGTH_SHORT).show();
+    }
+
     /** The official MobileGlues releases page; the plugin app for launchers like this one is the APK there. */
     private static final String MOBILEGLUES_RELEASES_URL = "https://github.com/MobileGL-Dev/MobileGlues-release/releases/latest";
 
@@ -335,7 +412,12 @@ public class LauncherPreferenceFragment extends PreferenceFragmentCompat impleme
         Preference get = findPreference("perf_mobileglues_get");
         if (toggle == null) return;
         boolean usable = RendererCache.isMobileGluesUsable(context);
+        // A launch that used MobileGlues and then stopped with an error soon after starting holds the swap
+        // back (PerformanceMobileGluesGuard); the row says so until the switch is turned off and on.
+        boolean failed = LauncherPreferences.PREF_PERF_MOBILEGLUES && usable
+                && PerformanceMobileGluesGuard.lastSwapFailed(context);
         int summary = !LauncherPreferences.PREF_PERF_MOBILEGLUES ? R.string.urinth_set_perf_mg_off
+                : failed ? R.string.urinth_set_perf_mg_failed
                 : usable ? R.string.urinth_set_perf_mg_found : R.string.urinth_set_perf_mg_missing;
         toggle.setSummary(summary);
         if (get != null) get.setVisible(!usable);
@@ -603,6 +685,8 @@ public class LauncherPreferenceFragment extends PreferenceFragmentCompat impleme
         if (context == null) return;
         LauncherPreferences.loadPreferences(context);
         if (mApiPreference == null || s == null) return;
+        // Turning the MobileGlues switch off or on gives it a fresh start after an error exit.
+        if ("perfMobileGlues".equals(s)) PerformanceMobileGluesGuard.clearFailure(context);
         switch (s) {
             case "renderer":
             case "performanceMode":

@@ -13,6 +13,7 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
+import net.kdt.pojavlaunch.game.renderer.PerformanceMobileGluesGuard;
 import net.kdt.pojavlaunch.utils.LaunchGuard;
 
 import git.artdeell.mojo.R;
@@ -43,6 +44,9 @@ public class ExitActivity extends AppCompatActivity {
 
     @SuppressWarnings("unused") //used by native jre_launcher_new
     public static void showExitMessage(Context ctx, int code, boolean isSignal) {
+        // A launch that used the Performance Mode swap to MobileGlues and then stopped with an error code
+        // soon after it started turns the swap off for the next ones (it never throws).
+        PerformanceMobileGluesGuard.onGameExit(ctx, code, isSignal);
         // The game ended by itself and is about to say so: that is not a launch that silently died.
         // A signal (native crash) is left unmarked, so the next launch can tell it died early.
         if(!isSignal) LaunchGuard.markCleanExit();

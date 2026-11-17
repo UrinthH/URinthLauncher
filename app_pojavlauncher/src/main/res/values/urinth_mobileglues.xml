@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Settings > MobileGlues. Every row is a real setting: its key is one of MobileGluesConfig.*, which writes
+     MobileGlues' config.json at each launch. The "(default)" labels and the defaultValue in
+     pref_all_settings.xml follow MobileGluesConfig.DEFAULT_*; a unit test keeps them equal. -->
+<resources>
+    <string name="urinth_set_cat_mobileglues">MobileGlues</string>
+
+    <string name="urinth_mg_info_title">How these settings work</string>
+    <string name="urinth_mg_info_summary">They are used whenever the game runs on MobileGlues, also from Performance Mode. The launcher writes them into MobileGlues\' config file at every launch, so the settings inside the MobileGlues app are not used here. A change applies the next time the game starts.</string>
+
+    <string name="urinth_mg_gl_title">OpenGL version shown to the game</string>
+    <string name="urinth_mg_gl_desc">What MobileGlues tells the game. Your phone\'s own driver (OpenGL ES) still does the real work, and its level can\'t be raised.</string>
+    <string name="urinth_mg_angle_title">ANGLE</string>
+    <string name="urinth_mg_angle_desc">ANGLE runs OpenGL ES on top of Vulkan. MobileGlues only supports it on some Adreno phones; forcing it on other phones can break the game.</string>
+    <string name="urinth_mg_noerror_title">OpenGL error handling</string>
+    <string name="urinth_mg_noerror_desc">Whether MobileGlues hides OpenGL errors from the game. Hiding them can avoid some crashes, but it also hides real problems.</string>
+    <string name="urinth_mg_compute_title">Compute shaders</string>
+    <string name="urinth_mg_compute_summary">Let the game use compute shaders. Only a few mods need them. Off by default.</string>
+    <string name="urinth_mg_timer_title">GPU timer queries</string>
+    <string name="urinth_mg_timer_summary">Let the game ask the GPU how long its work takes. Some mods and profilers use this. On by default.</string>
+    <string name="urinth_mg_dsa_title">Direct state access</string>
+    <string name="urinth_mg_dsa_summary">Offer the newer, leaner OpenGL calls known as direct state access. On by default.</string>
+    <string name="urinth_mg_cache_title">Shader cache</string>
+    <string name="urinth_mg_cache_desc">MobileGlues remembers the shaders it has already translated, so later launches do not translate them again. Off means no cache.</string>
+    <string name="urinth_mg_depthfix_title">ANGLE depth-clear fix</string>
+    <string name="urinth_mg_depthfix_desc">A workaround for depth glitches that can show up with ANGLE. It only matters while ANGLE is on.</string>
+    <string name="urinth_mg_fsr_title">FSR 1 upscaling</string>
+    <string name="urinth_mg_fsr_desc">Draws the game smaller and upscales it with AMD FSR 1. Experimental in MobileGlues, and it changes the render resolution, so it stays off unless you choose it.</string>
+    <string name="urinth_mg_hide_title">Hide MobileGlues from the game</string>
+    <string name="urinth_mg_hide_summary">Shows made-up names instead of \"MobileGlues\" and hides its extra extensions, for mods that refuse to run on it. The version text gets random letters, so leave it off unless a mod needs it.</string>
+
+    <string name="urinth_mg_order_auto">Automatic (default)</string>
+    <string name="urinth_mg_order_inherit">Uses the order above</string>
+    <string name="urinth_mg_order_title">Multi-draw order</string>
+    <string name="urinth_mg_order_message">How MobileGlues draws many pieces of terrain at once. Type method names, best first, separated by commas: native, multiindirect, multibasevertex, multiarrays, indirect, basevertex, unroll, compute. Leave it empty for MobileGlues\' automatic choice. Unknown names are dropped.</string>
+    <string name="urinth_mg_order_arrays_title">glMultiDrawArrays order</string>
+    <string name="urinth_mg_order_arrays_message">Overrides the order above for this call only. Names that apply here: unroll, multiarrays, multiindirect. Leave empty to use the order above.</string>
+    <string name="urinth_mg_order_elements_title">glMultiDrawElements order</string>
+    <string name="urinth_mg_order_elements_message">Overrides the order above for this call only. Names that apply here: unroll, indirect, multiindirect, multibasevertex, multiarrays. Leave empty to use the order above.</string>
+    <string name="urinth_mg_order_basevertex_title">glMultiDrawElementsBaseVertex order</string>
+    <string name="urinth_mg_order_basevertex_message">Overrides the order above for this call only. Names that apply here: unroll, basevertex, indirect, multiindirect, multibasevertex, compute. Leave empty to use the order above.</string>
+    <string name="urinth_mg_order_arrays_indirect_title">glMultiDrawArraysIndirect order</string>
+    <string name="urinth_mg_order_arrays_indirect_message">Overrides the order above for this call only. Names that apply here: indirect, multiindirect. Leave empty to use the order above.</string>
+    <string name="urinth_mg_order_elements_indirect_title">glMultiDrawElementsIndirect order</string>
+    <string name="urinth_mg_order_elements_indirect_message">Overrides the order above for this call only. Names that apply here: indirect, multiindirect. Leave empty to use the order above.</string>
+    <string name="urinth_mg_order_ignored">Not a method name, ignored: %1$s</string>
+
+    <string name="urinth_mg_reset_title">Reset MobileGlues settings</string>
+    <string name="urinth_mg_reset_summary">Puts every MobileGlues setting back to its default.</string>
+    <string name="urinth_mg_reset_confirm">Every MobileGlues setting above goes back to its default.</string>
+    <string name="urinth_mg_reset_done">MobileGlues settings reset</string>
+
+    <string-array name="urinth_mg_gl_version_names">
+        <item>OpenGL 3.2</item>
+        <item>OpenGL 3.3</item>
+        <item>OpenGL 4.0</item>
+        <item>OpenGL 4.1</item>
+        <item>OpenGL 4.2</item>
+        <item>OpenGL 4.3</item>
+        <item>OpenGL 4.4</item>
+        <item>OpenGL 4.5</item>
+        <item>OpenGL 4.6 (default)</item>
+    </string-array>
+    <string-array name="urinth_mg_gl_version_values">
+        <item>32</item>
+        <item>33</item>
+        <item>40</item>
+        <item>41</item>
+        <item>42</item>
+        <item>43</item>
+        <item>44</item>
+        <item>45</item>
+        <item>46</item>
+    </string-array>
+
+    <string-array name="urinth_mg_angle_names">
+        <item>Off if possible (default)</item>
+        <item>On if possible</item>
+        <item>Always off</item>
+        <item>Always on</item>
+    </string-array>
+    <string-array name="urinth_mg_angle_values">
+        <item>0</item>
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+    </string-array>
+
+    <string-array name="urinth_mg_noerror_names">
+        <item>Automatic (default)</item>
+        <item>Off</item>
+        <item>Level 1: hide some errors</item>
+        <item>Level 2: hide all errors</item>
+    </string-array>
+    <string-array name="urinth_mg_noerror_values">
+        <item>0</item>
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+    </string-array>
+
+    <string-array name="urinth_mg_cache_names">
+        <item>Off</item>
+        <item>16 MB</item>
+        <item>32 MB (default)</item>
+        <item>64 MB</item>
+        <item>128 MB</item>
+        <item>256 MB</item>
+    </string-array>
+    <string-array name="urinth_mg_cache_values">
+        <item>0</item>
+        <item>16</item>
+        <item>32</item>
+        <item>64</item>
+        <item>128</item>
+        <item>256</item>
+    </string-array>
+
+    <string-array name="urinth_mg_depthfix_names">
+        <item>Off (default)</item>
+        <item>Mode 1</item>
+        <item>Mode 2</item>
+    </string-array>
+    <string-array name="urinth_mg_depthfix_values">
+        <item>0</item>
+        <item>1</item>
+        <item>2</item>
+    </string-array>
+
+    <string-array name="urinth_mg_fsr_names">
+        <item>Off (default)</item>
+        <item>Ultra quality</item>
+        <item>Quality</item>
+        <item>Balanced</item>
+        <item>Performance</item>
+    </string-array>
+    <string-array name="urinth_mg_fsr_values">
+        <item>0</item>
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+        <item>4</item>
+    </string-array>
+</resources>

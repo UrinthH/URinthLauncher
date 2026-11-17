@@ -723,7 +723,8 @@
     <string name="urinth_set_perf_mg_missing">The MobileGlues plugin app is not installed, so Performance Mode uses LTW for now. Install it once and it is used from the next launch.</string>
     <string name="urinth_set_perf_mg_off">Off: Performance Mode always uses LTW.</string>
     <string name="urinth_set_perf_mg_get_title">Get the MobileGlues plugin</string>
-    <string name="urinth_set_perf_mg_get_summary">Opens the official download page. MobileGlues also asks for All files access when the game starts, so it can read its settings; without that it can crash with Sodium on some GPUs.</string>
+    <string name="urinth_set_perf_mg_get_summary">Opens the official download page. The launcher keeps MobileGlues\' settings in its own storage (see the MobileGlues section in Settings), so no extra permission is needed.</string>
+    <string name="urinth_set_perf_mg_failed">Held back for now: the last launch with MobileGlues ended with an error soon after it started, so Performance Mode uses LTW. Turn this off and on again to try MobileGlues once more. A newer launcher build tries it again by itself.</string>
     <string name="urinth_set_gpu_title">Graphics hardware</string>
     <string name="urinth_set_gpu_unknown">Unknown graphics chip</string>
     <string name="urinth_set_gpu_summary">%1$s · OpenGL ES %2$d · %3$s</string>

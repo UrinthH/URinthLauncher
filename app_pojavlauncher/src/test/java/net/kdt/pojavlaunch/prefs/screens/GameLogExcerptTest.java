@@ -89,6 +89,21 @@ public class GameLogExcerptTest {
         assertTrue(text, text.contains("#26 bigcore: forced current thread onto big core"));
     }
 
+    @Test
+    public void theMobileGluesSettingsAndRendererChoiceLinesAreKept() throws IOException {
+        StringBuilder log = new StringBuilder();
+        for (int i = 1; i <= 60; i++) {
+            if (i == 19) log.append("[PerformanceMode] renderer: MobileGlues (plugin found), instead of LTW\n");
+            else if (i == 21) log.append("[MGConfig] OpenGL 4.6, ANGLE off if possible, errors auto, compute off, timer query on, DSA on, shader cache 32 MB, FSR1 off, hide env off, multi-draw automatic\n");
+            else if (i == 22) log.append("[PerformanceMode] the game ended with error code -1 soon after it started with MobileGlues, so Performance Mode uses LTW\n");
+            else log.append("line ").append(i).append('\n');
+        }
+        String text = excerpt(log.toString(), 3, 10, 3, BIG);
+        assertTrue(text, text.contains("#19 [PerformanceMode] renderer: MobileGlues (plugin found)"));
+        assertTrue(text, text.contains("#21 [MGConfig] OpenGL 4.6"));
+        assertTrue(text, text.contains("#22 [PerformanceMode] the game ended with error code -1"));
+    }
+
     // ---- the summary counted over the whole log ----------------------------------------------
 
     private static final String GC_YOUNG = "[71.235s][info   ][gc         ] GC(18) Pause Young (Mixed) (G1 Evacuation Pause) 424M->215M(512M) 94.223ms";
