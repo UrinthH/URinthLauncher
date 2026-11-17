@@ -1,0 +1,20 @@
+{
+	"schemaVersion": 1,
+	"id": "legendary_arsenal",
+	"version": "${version}",
+	"name": "Legendary Arsenal",
+	"description": "Every sword, axe and mace becomes a detailed 3D legendary weapon in YOUR hands (first person only). Other players, third person, the inventory and dropped items keep the normal look. Comes with its own resource pack, switched on by default (Options > Resource Packs > Legendary Arsenal).",
+	"authors": ["URinth"],
+	"license": "MIT",
+	"icon": "assets/legendary_arsenal/icon.png",
+	"environment": "client",
+	"entrypoints": {
+		"client": ["dev.urinth.legendary.LegendaryArsenal"]
+	},
+	"depends": {
+		"fabricloader": ">=0.16.0",
+		"minecraft": "~1.21.4",
+		"java": ">=21",
+		"fabric-api": "*"
+	}
+}
