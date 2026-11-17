@@ -36,3 +36,13 @@ jobs:
         with:
           name: urinth-legendary-arsenal-jar
           path: legendary-arsenal-mod/build/libs/urinth-legendary-arsenal-*.jar
+      # The storage host of workflow artifacts cannot be reached from the sandbox the assistant works in, the job log can. The jar is
+      # printed in 3000-character lines between two markers and rebuilt from the log. The checksum is printed first to check the copy.
+      - name: Print the jar (so it can be fetched from this log)
+        run: |
+          jar=$(ls build/libs/urinth-legendary-arsenal-*.jar | head -1)
+          ls -l "$jar"
+          echo "JAR-SHA256 $(sha256sum "$jar" | cut -d' ' -f1)"
+          echo "JAR-BASE64-BEGIN"
+          base64 -w 3000 "$jar"
+          echo "JAR-BASE64-END"
