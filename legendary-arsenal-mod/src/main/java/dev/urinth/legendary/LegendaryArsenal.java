@@ -11,8 +11,10 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Legendary Arsenal: the whole mod is one built-in resource pack that Fabric API offers in Options > Resource Packs and switches on by
- * default. The pack gives every sword, axe and mace a detailed 3D model that is used ONLY in the player's own first-person hands (the
- * item definitions select on display_context); every other view of the item falls back to the normal vanilla model.
+ * default. The pack gives every sword, axe, pickaxe, shovel, hoe and the mace a sharp, hand-painted HD picture that is used ONLY in the
+ * player's own first-person hands (the item definitions select on display_context). It is held exactly the way the game holds every
+ * normal item, and every other view of the item (other players, third person, inventory, dropped, item frames) falls back to the
+ * normal vanilla model.
  *
  * There is no code that touches rendering, no mixin and no file the mod writes, so the only thing that can go wrong is the pack itself,
  * and the player can switch that off in the Resource Packs screen.

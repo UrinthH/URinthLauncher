@@ -1,6 +1,6 @@
 name: Legendary Arsenal mod
 
-# Builds the Legendary Arsenal mod (a resource pack of 3D first-person weapons that Fabric API switches on by default) and tests the
+# Builds the Legendary Arsenal mod (a resource pack of HD first-person weapons that Fabric API switches on by default) and tests the
 # finished jar. It only runs when the mod changes, so it does not slow down the launcher build.
 on:
   push:
