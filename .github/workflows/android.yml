@@ -1,113 +1,89 @@
-name: Boost both versions check
+name: Sodium page probe
 
-# Scratch run, can be deleted. Builds the Boost mod for 1.21.4 and for 1.21.11 and starts the real Minecraft client with it on a virtual screen,
-# with the mixin settings made strict, so a hook that does not apply stops the game and fails this check.
+# Scratch run, can be deleted. Downloads the exact Sodium-family mods the player runs (1.21.4) and prints the real class
+# signatures, so the video settings page of the sun flare mod is written against what really exists.
 on:
   push:
     branches:
       - claude/find-jar-dump
 
 jobs:
-  build:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - dir: boost-mod
-            jar: urinth-boost-1.1.0.jar
-          - dir: boost-mod-1.21.11
-            jar: urinth-boost-1.21.11-1.1.0.jar
+  probe:
     runs-on: ubuntu-22.04
-    defaults:
-      run:
-        working-directory: ${{ matrix.dir }}
     steps:
-      - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '25'
-      - uses: gradle/actions/setup-gradle@v4
-      - name: Build the jar and run every test
-        run: ./gradlew build --no-daemon --stacktrace 2>&1 | tee build.log
-      - name: Mixin warnings from the compiler
+          java-version: '21'
+      - name: Download the mods
         run: |
-          grep -n -i -E "Unable to locate|obfuscation mapping|warning: .*(mixin|inject)" build.log || echo "NO-MIXIN-WARNINGS"
-      - name: Test results
-        run: grep -h "<testsuite " build/test-results/test/*.xml | sed -E 's/ timestamp=.*//'
-      - name: Jar contents and refmap
+          mkdir -p mods
+          python3 - <<'PY'
+          import json, urllib.request, urllib.parse
+          H = {'User-Agent': 'UrinthH/URinthLauncher-ci (scratch probe)'}
+          def get(url):
+              return urllib.request.urlopen(urllib.request.Request(url, headers=H))
+          for slug, want in [('sodium', '0.6.13'), ('reeses-sodium-options', '1.8.3'), ('sodium-extra', '0.6.1'), ('moreculling', '1.2.10')]:
+              q = urllib.parse.urlencode({'game_versions': json.dumps(['1.21.4']), 'loaders': json.dumps(['fabric'])})
+              vs = json.load(get('https://api.modrinth.com/v2/project/%s/version?%s' % (slug, q)))
+              print('==', slug, [v['version_number'] for v in vs][:14])
+              pick = [v for v in vs if want in v['version_number']]
+              if not pick:
+                  print('NOT FOUND', slug, want)
+                  continue
+              files = pick[0]['files']
+              f = ([x for x in files if x.get('primary')] or files)[0]
+              print('PICK', slug, pick[0]['version_number'], pick[0]['id'], f['filename'])
+              with open('mods/%s.jar' % slug, 'wb') as out:
+                  out.write(get(f['url']).read())
+          PY
+          ls -l mods
+      - name: Class lists
         run: |
-          ls -l build/libs
-          sha256sum build/libs/${{ matrix.jar }}
-          unzip -tq build/libs/${{ matrix.jar }}
-          unzip -l build/libs/${{ matrix.jar }} | grep -v "/$"
-          echo "=== mixins.json in the jar"
-          unzip -p build/libs/${{ matrix.jar }} urinth_boost.mixins.json
-      - name: Print the jar
-        run: |
-          echo "JAR-BEGIN"
-          base64 -w 100 build/libs/${{ matrix.jar }}
-          echo "JAR-END"
-
-  smoke:
-    strategy:
-      fail-fast: false
-      matrix:
-        dir: [boost-mod, boost-mod-1.21.11]
-    runs-on: ubuntu-22.04
-    defaults:
-      run:
-        working-directory: ${{ matrix.dir }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '25'
-      - uses: gradle/actions/setup-gradle@v4
-      - name: Packages for a headless client
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq --no-install-recommends xvfb libgl1 libgl1-mesa-dri libglx-mesa0 libglu1-mesa libegl1 libxrandr2 libxinerama1 libxcursor1 libxi6 libxxf86vm1 libxrender1 libxext6 libx11-6 mesa-utils x11-utils
-      - name: Make every hook mandatory (only in this check, never in the real jar)
-        run: |
-          sed -i 's/require = 0/require = 1/' src/main/java/dev/urinth/boost/mixin/*.java
-          sed -i 's/"required": false/"required": true/; s/"defaultRequire": 0/"defaultRequire": 1/' src/main/resources/urinth_boost.mixins.json
-          grep -c "require = 1" src/main/java/dev/urinth/boost/mixin/*.java
-          cat src/main/resources/urinth_boost.mixins.json
-      - name: Start the real client with the mod
-        run: |
-          export LIBGL_ALWAYS_SOFTWARE=1 GALLIUM_DRIVER=llvmpipe MESA_GL_VERSION_OVERRIDE=4.5 MESA_GLSL_VERSION_OVERRIDE=450
-          export JAVA_TOOL_OPTIONS="-Dmixin.debug.export=true"
-          Xvfb :99 -screen 0 1280x720x24 +extension GLX +render -noreset > xvfb.log 2>&1 &
-          export DISPLAY=:99
-          sleep 3
-          (./gradlew runClient --no-daemon --console=plain > run.log 2>&1; echo "GRADLE-EXIT $?" >> run.log) &
-          RESULT="TIMEOUT"
-          for i in $(seq 1 160); do
-            sleep 5
-            if grep -q "GRADLE-EXIT" run.log; then RESULT="EXITED"; break; fi
-            if grep -q "Minecraft Crash Report" run.log; then RESULT="CRASH"; break; fi
-            if grep -q "URinth Boost\] ready" run.log; then sleep 15; RESULT="READY"; break; fi
+          for j in sodium reeses-sodium-options sodium-extra moreculling; do
+            echo "=== classes of $j (gui / option / mixin related)"
+            unzip -Z1 mods/$j.jar | grep '\.class$' | grep -i -E 'gui|option|screen|page|mixin' | head -150
           done
-          echo "SMOKE-RESULT $RESULT after about $((i*5)) s"
-          echo "=== failures in the log"
-          grep -n -E "FAILED during|InvalidInjection|Critical injection|MixinApplyError|MixinTransformerError|Mixin transformation|InjectionError|was not injected|Minecraft Crash Report" run.log | cut -c1-300 | head -30 || true
-          echo "=== Boost lines"
-          grep -n "URinth Boost" run.log | cut -c1-300 | head -20 || true
-          echo "=== exported (transformed) classes"
-          find run/.mixin.out -name '*.class' 2>/dev/null | sed 's|.*/.mixin.out/||' | head -80
-          pkill -f KnotClient || true
-          pkill -f gradle || true
-          pkill Xvfb || true
-          FOUND=0
-          for h in 'urinth\$limitParticles' 'urinth\$limitEntities' 'urinth\$limitNameTags' 'urinth\$limitLayers'; do
-            if find run/.mixin.out -name '*.class' 2>/dev/null | while read f; do javap -p "$f" 2>/dev/null; done | grep -q "$h"; then
-              echo "APPLIED $h"; FOUND=$((FOUND+1))
-            else
-              echo "NOT-APPLIED $h"
-            fi
+      - name: Sodium option API signatures
+        run: |
+          J=mods/sodium.jar
+          for c in $(unzip -Z1 $J | grep '\.class$' | grep -E 'client/gui/(SodiumOptionsGUI|options/|SodiumGameOptions)' | sed 's/\.class$//; s|/|.|g'); do
+            echo "##### $c"; javap -p -cp $J "$c" 2>&1 | cut -c1-240
           done
-          echo "APPLIED-COUNT $FOUND of 4"
-          test "$RESULT" = "READY"
-          test "$FOUND" = "4"
+      - name: Sodium client gui, the rest of the package
+        run: |
+          J=mods/sodium.jar
+          for c in $(unzip -Z1 $J | grep '\.class$' | grep -E 'client/gui/' | grep -v -E 'client/gui/(SodiumOptionsGUI|options/)' | sed 's/\.class$//; s|/|.|g' | head -60); do
+            echo "##### $c"; javap -p -cp $J "$c" 2>&1 | cut -c1-200
+          done
+      - name: How SodiumOptionsGUI builds its page list (bytecode)
+        run: |
+          javap -p -c -cp mods/sodium.jar net.caffeinemc.mods.sodium.client.gui.SodiumOptionsGUI 2>&1 | cut -c1-230 | head -400
+      - name: Reese's Sodium Options, signatures
+        run: |
+          J=mods/reeses-sodium-options.jar
+          for c in $(unzip -Z1 $J | grep '\.class$' | grep -v -E 'lambda' | sed 's/\.class$//; s|/|.|g' | head -140); do
+            echo "##### $c"; javap -p -cp $J:mods/sodium.jar "$c" 2>&1 | cut -c1-220 | head -60
+          done
+      - name: How other addons add their pages (annotations)
+        run: |
+          for j in sodium-extra moreculling reeses-sodium-options; do
+            J=mods/$j.jar
+            for c in $(unzip -Z1 $J | grep '\.class$' | grep -i 'mixin' | sed 's/\.class$//; s|/|.|g'); do
+              if javap -v -p -cp $J:mods/sodium.jar "$c" 2>/dev/null | grep -q -E 'SodiumOptionsGUI|OptionPage|VideoSettings'; then
+                echo "##### $j :: $c"
+                javap -v -p -cp $J:mods/sodium.jar "$c" 2>&1 | grep -E 'InvisibleAnnotations|Mixin|Inject|method=|target=|ordinal|shift|value=|at=|Shadow|Final|class |descriptor' | cut -c1-260 | head -80
+              fi
+            done
+          done
+      - name: Page builders of the other addons (bytecode of the class that makes OptionPage)
+        run: |
+          for j in sodium-extra moreculling; do
+            J=mods/$j.jar
+            for c in $(unzip -Z1 $J | grep '\.class$' | grep -v -i 'mixin' | sed 's/\.class$//; s|/|.|g'); do
+              if javap -v -p -cp $J:mods/sodium.jar "$c" 2>/dev/null | grep -q -E 'OptionPage'; then
+                echo "##### $j :: $c"
+                javap -p -cp $J:mods/sodium.jar "$c" 2>&1 | cut -c1-240 | head -50
+              fi
+            done
+          done
