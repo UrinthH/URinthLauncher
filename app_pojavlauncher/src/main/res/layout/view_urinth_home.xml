@@ -142,12 +142,14 @@
                 <TextView style="@style/UrinthNavText" android:text="@string/urinth_nav_installations" />
             </LinearLayout>
 
+            <!-- Was "Servers". Only shown while Performance Mode is on (UrinthHomeController.renderAdvancedNav);
+                 the servers list is still the Servers tab of Downloads. -->
             <LinearLayout
-                android:id="@+id/urinth_nav_skins"
+                android:id="@+id/urinth_nav_advanced"
                 style="@style/UrinthNavItem"
                 android:background="@drawable/urinth_nav_idle">
-                <ImageView style="@style/UrinthNavIcon" android:src="@drawable/ic_urinth_globe" />
-                <TextView style="@style/UrinthNavText" android:text="@string/urinth_nav_skins" />
+                <ImageView style="@style/UrinthNavIcon" android:src="@drawable/ic_set_speed" />
+                <TextView style="@style/UrinthNavText" android:text="@string/urinth_nav_advanced" />
             </LinearLayout>
 
             <LinearLayout

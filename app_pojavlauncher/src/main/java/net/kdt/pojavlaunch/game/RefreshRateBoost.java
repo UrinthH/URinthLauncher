@@ -18,6 +18,8 @@ import androidx.annotation.Nullable;
 import net.kdt.pojavlaunch.Logger;
 
 import java.lang.ref.WeakReference;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Asks Android to run the screen at the highest refresh rate it supports, up to 120 Hz, while the
@@ -44,7 +46,6 @@ import java.lang.ref.WeakReference;
  */
 public final class RefreshRateBoost {
     private static final String TAG = "RefreshRateBoost";
-    private static final float WANTED_MAX_HZ = 120f;
     /** How often the rate is checked even without an Android event saying it changed. */
     private static final long POLL_MS = 2_000L;
 
@@ -77,8 +78,17 @@ public final class RefreshRateBoost {
     }
 
     /** Requests the highest supported refresh rate (at most 120 Hz). Call from the main thread. */
-    @SuppressWarnings("deprecation")
     public static void apply(Activity activity) {
+        apply(activity, 0);
+    }
+
+    /**
+     * Requests a refresh rate. With {@code capHz} 0 that is the highest supported one (at most 120 Hz); with a
+     * cap (the Advanced settings screen, Performance Mode only) it is the highest one that does not go over it,
+     * which can be lower than the current rate. Call from the main thread.
+     */
+    @SuppressWarnings("deprecation")
+    public static void apply(Activity activity, int capHz) {
         try {
             Window window = activity.getWindow();
             Display display = activity.getWindowManager().getDefaultDisplay();
@@ -88,23 +98,29 @@ public final class RefreshRateBoost {
             int bestModeId = 0;
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 Display.Mode now = display.getMode();
+                List<Display.Mode> sameSize = new ArrayList<>();
                 for (Display.Mode mode : display.getSupportedModes()) {
                     if (mode.getPhysicalWidth() != now.getPhysicalWidth()
                             || mode.getPhysicalHeight() != now.getPhysicalHeight()) continue;
-                    float rate = mode.getRefreshRate();
-                    if (rate <= WANTED_MAX_HZ + 0.5f && rate > best + 0.5f) {
-                        best = rate;
-                        bestModeId = mode.getModeId();
-                    }
+                    sameSize.add(mode);
                 }
-                if (bestModeId != 0) params.preferredDisplayModeId = bestModeId;
+                float[] rates = new float[sameSize.size()];
+                for (int i = 0; i < rates.length; i++) rates[i] = sameSize.get(i).getRefreshRate();
+                int index = RefreshRatePolicy.pickMode(current, rates, capHz);
+                if (index >= 0) {
+                    best = rates[index];
+                    bestModeId = sameSize.get(index).getModeId();
+                    params.preferredDisplayModeId = bestModeId;
+                }
             }
             params.preferredRefreshRate = best;
             window.setAttributes(params);
             sTarget = best;
             sModeId = bestModeId;
+            String why = bestModeId != 0 ? " (mode " + bestModeId + ")"
+                    : capHz > 0 ? " (no screen mode at or under the " + capHz + " Hz cap)" : " (no higher mode available)";
             Logger.appendToLog("[RefreshRate] screen is at " + current + " Hz, requested " + best + " Hz"
-                    + (bestModeId == 0 ? " (no higher mode available)" : " (mode " + bestModeId + ")"));
+                    + (capHz > 0 ? ", cap " + capHz + " Hz" : "") + why);
         } catch (RuntimeException error) {
             Log.w(TAG, "Could not request a higher refresh rate", error);
         }

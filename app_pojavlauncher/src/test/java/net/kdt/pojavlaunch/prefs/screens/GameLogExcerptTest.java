@@ -104,6 +104,23 @@ public class GameLogExcerptTest {
         assertTrue(text, text.contains("#22 [PerformanceMode] the game ended with error code -1"));
     }
 
+    @Test
+    public void theAdvancedSettingsAntiCrashAndGameStateLinesAreKept() throws IOException {
+        StringBuilder log = new StringBuilder();
+        for (int i = 1; i <= 60; i++) {
+            if (i == 18) log.append("[AdvancedSettings] Changed from the defaults: advGc=parallel, advCores=4\n");
+            else if (i == 20) log.append("[AdvancedSettings] Java flags added by them: -XX:+IgnoreUnrecognizedVMOptions -XX:+UseParallelGC\n");
+            else if (i == 23) log.append("[AntiCrash] Android closed the game because the phone ran out of memory 1 time(s) in a row, so this start uses 896 MB\n");
+            else if (i == 25) log.append("[GameState] told Android the game is playing\n");
+            else log.append("line ").append(i).append('\n');
+        }
+        String text = excerpt(log.toString(), 3, 10, 3, BIG);
+        assertTrue(text, text.contains("#18 [AdvancedSettings] Changed from the defaults"));
+        assertTrue(text, text.contains("#20 [AdvancedSettings] Java flags added by them"));
+        assertTrue(text, text.contains("#23 [AntiCrash] Android closed the game"));
+        assertTrue(text, text.contains("#25 [GameState] told Android"));
+    }
+
     // ---- the summary counted over the whole log ----------------------------------------------
 
     private static final String GC_YOUNG = "[71.235s][info   ][gc         ] GC(18) Pause Young (Mixed) (G1 Evacuation Pause) 424M->215M(512M) 94.223ms";

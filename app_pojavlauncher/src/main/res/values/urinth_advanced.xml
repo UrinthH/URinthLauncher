@@ -1,0 +1,258 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The "Advanced settings" screen (res/xml/pref_advanced_settings.xml). The keys are AdvancedPerformance.KEY_*
+     and the value lists below are AdvancedPerformance's values in the same order; AdvancedSettingsXmlTest
+     compares them, so a row cannot be added or changed without its entry in the table. -->
+<resources>
+    <!-- Screen -->
+    <string name="urinth_adv_info_title">Part of Performance Mode</string>
+    <string name="urinth_adv_info_summary">Everything here except the RAM slider and the MobileGlues options applies only while Performance Mode is ON. Leave a setting on Auto (or at its default) and the game runs exactly as Performance Mode always did. A flag you type in the Java arguments always wins over these settings. Changes apply the next time the game starts, and the game log lists the ones that are in effect.</string>
+
+    <string name="urinth_adv_cat_memory">Memory</string>
+    <string name="urinth_adv_cat_gc">Garbage collection</string>
+    <string name="urinth_adv_cat_cpu">CPU and JIT</string>
+    <string name="urinth_adv_cat_screen">Screen and heat</string>
+    <string name="urinth_adv_cat_network">Network and logs</string>
+    <string name="urinth_adv_cat_anticrash">Anti Crash</string>
+    <string name="urinth_adv_cat_reset">Reset</string>
+
+    <string name="urinth_adv_allocation_summary">From %1$d MB up to %2$d MB on this phone (%3$d MB of RAM in total). The top of the slider stays below the total because Android closes the game when it needs more memory than the phone has free.</string>
+
+    <string name="urinth_adv_reset_title">Reset Advanced settings</string>
+    <string name="urinth_adv_reset_summary">Puts the 24 performance settings and the three Anti Crash switches back to their defaults. The RAM slider and the MobileGlues options are not touched.</string>
+    <string name="urinth_adv_reset_confirm">Put every Advanced setting back to its default?</string>
+    <string name="urinth_adv_reset_done">Advanced settings were reset</string>
+
+    <!-- Memory -->
+    <string name="urinth_adv_initial_heap_title">Starting heap</string>
+    <string name="urinth_adv_initial_heap_desc">How much heap the JVM sets up at launch; the most it can grow to is the RAM slider. A bigger start avoids pauses while the heap grows. Memory is only used as the game fills it.</string>
+    <string name="urinth_adv_metaspace_title">Class memory trigger (Metaspace)</string>
+    <string name="urinth_adv_metaspace_desc">How much class data the JVM collects before its first cleanup. A modded game loads tens of thousands of classes, and a higher trigger means fewer cleanups while it loads. It does not reserve memory.</string>
+    <string name="urinth_adv_code_cache_title">Compiled-code space</string>
+    <string name="urinth_adv_code_cache_desc">Room for the code the JIT compiles. When it is full the JVM stops compiling for good and the game slows down, a known cause of a sudden FPS collapse with many mods (look for \"CodeCache is full\" in the game log). It is reserved address space, not used RAM.</string>
+    <string name="urinth_adv_pre_touch_title">Pre-touch the starting heap</string>
+    <string name="urinth_adv_pre_touch_desc">Touches the starting heap while the game loads, so memory page faults do not happen while you play. Starting takes longer and that memory is used at once.</string>
+    <string name="urinth_adv_string_dedup_title">Deduplicate strings (G1 only)</string>
+    <string name="urinth_adv_string_dedup_desc">Lets G1 merge identical strings in the background. Saves some memory for a little CPU.</string>
+
+    <!-- Garbage collection -->
+    <string name="urinth_adv_gc_title">Garbage collector</string>
+    <string name="urinth_adv_gc_desc">G1 is the default. Parallel and Serial run no background threads; try them if the game log shows long pauses. A collector typed in the Java arguments always wins.</string>
+    <string name="urinth_adv_pause_goal_title">Pause goal</string>
+    <string name="urinth_adv_pause_goal_desc">The longest pause the collector aims for (G1 and Parallel). A lower goal means shorter but more frequent collections.</string>
+    <string name="urinth_adv_young_gen_title">Young generation size (G1)</string>
+    <string name="urinth_adv_young_gen_desc">How much of the heap holds new objects. A larger one clears short-lived garbage in small quick collections; a smaller one leaves more room for long-lived data.</string>
+    <string name="urinth_adv_region_size_title">G1 region size</string>
+    <string name="urinth_adv_region_size_desc">An array that fills half a region or more is allocated in a slower special way. Larger regions turn fewer arrays into that.</string>
+    <string name="urinth_adv_g1_reserve_title">Emergency headroom (G1)</string>
+    <string name="urinth_adv_g1_reserve_desc">Heap kept free so G1 can always copy objects. When it runs out (\"to-space exhausted\" in the game log) the collector falls back to a long full pause, which is a freeze. More headroom costs usable heap.</string>
+    <string name="urinth_adv_gc_threads_title">Garbage collector threads</string>
+    <string name="urinth_adv_gc_threads_desc">How many threads share a collection. On a phone with two fast and six slow cores, fewer threads can keep a pause from waiting on a slow core. Auto lets the JVM decide from the core count.</string>
+    <string name="urinth_adv_ignore_system_gc_title">Ignore System.gc() calls</string>
+    <string name="urinth_adv_ignore_system_gc_desc">Some mods ask for a full collection by hand, which freezes the game for a moment. On: those requests are ignored.</string>
+    <string name="urinth_adv_parallel_refs_title">Process references in parallel</string>
+    <string name="urinth_adv_parallel_refs_desc">A modded game creates many weak and soft references; processing them on several threads shortens pauses.</string>
+
+    <!-- CPU and JIT -->
+    <string name="urinth_adv_jit_title">JIT compiler</string>
+    <string name="urinth_adv_jit_desc">Auto uses the full two-tier JIT. The simple one (C1 only) compiles faster with less CPU, heat and native memory but reaches a lower top speed. It is also the usual fix for a crash inside Java\'s optimising compiler; Anti Crash can switch to it by itself.</string>
+    <string name="urinth_adv_jit_threads_title">JIT compiler threads</string>
+    <string name="urinth_adv_jit_threads_desc">Threads that compile code in the background. Fewer leave more CPU for the game while it warms up, but code gets compiled later.</string>
+    <string name="urinth_adv_cores_title">CPU cores the game sees</string>
+    <string name="urinth_adv_cores_desc">The JVM sizes its collector and compiler threads from this number, and Minecraft sizes its background worker pool as cores minus one. Fewer cores means fewer threads competing with the render thread, but chunks may load more slowly.</string>
+    <string name="urinth_adv_helper_threads_title">Lower helper-thread priority</string>
+    <string name="urinth_adv_helper_threads_desc">Lets the launcher lower the priority of the game\'s background helper threads while the render thread is kept waiting or the phone is hot. Off: every thread keeps the priority Android gave it.</string>
+
+    <!-- Screen and heat -->
+    <string name="urinth_adv_refresh_rate_title">Screen refresh rate</string>
+    <string name="urinth_adv_refresh_rate_desc">Highest asks the screen for its fastest mode, up to 120 Hz. Pick a lower rate if the game cannot hold it: a steady 60 looks smoother than a rate that keeps dropping. Android may still decide otherwise.</string>
+    <string name="urinth_adv_refresh_watch_title">Keep the refresh rate</string>
+    <string name="urinth_adv_refresh_watch_desc">Android sometimes lowers the refresh rate on its own. On: the launcher asks for the chosen rate again, waiting longer each time and not at all while the phone is hot.</string>
+    <string name="urinth_adv_thermal_guard_title">Heat watch</string>
+    <string name="urinth_adv_thermal_guard_desc">Reads the phone\'s temperature (warm from 40 °C, hot from 42.5 °C) and raises the render thread\'s priority. The refresh-rate watch and the helper-thread scheduler also use it to back off when the phone is hot. Off: none of that happens.</string>
+    <string name="urinth_adv_game_state_title">Tell Android the game is playing</string>
+    <string name="urinth_adv_game_state_desc">Android 13 and newer: tells the system when the game is loading and when you are playing, so a phone with Game Mode can give it the right resources. Whether anything changes depends on the phone maker. It does nothing on older Android.</string>
+
+    <!-- Network and logs -->
+    <string name="urinth_adv_ipv4_title">Prefer IPv4 for servers</string>
+    <string name="urinth_adv_ipv4_desc">Skips IPv6 when connecting to servers. Helps when joining a server is slow or times out on mobile data. It does not change FPS.</string>
+    <string name="urinth_adv_gc_log_title">GC pause lines in the game log</string>
+    <string name="urinth_adv_gc_log_desc">Adds a line to the game log for every garbage collection, so a stutter can be matched to a pause.</string>
+    <string name="urinth_adv_perf_report_title">Performance report in the game log</string>
+    <string name="urinth_adv_perf_report_desc">Every 30 seconds writes memory, CPU and heat figures to the game log. The cost is tiny; off saves it.</string>
+
+    <!-- Anti Crash -->
+    <string name="urinth_adv_ignore_unknown_title">Skip Java flags this Java does not know</string>
+    <string name="urinth_adv_ignore_unknown_desc">Without this, one flag that the installed Java version does not know stops the game before it starts. On: unknown flags are ignored instead.</string>
+    <string name="urinth_adv_low_memory_title">Lower RAM after a low-memory close</string>
+    <string name="urinth_adv_low_memory_desc">If Android closed the game because the phone ran out of memory, the next start uses an eighth less RAM, up to three times and never below 512 MB. Changing the RAM slider, or turning this off and on, undoes it. Needs Android 11 or newer.</string>
+    <string name="urinth_adv_low_memory_active">Right now: %1$d step(s) taken off the RAM setting.</string>
+    <string name="urinth_adv_jit_crash_title">Simple JIT after a compiler crash</string>
+    <string name="urinth_adv_jit_crash_desc">If the last crash happened inside Java\'s optimising compiler, the next starts use the simple compiler (C1 only). Turning this off and on undoes it. Needs Android 11 or newer.</string>
+    <string name="urinth_adv_jit_crash_active">Right now: the simple compiler is in use because of a compiler crash.</string>
+
+    <!-- Value lists. Same order as AdvancedPerformance's values. -->
+    <string-array name="urinth_adv_initial_heap_names">
+        <item>Auto (half of the maximum)</item>
+        <item>Small (256 MB)</item>
+        <item>Same as the maximum</item>
+    </string-array>
+    <string-array name="urinth_adv_initial_heap_values">
+        <item>auto</item>
+        <item>small</item>
+        <item>max</item>
+    </string-array>
+
+    <string-array name="urinth_adv_metaspace_names">
+        <item>Auto (128 MB)</item>
+        <item>64 MB</item>
+        <item>256 MB</item>
+        <item>512 MB</item>
+    </string-array>
+    <string-array name="urinth_adv_metaspace_values">
+        <item>auto</item>
+        <item>64</item>
+        <item>256</item>
+        <item>512</item>
+    </string-array>
+
+    <string-array name="urinth_adv_code_cache_names">
+        <item>Auto (JVM default)</item>
+        <item>128 MB</item>
+        <item>256 MB</item>
+        <item>512 MB</item>
+    </string-array>
+    <string-array name="urinth_adv_code_cache_values">
+        <item>auto</item>
+        <item>128</item>
+        <item>256</item>
+        <item>512</item>
+    </string-array>
+
+    <string-array name="urinth_adv_gc_names">
+        <item>Auto (G1)</item>
+        <item>G1</item>
+        <item>Parallel</item>
+        <item>Serial</item>
+    </string-array>
+    <string-array name="urinth_adv_gc_values">
+        <item>auto</item>
+        <item>g1</item>
+        <item>parallel</item>
+        <item>serial</item>
+    </string-array>
+
+    <string-array name="urinth_adv_pause_goal_names">
+        <item>Auto (50 ms)</item>
+        <item>20 ms</item>
+        <item>35 ms</item>
+        <item>100 ms</item>
+        <item>200 ms</item>
+    </string-array>
+    <string-array name="urinth_adv_pause_goal_values">
+        <item>auto</item>
+        <item>20</item>
+        <item>35</item>
+        <item>100</item>
+        <item>200</item>
+    </string-array>
+
+    <string-array name="urinth_adv_young_gen_names">
+        <item>Auto (30 to 45% of the heap)</item>
+        <item>Small (20 to 35%)</item>
+        <item>Large (40 to 60%)</item>
+    </string-array>
+    <string-array name="urinth_adv_young_gen_values">
+        <item>auto</item>
+        <item>small</item>
+        <item>large</item>
+    </string-array>
+
+    <string-array name="urinth_adv_region_size_names">
+        <item>Auto (the JVM decides)</item>
+        <item>2 MB</item>
+        <item>4 MB</item>
+        <item>8 MB</item>
+    </string-array>
+    <string-array name="urinth_adv_region_size_values">
+        <item>auto</item>
+        <item>2</item>
+        <item>4</item>
+        <item>8</item>
+    </string-array>
+
+    <string-array name="urinth_adv_g1_reserve_names">
+        <item>Auto (10%)</item>
+        <item>15%</item>
+        <item>20%</item>
+        <item>25%</item>
+    </string-array>
+    <string-array name="urinth_adv_g1_reserve_values">
+        <item>auto</item>
+        <item>15</item>
+        <item>20</item>
+        <item>25</item>
+    </string-array>
+
+    <string-array name="urinth_adv_gc_threads_names">
+        <item>Auto (the JVM decides)</item>
+        <item>2 threads</item>
+        <item>3 threads</item>
+        <item>4 threads</item>
+    </string-array>
+    <string-array name="urinth_adv_gc_threads_values">
+        <item>auto</item>
+        <item>2</item>
+        <item>3</item>
+        <item>4</item>
+    </string-array>
+
+    <string-array name="urinth_adv_jit_names">
+        <item>Auto (full JIT)</item>
+        <item>Simple (C1 only)</item>
+    </string-array>
+    <string-array name="urinth_adv_jit_values">
+        <item>auto</item>
+        <item>c1</item>
+    </string-array>
+
+    <string-array name="urinth_adv_jit_threads_names">
+        <item>Auto (the JVM decides)</item>
+        <item>2 threads</item>
+        <item>3 threads</item>
+        <item>4 threads</item>
+    </string-array>
+    <string-array name="urinth_adv_jit_threads_values">
+        <item>auto</item>
+        <item>2</item>
+        <item>3</item>
+        <item>4</item>
+    </string-array>
+
+    <string-array name="urinth_adv_cores_names">
+        <item>Auto (all cores)</item>
+        <item>6 cores</item>
+        <item>4 cores</item>
+        <item>3 cores</item>
+        <item>2 cores</item>
+    </string-array>
+    <string-array name="urinth_adv_cores_values">
+        <item>auto</item>
+        <item>6</item>
+        <item>4</item>
+        <item>3</item>
+        <item>2</item>
+    </string-array>
+
+    <string-array name="urinth_adv_refresh_rate_names">
+        <item>Highest available (up to 120 Hz)</item>
+        <item>60 Hz</item>
+        <item>90 Hz</item>
+        <item>120 Hz</item>
+    </string-array>
+    <string-array name="urinth_adv_refresh_rate_values">
+        <item>auto</item>
+        <item>60</item>
+        <item>90</item>
+        <item>120</item>
+    </string-array>
+</resources>

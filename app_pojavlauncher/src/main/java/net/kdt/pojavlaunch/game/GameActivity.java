@@ -71,6 +71,7 @@ import net.kdt.pojavlaunch.instances.Instances;
 import net.kdt.pojavlaunch.lifecycle.ContextExecutor;
 import net.kdt.pojavlaunch.game.platform.Platform;
 import net.kdt.pojavlaunch.game.platform.backend.DummyBackend;
+import net.kdt.pojavlaunch.prefs.AdvancedPerformance;
 import net.kdt.pojavlaunch.prefs.LauncherPreferences;
 import net.kdt.pojavlaunch.prefs.QuickSettingSideDialog;
 import net.kdt.pojavlaunch.services.GameService;
@@ -177,7 +178,8 @@ public class GameActivity extends BaseActivity implements ControlButtonMenuListe
         // Start the service a bit early
         ContextCompat.startForegroundService(this, gameServiceIntent);
         initLayout(R.layout.activity_basemain);
-        RefreshRateBoost.apply(this); // highest refresh rate the screen offers, up to 120 Hz
+        // Highest refresh rate the screen offers, up to 120 Hz, or the cap chosen in the Advanced settings.
+        RefreshRateBoost.apply(this, refreshRateCapHz());
         if(safeLaunch) {
             Logger.appendToLog("[LaunchGuard] The previous launch ended during start-up. Safe launch: "
                     + "custom Java arguments, CPU pinning, sustained performance and the thermal guard are off, RAM is capped at "
@@ -201,16 +203,30 @@ public class GameActivity extends BaseActivity implements ControlButtonMenuListe
         if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.N)
             getWindow().setSustainedPerformanceMode(PREF_SUSTAINED_PERFORMANCE);
 
+        // The Advanced settings (Performance Mode only) can switch the parts below off one by one; with the mode
+        // off, or in safe launch, PREF_PERFORMANCE_MODE is false and none of them is read.
+        final AdvancedPerformance advanced = LauncherPreferences.PREF_ADVANCED;
+
         // A line every 30 s in the game log about memory, page faults, CPU and heat.
-        PerfReport.start(this);
+        if(!PREF_PERFORMANCE_MODE || advanced.on(AdvancedPerformance.KEY_PERF_REPORT)) PerfReport.start(this);
 
         // Repeating temperature check while the game is open; eases CPU/GPU load when hot.
         if(PREF_PERFORMANCE_MODE) {
-            ThermalGuard.start(this, launcherGLView);
-            RenderScheduler.start();
+            StringBuilder switchedOff = new StringBuilder();
+            if(advanced.on(AdvancedPerformance.KEY_THERMAL_GUARD)) ThermalGuard.start(this, launcherGLView);
+            else switchedOff.append(" heat-watch");
+            if(advanced.on(AdvancedPerformance.KEY_HELPER_THREADS)) RenderScheduler.start();
+            else switchedOff.append(" helper-thread-scheduler");
             // Keep the highest refresh rate asked for in apply() above: the game surface votes for it,
             // and the request is repeated if the system lowers the rate while playing.
-            RefreshRateBoost.start(this, launcherGLView);
+            if(advanced.on(AdvancedPerformance.KEY_REFRESH_WATCH)) RefreshRateBoost.start(this, launcherGLView);
+            else switchedOff.append(" refresh-rate-watch");
+            if(!advanced.on(AdvancedPerformance.KEY_PERF_REPORT)) switchedOff.append(" performance-report");
+            if(advanced.on(AdvancedPerformance.KEY_GAME_STATE)) GameStateHint.loading(this);
+            else switchedOff.append(" game-state-hint");
+            if(switchedOff.length() > 0) {
+                Logger.appendToLog("[AdvancedSettings] Switched off on the Advanced settings screen:" + switchedOff);
+            }
             // Smooth screen flips: let the system rotate the window without freezing it until the
             // game has redrawn (seamless on Android 8+, a quick crossfade before that). Set once,
             // before the first frame; the system falls back on its own where it cannot do this.
@@ -525,6 +541,7 @@ public class GameActivity extends BaseActivity implements ControlButtonMenuListe
         RenderScheduler.stop();
         RefreshRateBoost.stop();
         ThermalGuard.stop();
+        GameStateHint.ended(this);
         URinthRender.stopThermalMonitoring();
         // The player left on purpose: this launch did not crash.
         if(isFinishing()) LaunchGuard.markCleanExit();
@@ -688,6 +705,12 @@ public class GameActivity extends BaseActivity implements ControlButtonMenuListe
         }
     }
 
+    /** The refresh-rate cap of the Advanced settings in Hz, or 0 for none (Performance Mode off, or "Highest"). */
+    private static int refreshRateCapHz() {
+        if(!PREF_PERFORMANCE_MODE) return 0;
+        return Math.max(0, LauncherPreferences.PREF_ADVANCED.number(AdvancedPerformance.KEY_REFRESH_RATE));
+    }
+
     public void hideLoadingScreen(){
         if(mLoadingScreen == null || mLoadingHiding) return;
         mLoadingHiding = true;
@@ -695,6 +718,10 @@ public class GameActivity extends BaseActivity implements ControlButtonMenuListe
         StartupTimeline.markNow("Java + Minecraft until the window");
         String startupSummary = StartupTimeline.currentSummary();
         if(startupSummary != null) Logger.appendToLog(startupSummary);
+        // The game window is up: tell Android the player is in the game (Advanced settings, Android 13+).
+        if(PREF_PERFORMANCE_MODE && LauncherPreferences.PREF_ADVANCED.on(AdvancedPerformance.KEY_GAME_STATE)) {
+            GameStateHint.playing(this);
+        }
         final View screen = mLoadingScreen;
         ((TextView) screen.findViewById(R.id.main_loading_screen_text)).setText(getString(R.string.loading_screen_booted, PLATFORM.backendName()));
         // The game is up. Until now the loading screen has been a small, wide, rounded window on a

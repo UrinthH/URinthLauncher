@@ -1,0 +1,398 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The Advanced settings screen, shown from the sidebar while Performance Mode is on. Keys are
+     AdvancedPerformance.KEY_*; the values and defaults here are AdvancedPerformance's (AdvancedSettingsXmlTest
+     compares them). AdvancedSettingsFragment adds the summaries and the Anti Crash status. "allocation",
+     "sustainedPerformance", "bigCoreAffinity" and the MobileGlues rows are the same preferences as in Settings. -->
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app2="http://schemas.android.com/apk/res-auto">
+
+    <Preference
+        android:icon="@drawable/ic_set_info"
+        android:key="adv_info"
+        android:persistent="false"
+        android:summary="@string/urinth_adv_info_summary"
+        android:title="@string/urinth_adv_info_title"
+        app2:selectable="false" />
+
+    <PreferenceCategory
+        android:layout="@layout/preference_category_clean"
+        android:icon="@drawable/ic_set_memory"
+        android:title="@string/urinth_adv_cat_memory">
+
+        <net.kdt.pojavlaunch.prefs.CustomSeekBarPreference
+            android:icon="@drawable/ic_set_memory"
+            android:key="allocation"
+            android:summary="@string/mcl_memory_allocation_subtitle"
+            android:title="@string/mcl_memory_allocation"
+            app2:min="@integer/memory_seekbar_min"
+            app2:seekBarIncrement="@integer/memory_seekbar_increment"
+            app2:selectable="false"
+            app2:showSeekBarValue="true" />
+        <androidx.preference.ListPreference
+            android:defaultValue="auto"
+            android:entries="@array/urinth_adv_initial_heap_names"
+            android:entryValues="@array/urinth_adv_initial_heap_values"
+            android:icon="@drawable/ic_set_memory"
+            android:key="advInitialHeap"
+            android:title="@string/urinth_adv_initial_heap_title" />
+        <androidx.preference.ListPreference
+            android:defaultValue="auto"
+            android:entries="@array/urinth_adv_metaspace_names"
+            android:entryValues="@array/urinth_adv_metaspace_values"
+            android:icon="@drawable/ic_set_code"
+            android:key="advMetaspace"
+            android:title="@string/urinth_adv_metaspace_title" />
+        <androidx.preference.ListPreference
+            android:defaultValue="auto"
+            android:entries="@array/urinth_adv_code_cache_names"
+            android:entryValues="@array/urinth_adv_code_cache_values"
+            android:icon="@drawable/ic_set_code"
+            android:key="advCodeCache"
+            android:title="@string/urinth_adv_code_cache_title" />
+        <SwitchPreferenceCompat
+            android:defaultValue="false"
+            android:icon="@drawable/ic_set_bolt"
+            android:key="advPreTouch"
+            android:summary="@string/urinth_adv_pre_touch_desc"
+            android:title="@string/urinth_adv_pre_touch_title" />
+        <SwitchPreferenceCompat
+            android:defaultValue="false"
+            android:icon="@drawable/ic_set_text"
+            android:key="advStringDedup"
+            android:summary="@string/urinth_adv_string_dedup_desc"
+            android:title="@string/urinth_adv_string_dedup_title" />
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:layout="@layout/preference_category_clean"
+        android:icon="@drawable/ic_set_swap"
+        android:title="@string/urinth_adv_cat_gc">
+
+        <androidx.preference.ListPreference
+            android:defaultValue="auto"
+            android:entries="@array/urinth_adv_gc_names"
+            android:entryValues="@array/urinth_adv_gc_values"
+            android:icon="@drawable/ic_set_swap"
+            android:key="advGc"
+            android:title="@string/urinth_adv_gc_title" />
+        <androidx.preference.ListPreference
+            android:defaultValue="auto"
+            android:entries="@array/urinth_adv_pause_goal_names"
+            android:entryValues="@array/urinth_adv_pause_goal_values"
+            android:icon="@drawable/ic_set_timer"
+            android:key="advPauseGoal"
+            android:title="@string/urinth_adv_pause_goal_title" />
+        <androidx.preference.ListPreference
+            android:defaultValue="auto"
+            android:entries="@array/urinth_adv_young_gen_names"
+            android:entryValues="@array/urinth_adv_young_gen_values"
+            android:icon="@drawable/ic_set_tune"
+            android:key="advYoungGen"
+            android:title="@string/urinth_adv_young_gen_title" />
+        <androidx.preference.ListPreference
+            android:defaultValue="auto"
+            android:entries="@array/urinth_adv_region_size_names"
+            android:entryValues="@array/urinth_adv_region_size_values"
+            android:icon="@drawable/ic_set_grid"
+            android:key="advRegionSize"
+            android:title="@string/urinth_adv_region_size_title" />
+        <androidx.preference.ListPreference
+            android:defaultValue="auto"
+            android:entries="@array/urinth_adv_g1_reserve_names"
+            android:entryValues="@array/urinth_adv_g1_reserve_values"
+            android:icon="@drawable/ic_set_shield"
+            android:key="advG1Reserve"
+            android:title="@string/urinth_adv_g1_reserve_title" />
+        <androidx.preference.ListPreference
+            android:defaultValue="auto"
+            android:entries="@array/urinth_adv_gc_threads_names"
+            android:entryValues="@array/urinth_adv_gc_threads_values"
+            android:icon="@drawable/ic_set_cpu"
+            android:key="advGcThreads"
+            android:title="@string/urinth_adv_gc_threads_title" />
+        <SwitchPreferenceCompat
+            android:defaultValue="true"
+            android:icon="@drawable/ic_set_trash"
+            android:key="advIgnoreSystemGc"
+            android:summary="@string/urinth_adv_ignore_system_gc_desc"
+            android:title="@string/urinth_adv_ignore_system_gc_title" />
+        <SwitchPreferenceCompat
+            android:defaultValue="true"
+            android:icon="@drawable/ic_set_sync"
+            android:key="advParallelRefs"
+            android:summary="@string/urinth_adv_parallel_refs_desc"
+            android:title="@string/urinth_adv_parallel_refs_title" />
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:layout="@layout/preference_category_clean"
+        android:icon="@drawable/ic_set_cpu"
+        android:title="@string/urinth_adv_cat_cpu">
+
+        <androidx.preference.ListPreference
+            android:defaultValue="auto"
+            android:entries="@array/urinth_adv_jit_names"
+            android:entryValues="@array/urinth_adv_jit_values"
+            android:icon="@drawable/ic_set_flask"
+            android:key="advJit"
+            android:title="@string/urinth_adv_jit_title" />
+        <androidx.preference.ListPreference
+            android:defaultValue="auto"
+            android:entries="@array/urinth_adv_jit_threads_names"
+            android:entryValues="@array/urinth_adv_jit_threads_values"
+            android:icon="@drawable/ic_set_cpu"
+            android:key="advJitThreads"
+            android:title="@string/urinth_adv_jit_threads_title" />
+        <androidx.preference.ListPreference
+            android:defaultValue="auto"
+            android:entries="@array/urinth_adv_cores_names"
+            android:entryValues="@array/urinth_adv_cores_values"
+            android:icon="@drawable/ic_set_cpu"
+            android:key="advCores"
+            android:title="@string/urinth_adv_cores_title" />
+        <SwitchPreferenceCompat
+            android:defaultValue="true"
+            android:icon="@drawable/ic_set_tune"
+            android:key="advHelperThreads"
+            android:summary="@string/urinth_adv_helper_threads_desc"
+            android:title="@string/urinth_adv_helper_threads_title" />
+        <SwitchPreferenceCompat
+            android:defaultValue="false"
+            android:icon="@drawable/ic_set_cpu"
+            android:key="bigCoreAffinity"
+            android:summary="@string/preference_force_big_core_desc"
+            android:title="@string/preference_force_big_core_title" />
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:layout="@layout/preference_category_clean"
+        android:icon="@drawable/ic_set_display"
+        android:title="@string/urinth_adv_cat_screen">
+
+        <androidx.preference.ListPreference
+            android:defaultValue="auto"
+            android:entries="@array/urinth_adv_refresh_rate_names"
+            android:entryValues="@array/urinth_adv_refresh_rate_values"
+            android:icon="@drawable/ic_set_display"
+            android:key="advRefreshRate"
+            android:title="@string/urinth_adv_refresh_rate_title" />
+        <SwitchPreferenceCompat
+            android:defaultValue="true"
+            android:icon="@drawable/ic_set_sync"
+            android:key="advRefreshWatch"
+            android:summary="@string/urinth_adv_refresh_watch_desc"
+            android:title="@string/urinth_adv_refresh_watch_title" />
+        <SwitchPreferenceCompat
+            android:defaultValue="true"
+            android:icon="@drawable/ic_set_warning"
+            android:key="advThermalGuard"
+            android:summary="@string/urinth_adv_thermal_guard_desc"
+            android:title="@string/urinth_adv_thermal_guard_title" />
+        <SwitchPreferenceCompat
+            android:defaultValue="true"
+            android:icon="@drawable/ic_set_gamepad"
+            android:key="advGameState"
+            android:summary="@string/urinth_adv_game_state_desc"
+            android:title="@string/urinth_adv_game_state_title" />
+        <SwitchPreferenceCompat
+            android:defaultValue="false"
+            android:icon="@drawable/ic_set_speed"
+            android:key="sustainedPerformance"
+            android:summary="@string/preference_sustained_performance_description"
+            android:title="@string/preference_sustained_performance_title" />
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:layout="@layout/preference_category_clean"
+        android:icon="@drawable/ic_set_logfile"
+        android:title="@string/urinth_adv_cat_network">
+
+        <SwitchPreferenceCompat
+            android:defaultValue="false"
+            android:icon="@drawable/ic_set_plug"
+            android:key="advIpv4"
+            android:summary="@string/urinth_adv_ipv4_desc"
+            android:title="@string/urinth_adv_ipv4_title" />
+        <SwitchPreferenceCompat
+            android:defaultValue="true"
+            android:icon="@drawable/ic_set_logfile"
+            android:key="advGcLog"
+            android:summary="@string/urinth_adv_gc_log_desc"
+            android:title="@string/urinth_adv_gc_log_title" />
+        <SwitchPreferenceCompat
+            android:defaultValue="true"
+            android:icon="@drawable/ic_set_file"
+            android:key="advPerfReport"
+            android:summary="@string/urinth_adv_perf_report_desc"
+            android:title="@string/urinth_adv_perf_report_title" />
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:layout="@layout/preference_category_clean"
+        android:icon="@drawable/ic_set_shield"
+        android:title="@string/urinth_adv_cat_anticrash">
+
+        <SwitchPreferenceCompat
+            android:defaultValue="true"
+            android:icon="@drawable/ic_set_java"
+            android:key="advIgnoreUnknownFlags"
+            android:summary="@string/urinth_adv_ignore_unknown_desc"
+            android:title="@string/urinth_adv_ignore_unknown_title" />
+        <SwitchPreferenceCompat
+            android:defaultValue="true"
+            android:icon="@drawable/ic_set_memory"
+            android:key="advLowMemoryGuard"
+            android:summary="@string/urinth_adv_low_memory_desc"
+            android:title="@string/urinth_adv_low_memory_title" />
+        <SwitchPreferenceCompat
+            android:defaultValue="true"
+            android:icon="@drawable/ic_set_flask"
+            android:key="advJitCrashGuard"
+            android:summary="@string/urinth_adv_jit_crash_desc"
+            android:title="@string/urinth_adv_jit_crash_title" />
+    </PreferenceCategory>
+
+    <!-- MobileGlues. Keys are MobileGluesConfig.KEY_*; the defaults here are MobileGluesConfig.DEFAULT_*
+         (a unit test compares them). LauncherPreferenceFragment.setupMobileGlues() adds the summaries. -->
+    <PreferenceCategory
+        android:layout="@layout/preference_category_clean"
+        android:icon="@drawable/ic_set_renderer"
+        android:title="@string/urinth_set_cat_mobileglues">
+
+        <Preference
+            android:icon="@drawable/ic_set_info"
+            android:key="mg_info"
+            android:persistent="false"
+            android:summary="@string/urinth_mg_info_summary"
+            android:title="@string/urinth_mg_info_title"
+            app2:selectable="false" />
+        <androidx.preference.ListPreference
+            android:defaultValue="46"
+            android:entries="@array/urinth_mg_gl_version_names"
+            android:entryValues="@array/urinth_mg_gl_version_values"
+            android:icon="@drawable/ic_set_opengl"
+            android:key="mgGlVersion"
+            android:title="@string/urinth_mg_gl_title" />
+        <androidx.preference.ListPreference
+            android:defaultValue="0"
+            android:entries="@array/urinth_mg_angle_names"
+            android:entryValues="@array/urinth_mg_angle_values"
+            android:icon="@drawable/ic_set_triangle"
+            android:key="mgAngle"
+            android:title="@string/urinth_mg_angle_title" />
+        <androidx.preference.ListPreference
+            android:defaultValue="0"
+            android:entries="@array/urinth_mg_noerror_names"
+            android:entryValues="@array/urinth_mg_noerror_values"
+            android:icon="@drawable/ic_set_warning"
+            android:key="mgNoError"
+            android:title="@string/urinth_mg_noerror_title" />
+        <SwitchPreferenceCompat
+            android:defaultValue="false"
+            android:icon="@drawable/ic_set_cpu"
+            android:key="mgComputeShader"
+            android:summary="@string/urinth_mg_compute_summary"
+            android:title="@string/urinth_mg_compute_title" />
+        <SwitchPreferenceCompat
+            android:defaultValue="true"
+            android:icon="@drawable/ic_set_timer"
+            android:key="mgTimerQuery"
+            android:summary="@string/urinth_mg_timer_summary"
+            android:title="@string/urinth_mg_timer_title" />
+        <SwitchPreferenceCompat
+            android:defaultValue="true"
+            android:icon="@drawable/ic_set_tune"
+            android:key="mgDirectStateAccess"
+            android:summary="@string/urinth_mg_dsa_summary"
+            android:title="@string/urinth_mg_dsa_title" />
+        <androidx.preference.ListPreference
+            android:defaultValue="32"
+            android:entries="@array/urinth_mg_cache_names"
+            android:entryValues="@array/urinth_mg_cache_values"
+            android:icon="@drawable/ic_set_memory"
+            android:key="mgGlslCacheMb"
+            android:title="@string/urinth_mg_cache_title" />
+        <androidx.preference.ListPreference
+            android:defaultValue="0"
+            android:entries="@array/urinth_mg_depthfix_names"
+            android:entryValues="@array/urinth_mg_depthfix_values"
+            android:icon="@drawable/ic_set_surface"
+            android:key="mgAngleDepthFix"
+            android:title="@string/urinth_mg_depthfix_title" />
+        <androidx.preference.ListPreference
+            android:defaultValue="0"
+            android:entries="@array/urinth_mg_fsr_names"
+            android:entryValues="@array/urinth_mg_fsr_values"
+            android:icon="@drawable/ic_set_resolution"
+            android:key="mgFsr1"
+            android:title="@string/urinth_mg_fsr_title" />
+        <SwitchPreferenceCompat
+            android:defaultValue="false"
+            android:icon="@drawable/ic_set_shield"
+            android:key="mgHideEnv"
+            android:summary="@string/urinth_mg_hide_summary"
+            android:title="@string/urinth_mg_hide_title" />
+        <androidx.preference.EditTextPreference
+            android:dialogMessage="@string/urinth_mg_order_message"
+            android:dialogTitle="@string/urinth_mg_order_title"
+            android:icon="@drawable/ic_set_grid"
+            android:key="mgMultidrawOrder"
+            android:singleLine="true"
+            android:title="@string/urinth_mg_order_title" />
+        <androidx.preference.EditTextPreference
+            android:dialogMessage="@string/urinth_mg_order_arrays_message"
+            android:dialogTitle="@string/urinth_mg_order_arrays_title"
+            android:icon="@drawable/ic_set_grid"
+            android:key="mgMultidrawOrderArrays"
+            android:singleLine="true"
+            android:title="@string/urinth_mg_order_arrays_title" />
+        <androidx.preference.EditTextPreference
+            android:dialogMessage="@string/urinth_mg_order_elements_message"
+            android:dialogTitle="@string/urinth_mg_order_elements_title"
+            android:icon="@drawable/ic_set_grid"
+            android:key="mgMultidrawOrderElements"
+            android:singleLine="true"
+            android:title="@string/urinth_mg_order_elements_title" />
+        <androidx.preference.EditTextPreference
+            android:dialogMessage="@string/urinth_mg_order_basevertex_message"
+            android:dialogTitle="@string/urinth_mg_order_basevertex_title"
+            android:icon="@drawable/ic_set_grid"
+            android:key="mgMultidrawOrderElementsBaseVertex"
+            android:singleLine="true"
+            android:title="@string/urinth_mg_order_basevertex_title" />
+        <androidx.preference.EditTextPreference
+            android:dialogMessage="@string/urinth_mg_order_arrays_indirect_message"
+            android:dialogTitle="@string/urinth_mg_order_arrays_indirect_title"
+            android:icon="@drawable/ic_set_grid"
+            android:key="mgMultidrawOrderArraysIndirect"
+            android:singleLine="true"
+            android:title="@string/urinth_mg_order_arrays_indirect_title" />
+        <androidx.preference.EditTextPreference
+            android:dialogMessage="@string/urinth_mg_order_elements_indirect_message"
+            android:dialogTitle="@string/urinth_mg_order_elements_indirect_title"
+            android:icon="@drawable/ic_set_grid"
+            android:key="mgMultidrawOrderElementsIndirect"
+            android:singleLine="true"
+            android:title="@string/urinth_mg_order_elements_indirect_title" />
+        <Preference
+            android:icon="@drawable/ic_set_swap"
+            android:key="mg_reset"
+            android:persistent="false"
+            android:summary="@string/urinth_mg_reset_summary"
+            android:title="@string/urinth_mg_reset_title" />
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:layout="@layout/preference_category_clean"
+        android:icon="@drawable/ic_set_swap"
+        android:title="@string/urinth_adv_cat_reset">
+
+        <Preference
+            android:icon="@drawable/ic_set_swap"
+            android:key="adv_reset"
+            android:persistent="false"
+            android:summary="@string/urinth_adv_reset_summary"
+            android:title="@string/urinth_adv_reset_title" />
+    </PreferenceCategory>
+
+</PreferenceScreen>

@@ -16,7 +16,9 @@ import net.kdt.pojavlaunch.Tools;
 import net.kdt.pojavlaunch.awt.AWTView;
 import net.kdt.pojavlaunch.multirt.MultiRTUtils;
 import net.kdt.pojavlaunch.multirt.Runtime;
+import net.kdt.pojavlaunch.prefs.AdvancedPerformance;
 import net.kdt.pojavlaunch.prefs.LauncherPreferences;
+import net.kdt.pojavlaunch.utils.AntiCrash;
 import net.kdt.pojavlaunch.utils.JREUtils;
 
 import java.io.File;
@@ -99,10 +101,10 @@ public class JavaRunner {
         // Start small and let the heap grow up to -Xmx, instead of committing it all at start.
         // Performance Mode starts at half the maximum, so the heap does not have to stop and grow
         // (a GC pause each time) while the world loads. Memory is only used once it is filled.
-        int initialHeap = LauncherPreferences.PREF_PERFORMANCE_MODE
-                ? Math.max(256, LauncherPreferences.PREF_RAM_ALLOCATION / 2)
-                : 256;
-        userArguments.add(0, "-Xms"+Math.min(initialHeap, LauncherPreferences.PREF_RAM_ALLOCATION)+"M");
+        // The Advanced settings can change the starting size ("Initial heap"); with the mode off they are ignored.
+        int initialHeap = AdvancedJvmArguments.initialHeapMb(advancedSettings(),
+                LauncherPreferences.PREF_PERFORMANCE_MODE, LauncherPreferences.PREF_RAM_ALLOCATION);
+        userArguments.add(0, "-Xms"+initialHeap+"M");
         userArguments.add(0, "-Xmx"+LauncherPreferences.PREF_RAM_ALLOCATION+"M");
 
         ArrayList<String> overridableArguments = new ArrayList<>(Arrays.asList(
@@ -160,6 +162,14 @@ public class JavaRunner {
     }
 
     /**
+     * The Advanced settings in effect for this start: the player's choices while Performance Mode is on,
+     * and the defaults (which change nothing) while it is off or in safe launch.
+     */
+    private static AdvancedPerformance advancedSettings() {
+        return LauncherPreferences.PREF_PERFORMANCE_MODE ? LauncherPreferences.PREF_ADVANCED : AdvancedPerformance.defaults();
+    }
+
+    /**
      * Performance Mode: fewer and shorter garbage collection pauses (a larger young generation, a
      * shorter pause goal, no explicit full collections, no pauses for metadata growth while loading).
      * The flags and the reasons are in {@link PerformanceJvmArguments}. Never overrides a flag the
@@ -167,11 +177,23 @@ public class JavaRunner {
      */
     private static void addPerformanceModeArguments(List<String> arguments) {
         List<String> replaced = PerformanceJvmArguments.dropLauncherDefaults(arguments);
+        // The Advanced settings first, so what the player chose there is in place before Performance Mode fills
+        // in the rest. A flag typed in the Java arguments wins over both.
+        AdvancedPerformance advanced = LauncherPreferences.PREF_ADVANCED;
+        boolean simpleJitForced = AntiCrash.simpleJitForced();
+        List<String> advancedFlags = AdvancedJvmArguments.addTo(arguments, advanced, simpleJitForced);
         PerformanceJvmArguments.addTo(arguments);
         try {
             if (!replaced.isEmpty()) {
                 Logger.appendToLog("[PerformanceMode] The Java arguments in Settings are still the launcher's default text, "
                         + "so Performance Mode uses its own memory settings instead of: " + android.text.TextUtils.join(" ", replaced));
+            }
+            List<String> changed = advanced.changed();
+            if (!changed.isEmpty()) {
+                Logger.appendToLog("[AdvancedSettings] Changed from the defaults: " + android.text.TextUtils.join(", ", changed));
+            }
+            if (!advancedFlags.isEmpty()) {
+                Logger.appendToLog("[AdvancedSettings] Java flags added by them: " + android.text.TextUtils.join(" ", advancedFlags));
             }
             for (String line : PerformanceJvmArguments.describeMemorySettings(arguments, 150)) {
                 Logger.appendToLog("[PerformanceMode] Memory settings in effect: " + line);
@@ -319,10 +341,13 @@ public class JavaRunner {
         vmArgs.clear();
 
 
-        runtimeArgs.add("-XX:ActiveProcessorCount=" + java.lang.Runtime.getRuntime().availableProcessors());
+        AdvancedPerformance advanced = advancedSettings();
+        int processors = AdvancedJvmArguments.activeProcessors(advanced, java.lang.Runtime.getRuntime().availableProcessors());
+        runtimeArgs.add("-XX:ActiveProcessorCount=" + processors);
         // Performance Mode: one short line per garbage collection in the game log, with how long
         // it paused the game. A lag spike can then be matched to a collection (or ruled out).
-        if(LauncherPreferences.PREF_PERFORMANCE_MODE && !hasArgument(runtimeArgs, "-verbose:gc")) runtimeArgs.add("-verbose:gc");
+        if(LauncherPreferences.PREF_PERFORMANCE_MODE && advanced.on(AdvancedPerformance.KEY_GC_LOG)
+                && !hasArgument(runtimeArgs, "-verbose:gc")) runtimeArgs.add("-verbose:gc");
         addx86SignalWorkaround(runtimeArgs);
         StringBuilder classpathBuilder = new StringBuilder().append("-Djava.class.path=");
         boolean first = true;

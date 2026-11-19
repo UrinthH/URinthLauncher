@@ -75,6 +75,11 @@ public class LauncherPreferences {
     /** Watch device temperature while the game runs and ease CPU/GPU load when it gets hot. */
     public static boolean PREF_PERFORMANCE_MODE = false;
     /**
+     * The settings of the Advanced settings screen. Read only while {@link #PREF_PERFORMANCE_MODE} is on:
+     * with the mode off (or in safe launch) nothing here changes how the game starts.
+     */
+    public static AdvancedPerformance PREF_ADVANCED = AdvancedPerformance.defaults();
+    /**
      * Set for the lifetime of one game process that LaunchGuard put into safe launch.
      * Never written to SharedPreferences.
      */
@@ -142,6 +147,7 @@ public class LauncherPreferences {
         PREF_BIG_CORE_AFFINITY = DEFAULT_PREF.getBoolean("bigCoreAffinity", false);
         PREF_PERF_MOBILEGLUES = DEFAULT_PREF.getBoolean("perfMobileGlues", true);
         PREF_PERFORMANCE_MODE = performanceModeIsOn();
+        PREF_ADVANCED = AdvancedPerformance.fromMap(DEFAULT_PREF.getAll());
         syncRendererWithPerformanceMode();
         PREF_ZINK_PREFER_SYSTEM_DRIVER = DEFAULT_PREF.getBoolean("zinkPreferSystemDriver", false);
         PREF_DOWNLOAD_SOURCE = DEFAULT_PREF.getString("downloadSource", "default");

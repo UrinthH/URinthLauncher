@@ -75,6 +75,31 @@ public final class GameExitReporter {
     }
 
     /**
+     * How the newest finished game process ended, for the Anti Crash guard ({@link AntiCrashPolicy}):
+     * when it ended and what kind of ending it was. This only reads Android's record; it does not mark
+     * anything as reported, so the "game closed unexpectedly" dialog is not affected.
+     *
+     * @return null when Android keeps no record (before Android 11) or there is no finished game process
+     */
+    @Nullable
+    public static AntiCrashPolicy.Exit newestExit(Context context) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return null;
+        try {
+            ExitSummary exit = ExitReader.newestGameExit(context.getApplicationContext());
+            if (exit == null) return null;
+            boolean lowMemory = ExitReader.isMemoryKill(exit.reason);
+            boolean nativeCrash = ExitReader.isNativeCrash(exit.reason);
+            boolean otherAbnormal = ExitReader.isAbnormal(exit.reason);
+            return new AntiCrashPolicy.Exit(exit.timestamp,
+                    AntiCrashPolicy.classify(lowMemory, nativeCrash, exit.nativeCrash, otherAbnormal));
+        } catch (Throwable error) {
+            // The guard is a safety net: no record simply means nothing to act on.
+            Log.w(TAG, "Could not read how the last game process ended", error);
+            return null;
+        }
+    }
+
+    /**
      * Build the report for the previous game session. Does file and system calls, so call it off
      * the main thread.
      *

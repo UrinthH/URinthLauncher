@@ -3,6 +3,7 @@ package net.kdt.pojavlaunch.fragments;
 import net.kdt.pojavlaunch.downloads.DownloadCategory;
 import net.kdt.pojavlaunch.downloads.ui.DownloadsFragment;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.text.Spannable;
 import android.text.SpannableString;
@@ -32,6 +33,7 @@ import net.kdt.pojavlaunch.home.InstallationLabels;
 import net.kdt.pojavlaunch.instances.InstanceIconProvider;
 import net.kdt.pojavlaunch.instances.Instances;
 import net.kdt.pojavlaunch.prefs.LauncherPreferences;
+import net.kdt.pojavlaunch.prefs.screens.AdvancedSettingsFragment;
 import net.kdt.pojavlaunch.prefs.screens.LauncherPreferenceFragment;
 
 import java.text.DateFormat;
@@ -75,8 +77,17 @@ public final class UrinthHomeController {
     private Account[] savedAccounts = new Account[0];
     private Bitmap avatar;
     private boolean released;
-    /** The 5 sidebar categories, in the same order as the layout, for the active-highlight. */
-    private View navHome, navNews, navInstallations, navSkins, navSettings;
+    /**
+     * The 5 sidebar categories, in the same order as the layout, for the active-highlight.
+     * navAdvanced ("Advanced settings") is only shown while Performance Mode is on.
+     */
+    private View navHome, navNews, navInstallations, navAdvanced, navSettings;
+    /** The sidebar entry that is highlighted now, so the Advanced screen can be closed when its entry goes away. */
+    private View activeNav;
+    /** Kept in a field because SharedPreferences only holds listeners weakly. */
+    private final SharedPreferences.OnSharedPreferenceChangeListener performanceModeListener = (prefs, key) -> {
+        if ("performanceMode".equals(key)) renderAdvancedNav(prefs.getBoolean("performanceMode", true));
+    };
 
     private final ExtraListener<Boolean> accountRefreshListener = (key, value) -> {
         refresh();
@@ -113,9 +124,13 @@ public final class UrinthHomeController {
         navHome = root.findViewById(R.id.urinth_nav_home);
         navNews = root.findViewById(R.id.urinth_nav_news);
         navInstallations = root.findViewById(R.id.urinth_nav_installations);
-        navSkins = root.findViewById(R.id.urinth_nav_skins);
+        navAdvanced = root.findViewById(R.id.urinth_nav_advanced);
         navSettings = root.findViewById(R.id.urinth_nav_settings);
         markHomeActive();
+        // "Advanced settings" belongs to Performance Mode: shown while it is on, gone while it is off, and
+        // updated at once when the switch is flipped anywhere (the home button or the Settings screen).
+        renderAdvancedNav(LauncherPreferences.PREF_PERFORMANCE_MODE);
+        LauncherPreferences.DEFAULT_PREF.registerOnSharedPreferenceChangeListener(performanceModeListener);
 
         bindActions(root);
         bindNews(root);
@@ -128,6 +143,7 @@ public final class UrinthHomeController {
     public void release() {
         released = true;
         ExtraCore.removeExtraListenerFromValue(ExtraConstants.REFRESH_ACCOUNT_SPINNER, accountRefreshListener);
+        LauncherPreferences.DEFAULT_PREF.unregisterOnSharedPreferenceChangeListener(performanceModeListener);
     }
 
     /** The home screen has no music and no background animation any more; kept so the host can still call them. */
@@ -158,9 +174,12 @@ public final class UrinthHomeController {
                 toast(R.string.urinth_not_set_up);
             }
         });
-        // Downloads (mods, packs, shaders, modpacks...) and the Servers tab of the same page.
+        // Downloads (mods, packs, shaders, modpacks...); its Servers tab is where the servers list lives.
         navNews.setOnClickListener(v -> openDownloads(DownloadCategory.MODS, navNews));
-        navSkins.setOnClickListener(v -> openDownloads(DownloadCategory.SERVERS, navSkins));
+        navAdvanced.setOnClickListener(v -> {
+            setActiveNav(navAdvanced);
+            openAdvancedSettings();
+        });
         navSettings.setOnClickListener(v -> {
             setActiveNav(navSettings);
             openSettings();
@@ -184,7 +203,8 @@ public final class UrinthHomeController {
 
     /** Highlights the given sidebar category and un-highlights the rest. */
     private void setActiveNav(View active) {
-        View[] all = {navHome, navNews, navInstallations, navSkins, navSettings};
+        activeNav = active;
+        View[] all = {navHome, navNews, navInstallations, navAdvanced, navSettings};
         for (View item : all) {
             if (item == null) continue;
             boolean on = item == active;
@@ -331,6 +351,7 @@ public final class UrinthHomeController {
 
     private void showPerformanceModeChange(boolean enabled) {
         renderPerformanceMode();
+        renderAdvancedNav(enabled);
         Toast.makeText(context, enabled ? R.string.urinth_perf_toast_on : R.string.urinth_perf_toast_off,
                 Toast.LENGTH_SHORT).show();
     }
@@ -402,6 +423,28 @@ public final class UrinthHomeController {
             host.showCenterFragment(LauncherPreferenceFragment.class, LauncherActivity.SETTING_FRAGMENT_TAG, null);
         } else {
             toast(R.string.urinth_not_set_up);
+        }
+    }
+
+    private void openAdvancedSettings() {
+        if (host != null) {
+            host.showCenterFragment(AdvancedSettingsFragment.class, AdvancedSettingsFragment.TAG, null);
+        } else {
+            toast(R.string.urinth_not_set_up);
+        }
+    }
+
+    /**
+     * Shows the "Advanced settings" entry while Performance Mode is on and hides it while it is off. If the
+     * screen is open when the mode goes off, it is closed with its entry, because its settings only apply
+     * while Performance Mode is on.
+     */
+    private void renderAdvancedNav(boolean performanceMode) {
+        if (navAdvanced == null || released) return;
+        navAdvanced.setVisibility(performanceMode ? View.VISIBLE : View.GONE);
+        if (!performanceMode && activeNav == navAdvanced) {
+            if (host != null) host.closeCenterContent();
+            markHomeActive();
         }
     }
 

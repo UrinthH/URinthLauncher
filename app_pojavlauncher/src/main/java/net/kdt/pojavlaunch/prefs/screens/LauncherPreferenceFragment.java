@@ -173,8 +173,7 @@ public class LauncherPreferenceFragment extends PreferenceFragmentCompat impleme
         requirePreference("gyroSampleRate", CustomSeekBarPreference.class).setSuffix(" ms");
         requirePreference("gyroCategory", PreferenceCategory.class).setVisible(Tools.deviceSupportsGyro(requireContext()));
 
-        int deviceRam = Tools.getTotalDeviceMemory(requireContext());
-        int maxRam = (Architecture.is32BitsDevice() || deviceRam < 2048) ? Math.min(1024, deviceRam) : deviceRam - (deviceRam < 3064 ? 800 : 1024);
+        int maxRam = maxAllocationMb();
         CustomSeekBarPreference memory = requirePreference("allocation", CustomSeekBarPreference.class);
         memory.setMaxKeepIncrement(maxRam);
         memory.setValue(LauncherPreferences.PREF_RAM_ALLOCATION);
@@ -329,12 +328,21 @@ public class LauncherPreferenceFragment extends PreferenceFragmentCompat impleme
     }
 
     /**
+     * The top of the RAM slider on this phone: what the phone has minus room for Android, or at most 1 GB on a
+     * 32-bit or small phone. Shared with the Advanced settings screen, which shows the same slider.
+     */
+    protected int maxAllocationMb() {
+        int deviceRam = Tools.getTotalDeviceMemory(requireContext());
+        return (Architecture.is32BitsDevice() || deviceRam < 2048) ? Math.min(1024, deviceRam) : deviceRam - (deviceRam < 3064 ? 800 : 1024);
+    }
+
+    /**
      * The MobileGlues category. Each list shows what it is set to and what it does, the typed multi-draw
      * orders are cleaned the way MobileGlues reads them, and the last row puts everything back to the
      * defaults. The values themselves are written into MobileGlues' config file at launch
-     * (MobileGluesLaunch).
+     * (MobileGluesLaunch). Also used by the Advanced settings screen, which shows the same rows.
      */
-    private void setupMobileGlues() {
+    protected void setupMobileGlues() {
         describeList(MobileGluesConfig.KEY_GL_VERSION, R.string.urinth_mg_gl_desc);
         describeList(MobileGluesConfig.KEY_ANGLE, R.string.urinth_mg_angle_desc);
         describeList(MobileGluesConfig.KEY_NO_ERROR, R.string.urinth_mg_noerror_desc);
@@ -356,7 +364,7 @@ public class LauncherPreferenceFragment extends PreferenceFragmentCompat impleme
     }
 
     /** A list row whose summary is the chosen entry followed by what the setting does. */
-    private void describeList(String key, int descriptionRes) {
+    protected void describeList(String key, int descriptionRes) {
         ListPreference list = requirePreference(key, ListPreference.class);
         final String description = getString(descriptionRes);
         list.setSummaryProvider((Preference.SummaryProvider<ListPreference>) p -> {
@@ -366,7 +374,7 @@ public class LauncherPreferenceFragment extends PreferenceFragmentCompat impleme
     }
 
     /** A typed draw-method order: its summary shows the order (or that it is automatic), and what is typed is cleaned. */
-    private void describeOrder(String key, boolean global) {
+    protected void describeOrder(String key, boolean global) {
         EditTextPreference order = requirePreference(key, EditTextPreference.class);
         final String empty = getString(global ? R.string.urinth_mg_order_auto : R.string.urinth_mg_order_inherit);
         order.setSummaryProvider((Preference.SummaryProvider<EditTextPreference>) p ->
@@ -385,7 +393,7 @@ public class LauncherPreferenceFragment extends PreferenceFragmentCompat impleme
         });
     }
 
-    private void resetMobileGlues() {
+    protected void resetMobileGlues() {
         for (java.util.Map.Entry<String, Object> entry : MobileGluesConfig.defaultValues().entrySet()) {
             Preference preference = findPreference(entry.getKey());
             Object value = entry.getValue();

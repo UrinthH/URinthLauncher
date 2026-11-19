@@ -33,6 +33,7 @@ import net.kdt.pojavlaunch.game.renderer.PerformanceMobileGluesGuard;
 import net.kdt.pojavlaunch.game.renderer.RendererApiPolicy;
 import net.kdt.pojavlaunch.game.renderer.RendererCache;
 import net.kdt.pojavlaunch.game.renderer.RenderSpec;
+import net.kdt.pojavlaunch.utils.AntiCrash;
 import net.kdt.pojavlaunch.utils.DateUtils;
 import net.kdt.pojavlaunch.utils.FileUtils;
 import net.kdt.pojavlaunch.utils.GpuUtils;
@@ -269,6 +270,10 @@ public class GameRunner {
 
     public static void launchGame(final AppCompatActivity activity, Account account,
                                   Instance instance, String versionId, File[] classpath, GameRenderer gameRenderer) throws Throwable {
+        // Anti Crash (Advanced settings, Performance Mode only) looks at how the last game process ended and may
+        // lower the RAM of this start or switch to the simple JIT. First, so the memory check below and the Java
+        // arguments see the result. It does its work once per game process.
+        AntiCrash.apply(activity);
         int freeDeviceMemory = Tools.getFreeDeviceMemory(activity);
         int localeString;
         int freeAddressSpace = Architecture.is32BitsDevice() ? Tools.getMaxContinuousAddressSpaceSize() : -1;

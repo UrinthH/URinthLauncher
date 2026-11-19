@@ -19,8 +19,35 @@ final class RefreshRatePolicy {
     static final int MAX_BACKOFF_STEPS = 5;
     /** Rates closer than this count as the same rate (refresh rates are reported as 89.9 and 90.0). */
     static final float TOLERANCE_HZ = 0.5f;
+    /** The highest rate asked for when no cap was chosen. */
+    static final float AUTO_MAX_HZ = 120f;
 
     private RefreshRatePolicy() {}
+
+    /**
+     * Which of the screen's modes (all of the current size) to ask for, as an index into {@code supportedHz},
+     * or -1 when there is nothing to ask for.
+     *
+     * <ul>
+     *   <li>No cap ({@code capHz} 0 or less): the highest rate up to {@link #AUTO_MAX_HZ}, and only one above
+     *       the current rate, so a screen that is already as fast as it gets is left alone.</li>
+     *   <li>A cap chosen on the Advanced settings screen: the highest rate that does not go over it. That can be
+     *       lower than the current rate, which is the point of choosing a lower cap (a steady 60 Hz runs
+     *       cooler than a 90 Hz that keeps dropping). A panel with no mode at or under the cap gets nothing.</li>
+     * </ul>
+     */
+    static int pickMode(float currentHz, float[] supportedHz, int capHz) {
+        boolean capped = capHz > 0;
+        float limit = capped ? capHz : AUTO_MAX_HZ;
+        int best = -1;
+        for (int i = 0; i < supportedHz.length; i++) {
+            float rate = supportedHz[i];
+            if (rate > limit + TOLERANCE_HZ) continue;
+            if (!capped && rate <= currentHz + TOLERANCE_HZ) continue;
+            if (best < 0 || rate > supportedHz[best] + TOLERANCE_HZ) best = i;
+        }
+        return best;
+    }
 
     /** True when the screen is running slower than the rate that was asked for. */
     static boolean isBelowTarget(float requestedHz, float currentHz) {
