@@ -1,0 +1,54 @@
+plugins {
+	id 'net.fabricmc.fabric-loom-remap' version "${loom_version}"
+}
+
+version = project.mod_version
+group = 'dev.urinth'
+base { archivesName = 'urinth-recordable-lite' }
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	minecraft "com.mojang:minecraft:${project.minecraft_version}"
+	mappings loom.officialMojangMappings()
+	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+
+	testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.10.2'
+	testImplementation 'com.google.code.gson:gson:2.11.0'
+}
+
+test {
+	useJUnitPlatform()
+	maxHeapSize = '1g'
+	// A failing check shows what failed in the CI log, not just that something did.
+	testLogging {
+		events 'failed'
+		exceptionFormat 'full'
+	}
+	// A few checks read the finished jar (after remapping), so it is built first.
+	dependsOn tasks.named('remapJar')
+	doFirst {
+		systemProperty 'urinth.jar', tasks.named('remapJar').get().archiveFile.get().asFile.absolutePath
+	}
+}
+
+processResources {
+	inputs.property 'version', project.version
+	
+	filesMatching('fabric.mod.json') {
+		expand 'version': project.version
+	}
+}
+
+tasks.withType(JavaCompile).configureEach {
+	it.options.release = 21
+}
+
+java {
+	sourceCompatibility = JavaVersion.VERSION_21
+	targetCompatibility = JavaVersion.VERSION_21
+}

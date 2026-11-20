@@ -1,0 +1,51 @@
+name: Record-able Lite mod
+
+# Builds and tests the Record-able Lite mod (a light gameplay recorder for Minecraft 1.21.4 on Fabric) and prints the finished jar into
+# the log, because the storage of workflow artifacts cannot be reached from the sandbox the assistant works in. It only runs when the
+# mod changes, so it does not slow down the launcher build.
+on:
+  push:
+    paths:
+      - 'recorder-lite-mod/**'
+      - '.github/workflows/recorder-lite.yml'
+  workflow_dispatch:
+
+jobs:
+  recorder-lite-mod:
+    runs-on: ubuntu-22.04
+    defaults:
+      run:
+        working-directory: recorder-lite-mod
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Build and test the mod
+        run: ./gradlew build --no-daemon --stacktrace
+      - name: Show what is in the jar
+        if: always()
+        run: |
+          for jar in build/libs/urinth-recordable-lite-*.jar; do
+            echo "::group::$jar"
+            unzip -l "$jar" | tail -n +1
+            echo "::endgroup::"
+          done
+      - name: List the Minecraft, Fabric API and LWJGL members the mod uses
+        if: always()
+        run: bash tools/discover-api.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: urinth-recordable-lite-jar
+          path: recorder-lite-mod/build/libs/urinth-recordable-lite-*.jar
+      # The jar is printed in 3000-character lines between two markers and rebuilt from the log. The checksum comes first.
+      - name: Print the jar (so it can be fetched from this log)
+        run: |
+          jar=$(ls build/libs/urinth-recordable-lite-*.jar | head -1)
+          ls -l "$jar"
+          echo "JAR-SHA256 $(sha256sum "$jar" | cut -d' ' -f1)"
+          echo "JAR-BASE64-BEGIN"
+          base64 -w 3000 "$jar"
+          echo "JAR-BASE64-END"
