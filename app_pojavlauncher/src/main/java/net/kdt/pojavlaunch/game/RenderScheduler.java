@@ -4,11 +4,14 @@ import android.os.Handler;
 import android.os.Looper;
 import android.os.Process;
 import android.os.SystemClock;
+import android.system.Os;
+import android.system.OsConstants;
 import android.util.Log;
 
 import androidx.annotation.Nullable;
 
 import net.kdt.pojavlaunch.Logger;
+import net.kdt.pojavlaunch.prefs.LauncherPreferences;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -40,7 +43,10 @@ import java.util.Set;
  * the same thread.
  *
  * A summary line goes into the game log once a minute, so a lag report can be matched to what
- * the render thread was actually going through.
+ * the render thread was actually going through. A second line, "[RenderThread]", says how busy the
+ * render thread was (see {@link RenderThreadStats}): always busy means the CPU is what limits the
+ * frame rate, a thread that spends part of every frame waiting means the graphics chip or the
+ * screen is, which is the first thing to know before trying to raise the FPS.
  */
 public final class RenderScheduler {
     private static final String TAG = "RenderScheduler";
@@ -68,6 +74,9 @@ public final class RenderScheduler {
     /** True once the phone has shown it reports no usable wait times. */
     private boolean mWaitTimesUnavailable;
     private int mAppliedLevel = SchedulerPolicy.LEVEL_NONE;
+    /** How busy the render thread is and on which cores it runs, for the once-a-minute "[RenderThread]" line. */
+    @Nullable
+    private RenderThreadStats mRenderStats;
 
     /** Kernel thread id to thread name, read once per thread. */
     private final Map<Integer, String> mThreadNames = new HashMap<>();
@@ -109,6 +118,11 @@ public final class RenderScheduler {
     private void begin() {
         mRunning = true;
         mSummaryStartedAt = SystemClock.elapsedRealtime();
+        long fastCores = readFastCores();
+        mRenderStats = new RenderThreadStats(fastCores, readClockTicks());
+        logTagged("RenderThread", fastCores != 0
+                ? "Fast cores of this phone: " + FastCores.describe(fastCores)
+                : "This phone does not report which of its cores are fast");
         mHandler.postDelayed(mSampleTask, SAMPLE_MS);
         log("Started: helper and JIT compiler threads are lowered only while the render thread is waiting for a core");
     }
@@ -126,6 +140,10 @@ public final class RenderScheduler {
             Set<Integer> helpers = new HashSet<>();
             Set<Integer> compilers = new HashSet<>();
             scanThreads(helpers, compilers);
+            if (mRenderTid > 0 && mRenderStats != null) {
+                mRenderStats.add(RenderThreadStats.parseStat(
+                        readFile(new File("/proc/self/task/" + mRenderTid + "/stat"))), now);
+            }
             if (mRenderTid > 0 && !mWaitTimesUnavailable) {
                 String schedstat = readFile(new File("/proc/self/task/" + mRenderTid + "/schedstat"));
                 long wait = SchedulerPolicy.hasRunTime(schedstat) ? SchedulerPolicy.parseWaitNanos(schedstat) : -1;
@@ -262,11 +280,19 @@ public final class RenderScheduler {
 
     private void maybeSummarise() {
         long now = SystemClock.elapsedRealtime();
-        if (now - mSummaryStartedAt < SUMMARY_MS || mSamples == 0) return;
-        log(String.format(java.util.Locale.US,
-                "Last minute: the render thread waited for a CPU core %.1f%% of the time on average, %.0f%% at worst; "
-                        + "helper threads were lowered for %d%% of it",
-                100 * mWaitSum / mSamples, 100 * mWaitPeak, Math.round(100f * mSamplesLowered / mSamples)));
+        if (now - mSummaryStartedAt < SUMMARY_MS) return;
+        // A phone with no wait counters (a Unisoc one did not have them) has no wait line, but still has the busy line.
+        if (mSamples > 0) {
+            log(String.format(java.util.Locale.US,
+                    "Last minute: the render thread waited for a CPU core %.1f%% of the time on average, %.0f%% at worst; "
+                            + "helper threads were lowered for %d%% of it",
+                    100 * mWaitSum / mSamples, 100 * mWaitPeak, Math.round(100f * mSamplesLowered / mSamples)));
+        }
+        if (mRenderStats != null && mRenderStats.hasData()) {
+            logTagged("RenderThread", mRenderStats.summarise(LauncherPreferences.PREF_BIG_CORE_AFFINITY
+                    ? "the big-core setting is on (see the [BigCore] line)"
+                    : "the big-core setting is off"));
+        }
         mSummaryStartedAt = now;
         mSamples = 0;
         mSamplesLowered = 0;
@@ -274,8 +300,41 @@ public final class RenderScheduler {
         mWaitPeak = 0;
     }
 
+    /** The fast cores of this phone as a mask, 0 when it reports nothing that tells them apart (see {@link FastCores}). */
+    static long readFastCores() {
+        int count = Math.min(Runtime.getRuntime().availableProcessors(), FastCores.MAX_CPUS);
+        long[] capacity = new long[count];
+        long[] maxFreq = new long[count];
+        for (int cpu = 0; cpu < count; cpu++) {
+            capacity[cpu] = readNumber("/sys/devices/system/cpu/cpu" + cpu + "/cpu_capacity");
+            maxFreq[cpu] = readNumber("/sys/devices/system/cpu/cpu" + cpu + "/cpufreq/cpuinfo_max_freq");
+        }
+        return FastCores.maskFor(capacity, maxFreq);
+    }
+
+    /** The number in a one-line file, or -1 when it cannot be read. */
+    private static long readNumber(String path) {
+        String text = readFile(new File(path));
+        if (text == null) return -1;
+        try {
+            return Long.parseLong(text.trim());
+        } catch (NumberFormatException notANumber) {
+            return -1;
+        }
+    }
+
+    /** The kernel's clock tick rate (CPU times in /proc are counted in ticks), 100 when Android will not say. */
+    private static long readClockTicks() {
+        try {
+            long ticks = Os.sysconf(OsConstants._SC_CLK_TCK);
+            return ticks > 0 ? ticks : 100;
+        } catch (Throwable error) {
+            return 100;
+        }
+    }
+
     @Nullable
-    private static String readThreadName(File task) {
+    static String readThreadName(File task) {
         String name = readFile(new File(task, "comm"));
         return name == null ? null : name.trim();
     }
@@ -290,9 +349,13 @@ public final class RenderScheduler {
     }
 
     private static void log(String message) {
+        logTagged("PerformanceMode", message);
+    }
+
+    private static void logTagged(String tag, String message) {
         Log.i(TAG, message);
         try {
-            Logger.appendToLog("[PerformanceMode] " + message);
+            Logger.appendToLog("[" + tag + "] " + message);
         } catch (Throwable ignored) {
             // The native logger is not available yet, or already gone. The Android log has it.
         }

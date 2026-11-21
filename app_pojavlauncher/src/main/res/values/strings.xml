@@ -313,8 +313,8 @@
     <string name="preference_microphone_access_title">Request microphone access permission</string>
     <string name="preference_microphone_access_description">Requests system to give access to device microphone for the game</string>
 
-    <string name="preference_force_big_core_title">Force the renderer to run on the big core</string>
-    <string name="preference_force_big_core_desc">Forces the game\'s render thread to run on the core with the highest maximum frequency (the last one, when several report the same speed).</string>
+    <string name="preference_force_big_core_title">Keep the render thread on the fast cores</string>
+    <string name="preference_force_big_core_desc">Moves only the game\'s drawing thread onto the fast cores of your phone (a Unisoc T606 has two: cores 6 and 7) so Android cannot leave it on a slow one. It can raise the FPS, and the game log (Settings, Copy game log) shows the cores it got. If the phone gets hot or the FPS drops, turn it off. Takes effect the next time the game starts.</string>
     <string name="version_select_hint">Select a version</string>
     <string name="forge_dl_progress">Downloading installer for %s</string>
     <string name="forge_dl_searching">Searching for Forge version number</string>

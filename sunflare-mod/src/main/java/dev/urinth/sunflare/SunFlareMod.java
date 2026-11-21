@@ -29,14 +29,17 @@ import org.slf4j.LoggerFactory;
  * Sun lens flare for Fabric. No shader loader is needed. The mode is kept in config/urinth-sunflare.properties (options.txt is
  * never touched) and can be changed in four ways, so it is always reachable:
  * <ul>
- *   <li>"Sun Flare: ..." and "Sun Beams: ..." buttons (and a "Fancy Leaves" one) on Sodium's video settings screen,</li>
- *   <li>the same button on the vanilla Video Settings screen,</li>
+ *   <li>the "URinth" page of Sodium's video settings (also in Reese's Sodium Options): Sun Flare, Sun Beams, Flare Style, Fancy
+ *   Leaves, Perf Guard and the stutter log, as rows like the ones of every other page,</li>
+ *   <li>buttons on the vanilla Video Settings screen (and on a Sodium screen that did not get the page),</li>
  *   <li>the chat commands /sunflare perf (stutter and frame-rate report), /sunflare fps [n] (the Perf Guard), /sunflare [off|subtle|full|strong] /sunflare beams [off|low|medium|high|extreme], /sunflare leaves [off|light|balanced|safe] and /sunflare style [real|pack],</li>
  *   <li>a key binding in Controls (unbound by default).</li>
  * </ul>
  */
 public final class SunFlareMod implements ClientModInitializer {
     static final Logger LOG = LoggerFactory.getLogger("urinth_sunflare");
+
+    private static volatile FlareConfig shared;
 
     private FlareConfig config;
     private PerfMonitor perf;
@@ -46,6 +49,7 @@ public final class SunFlareMod implements ClientModInitializer {
     public void onInitializeClient() {
         config = new FlareConfig(FabricLoader.getInstance().getConfigDir().resolve("urinth-sunflare.properties"));
         config.load();
+        shared = config;
         applyLeaves(false);
         registerLightingPack();
         FlareRenderer renderer = new FlareRenderer(config);
@@ -65,11 +69,18 @@ public final class SunFlareMod implements ClientModInitializer {
         LOG.info("[SunFlare] ready, mode={}", FlareConfig.NAMES[config.mode()]);
     }
 
+    /** The settings the whole mod uses, for the URinth page in Sodium's video settings. Null until the mod has started. */
+    static FlareConfig sharedConfig() {
+        return shared;
+    }
+
     // ---- the buttons on the video settings screen ------------------------------------------------------------------------
 
     private void registerScreenButton() {
         ScreenEvents.AFTER_INIT.register((client, screen, width, height) -> {
-            if (SettingsScreens.classify(screen.getClass().getName()) == SettingsScreens.Kind.NONE) return;
+            // Sodium's screen has the URinth page (made by SodiumOptionsPageMixin) with all of these settings; the buttons are only
+            // for the vanilla screen and for a Sodium that did not get the page.
+            if (!UrinthPageState.needsButtons(SettingsScreens.classify(screen.getClass().getName()))) return;
             try {
                 // A new screen layout (first open, or a resize): drop the old buttons and make new ones for this size.
                 Button[] old = buttons.remove(screen);
@@ -205,7 +216,7 @@ public final class SunFlareMod implements ClientModInitializer {
                 }));
             }
             root.then(ClientCommandManager.literal("fps").then(
-                ClientCommandManager.argument("target", com.mojang.brigadier.arguments.IntegerArgumentType.integer(0, 240))
+                ClientCommandManager.argument("target", com.mojang.brigadier.arguments.IntegerArgumentType.integer(0, FlareConfig.MAX_TARGET_FPS))
                     .executes(ctx -> {
                         int fps = config.setTargetFps(com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(ctx, "target"));
                         config.save();

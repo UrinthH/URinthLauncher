@@ -65,7 +65,8 @@ class FlareConfigTest {
             last = c.godRayDensity();
         }
         assertEquals(30, c.setTargetFps(5));
-        assertEquals(240, c.setTargetFps(999));
+        assertEquals(FlareConfig.MAX_TARGET_FPS, c.setTargetFps(999));
+        assertEquals(250, FlareConfig.MAX_TARGET_FPS);
         assertEquals(0, c.setTargetFps(0));
         c.setTargetFps(75);
         c.save();

@@ -53,7 +53,7 @@ final class GameLogExcerpt {
     /** A line that names an error, the graphics driver or one of the launcher's own tags. */
     private static final Pattern KEY_LINE = Pattern.compile(
             "ERROR|FATAL|Exception|Caused by|WARNING:|Pause Full|(?i:crash|out ?of ?memory|shader|renderer|opengl|vulkan|zink|mesa|egl|glfw|lwjgl|bigcore)"
-                    + "|\\[(?:RefreshRate|PerformanceMode|ThermalGuard|Startup|BigCore|Perf|LaunchGuard|MGConfig|AdvancedSettings|AntiCrash|GameState)\\]");
+                    + "|\\[(?:RefreshRate|PerformanceMode|ThermalGuard|Startup|BigCore|Perf|LaunchGuard|MGConfig|AdvancedSettings|AntiCrash|GameState|RenderThread)\\]");
     private static final Pattern STACK_FRAME = Pattern.compile("^\\s+(?:at |\\.\\.\\. \\d+ more).*");
 
     private GameLogExcerpt() {}

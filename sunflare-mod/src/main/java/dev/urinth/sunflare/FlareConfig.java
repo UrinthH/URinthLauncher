@@ -45,8 +45,10 @@ public final class FlareConfig {
     public static final int LEAVES_DEFAULT = 2;
     public static final String[] LEAVES_NAMES = {"Off", "Light", "Balanced", "Safe"};
 
-    /** The frame rates the Perf Guard button cycles through (0 = the guard is off). */
-    public static final int[] FPS_CHOICES = {0, 60, 72, 80, 90};
+    /** The frame rates the Perf Guard cycles through (0 = the guard is off). The highest ones are for phones that run well past 90. */
+    public static final int[] FPS_CHOICES = {0, 60, 72, 80, 90, 120, 144, 200, 250};
+    /** The highest frame rate the Perf Guard accepts. */
+    public static final int MAX_TARGET_FPS = 250;
 
     /** "Off" or "80 FPS", for the button and the commands. */
     public static String fpsName(int fps) {
@@ -133,9 +135,9 @@ public final class FlareConfig {
         return targetFps;
     }
 
-    /** 0 turns the frame-rate guard off; otherwise 30..240. */
+    /** 0 turns the frame-rate guard off; otherwise 30..{@value #MAX_TARGET_FPS}. */
     public int setTargetFps(int fps) {
-        targetFps = fps <= 0 ? 0 : Math.max(30, Math.min(240, fps));
+        targetFps = fps <= 0 ? 0 : Math.max(30, Math.min(MAX_TARGET_FPS, fps));
         return targetFps;
     }
 

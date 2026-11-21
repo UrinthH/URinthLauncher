@@ -277,6 +277,10 @@ class PerfGuardTest {
         FlareConfig c = new FlareConfig(dir.resolve("c.properties"));
         assertEquals(80, c.targetFps());
         assertEquals(90, c.cycleTargetFps());
+        assertEquals(120, c.cycleTargetFps());
+        assertEquals(144, c.cycleTargetFps());
+        assertEquals(200, c.cycleTargetFps());
+        assertEquals(250, c.cycleTargetFps());
         assertEquals(0, c.cycleTargetFps(), "after the highest comes Off");
         assertEquals(60, c.cycleTargetFps());
         assertEquals(72, c.cycleTargetFps());

@@ -87,15 +87,8 @@ public class JREUtils {
 
         setupFfmpegEnv(context, envMap);
 
-        if(LauncherPreferences.PREF_BIG_CORE_AFFINITY) {
-            // The game library pins the last core with the top speed. That is passed on unless the
-            // phone's core capacities show it would be a weaker core, or the library cannot read
-            // any core speed. The log line says what was found either way.
-            BigCorePolicy.Verdict bigCore = BigCorePolicy.decide(
-                    BigCorePolicy.readMaxFrequenciesKhz(), BigCorePolicy.readCapacities());
-            Logger.appendToLog("[BigCore] " + bigCore.note);
-            if(bigCore.pin) envMap.put("POJAV_BIG_CORE_AFFINITY", "1");
-        }
+        // PREF_BIG_CORE_AFFINITY ("keep the render thread on the fast cores") is handled while the game runs, by RenderThreadPin:
+        // no library of the game reads an environment variable for it.
         if(LauncherPreferences.PREF_ALSOFT_FORCE_OPENSL) envMap.put("ALSOFT_DRIVERS", "opensl");
 
         VoiceChatAudio.addEnvironment(envMap);

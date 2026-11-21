@@ -12,6 +12,8 @@
 #include <stdlib.h>
 #include <sched.h>
 #include <string.h>
+#include <errno.h>
+#include <jni.h>
 
 static _Thread_local bool big_core_affine = false;
 
@@ -64,4 +66,26 @@ void make_big_core_affine() {
         printf("bigcore: forced current thread onto big core\n");
         big_core_affine = true;
     }
+}
+
+/**
+ * Moves one thread (a kernel thread id, from /proc/self/task) onto the cores in a bit mask (bit n = core n), which is how the
+ * "keep the render thread on the fast cores" switch works. Returns 0 when it worked, otherwise the error number the kernel gave.
+ * Only that one thread is touched; every other thread of the game keeps running wherever the system puts it.
+ */
+JNIEXPORT jint JNICALL
+Java_net_kdt_pojavlaunch_game_CorePinner_nativePinThread(__attribute((unused)) JNIEnv *env, __attribute((unused)) jclass clazz,
+                                                         jint tid, jlong mask) {
+    cpu_set_t set;
+    CPU_ZERO(&set);
+    int wanted = 0;
+    for(int cpu = 0; cpu < 63 && cpu < CPU_SETSIZE; cpu++) {
+        if((((unsigned long long) mask) >> cpu) & 1ULL) {
+            CPU_SET(cpu, &set);
+            wanted++;
+        }
+    }
+    if(wanted == 0 || tid <= 0) return EINVAL;
+    if(sched_setaffinity((pid_t) tid, sizeof(set), &set) != 0) return errno;
+    return 0;
 }

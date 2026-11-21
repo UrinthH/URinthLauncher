@@ -8,6 +8,13 @@ base { archivesName = 'urinth-sunflare' }
 
 repositories {
 	mavenCentral()
+	maven {
+		name = 'Modrinth'
+		url = 'https://api.modrinth.com/maven'
+		content {
+			includeGroup 'maven.modrinth'
+		}
+	}
 }
 
 dependencies {
@@ -15,6 +22,8 @@ dependencies {
 	mappings loom.officialMojangMappings()
 	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+	// Sodium's option classes, to build the URinth page of the video settings. Compile time only: nothing of Sodium goes into this jar.
+	modCompileOnly "maven.modrinth:sodium:${project.sodium_version}"
 
 	testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.10.2'

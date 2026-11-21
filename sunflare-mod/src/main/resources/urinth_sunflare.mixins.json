@@ -4,7 +4,8 @@
   "package": "dev.urinth.sunflare.mixin",
   "compatibilityLevel": "JAVA_21",
   "client": [
-    "SodiumLeafCullMixin"
+    "SodiumLeafCullMixin",
+    "SodiumOptionsPageMixin"
   ],
   "injectors": {
     "defaultRequire": 0

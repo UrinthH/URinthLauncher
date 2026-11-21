@@ -3,7 +3,7 @@
 	"id": "urinth_sunflare",
 	"version": "${version}",
 	"name": "URinth Sun Lens Flare",
-	"description": "A lightweight sun lens flare drawn as a single overlay. No shader loader needed. Switch it in Options > Video Settings (Sodium or vanilla), with /sunflare, or with a key.",
+	"description": "A lightweight sun lens flare drawn as a single overlay. No shader loader needed. Switch it on the URinth page of Options > Video Settings (Sodium), on the vanilla Video Settings screen, with /sunflare, or with a key.",
 	"authors": ["URinth"],
 	"license": "MIT",
 	"environment": "client",

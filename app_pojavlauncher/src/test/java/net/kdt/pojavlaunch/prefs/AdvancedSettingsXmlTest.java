@@ -29,7 +29,7 @@ import java.util.regex.Pattern;
 public class AdvancedSettingsXmlTest {
     /** Rows that are not options of {@link AdvancedPerformance}: the shared Settings rows and the two helper rows. */
     private static final Set<String> NOT_IN_THE_MODEL = new HashSet<>(Arrays.asList(
-            "adv_info", "adv_reset", "allocation", "sustainedPerformance", "bigCoreAffinity"));
+            "adv_info", "adv_reset", "advPreset", "allocation", "sustainedPerformance", "bigCoreAffinity"));
 
     private static File res() {
         for (String path : new String[] {"src/main/res", "app_pojavlauncher/src/main/res"}) {
@@ -92,6 +92,25 @@ public class AdvancedSettingsXmlTest {
         Matcher item = Pattern.compile("<item>(.*?)</item>", Pattern.DOTALL).matcher(array.group(1));
         while (item.find()) items.add(item.group(1).trim());
         return items;
+    }
+
+    @Test
+    public void theQuickSetupRowListsEveryPresetInOrderWithTheTextTheScreenShows() throws IOException {
+        List<String> values = array("@array/urinth_adv_preset_values");
+        assertEquals(AdvancedPresets.PRESETS.length, values.size());
+        for (int i = 0; i < values.size(); i++) assertEquals(AdvancedPresets.PRESETS[i], values.get(i));
+        assertEquals(values.size(), array("@array/urinth_adv_preset_names").size());
+        Map<String, String> preset = row("advPreset");
+        assertTrue("the Quick setup row is a list", preset.get("tag").endsWith("ListPreference"));
+        assertEquals("false", preset.get("persistent"));
+        Set<String> strings = definedNames();
+        for (String id : AdvancedPresets.PRESETS) {
+            assertTrue("no description for " + id, strings.contains("urinth_adv_preset_" + id + "_desc"));
+        }
+        assertTrue(strings.contains("urinth_adv_preset_custom"));
+        assertTrue(strings.contains("urinth_adv_preset_custom_desc"));
+        assertTrue(strings.contains("urinth_adv_preset_now"));
+        assertTrue(strings.contains("urinth_adv_preset_note"));
     }
 
     @Test

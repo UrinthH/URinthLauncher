@@ -14,6 +14,22 @@
         android:title="@string/urinth_adv_info_title"
         app2:selectable="false" />
 
+    <!-- The quick setups (AdvancedPresets). The row keeps no value of its own: AdvancedSettingsFragment shows the preset that
+         the rows below add up to, and picking one writes those rows. -->
+    <PreferenceCategory
+        android:layout="@layout/preference_category_clean"
+        android:icon="@drawable/ic_set_bolt"
+        android:title="@string/urinth_adv_cat_preset">
+
+        <androidx.preference.ListPreference
+            android:entries="@array/urinth_adv_preset_names"
+            android:entryValues="@array/urinth_adv_preset_values"
+            android:icon="@drawable/ic_set_bolt"
+            android:key="advPreset"
+            android:persistent="false"
+            android:title="@string/urinth_adv_preset_title" />
+    </PreferenceCategory>
+
     <PreferenceCategory
         android:layout="@layout/preference_category_clean"
         android:icon="@drawable/ic_set_memory"

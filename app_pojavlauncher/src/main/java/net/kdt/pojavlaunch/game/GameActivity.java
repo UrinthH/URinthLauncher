@@ -210,6 +210,9 @@ public class GameActivity extends BaseActivity implements ControlButtonMenuListe
         // A line every 30 s in the game log about memory, page faults, CPU and heat.
         if(!PREF_PERFORMANCE_MODE || advanced.on(AdvancedPerformance.KEY_PERF_REPORT)) PerfReport.start(this);
 
+        // "Keep the render thread on the fast cores": works in either mode, the switch is in Settings too.
+        if(LauncherPreferences.PREF_BIG_CORE_AFFINITY) RenderThreadPin.start();
+
         // Repeating temperature check while the game is open; eases CPU/GPU load when hot.
         if(PREF_PERFORMANCE_MODE) {
             StringBuilder switchedOff = new StringBuilder();
@@ -539,6 +542,7 @@ public class GameActivity extends BaseActivity implements ControlButtonMenuListe
         if(mVoiceChatAudio != null) mVoiceChatAudio.stop();
         PerfReport.stop();
         RenderScheduler.stop();
+        RenderThreadPin.stop();
         RefreshRateBoost.stop();
         ThermalGuard.stop();
         GameStateHint.ended(this);

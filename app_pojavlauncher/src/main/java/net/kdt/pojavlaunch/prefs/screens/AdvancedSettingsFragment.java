@@ -14,6 +14,7 @@ import androidx.preference.SwitchPreferenceCompat;
 import git.artdeell.mojo.R;
 import net.kdt.pojavlaunch.Tools;
 import net.kdt.pojavlaunch.prefs.AdvancedPerformance;
+import net.kdt.pojavlaunch.prefs.AdvancedPresets;
 import net.kdt.pojavlaunch.prefs.CustomSeekBarPreference;
 import net.kdt.pojavlaunch.prefs.LauncherPreferences;
 import net.kdt.pojavlaunch.utils.AntiCrash;
@@ -31,6 +32,8 @@ import java.util.Map;
  */
 public class AdvancedSettingsFragment extends LauncherPreferenceFragment {
     public static final String TAG = "ADVANCED_SETTINGS_FRAGMENT";
+    /** The Quick setup row (res/xml/pref_advanced_settings.xml). It is not stored. */
+    private static final String KEY_PRESET = "advPreset";
 
     /** The performance and Anti Crash lists, with the text that follows the chosen value in the row. */
     private static final Object[][] LISTS = {
@@ -56,6 +59,7 @@ public class AdvancedSettingsFragment extends LauncherPreferenceFragment {
 
         setupMemory(context);
         for (Object[] list : LISTS) describeList((String) list[0], (Integer) list[1]);
+        setupPreset();
 
         SwitchPreferenceCompat sustained = requirePreference("sustainedPerformance", SwitchPreferenceCompat.class);
         sustained.setVisible(Build.VERSION.SDK_INT >= Build.VERSION_CODES.N);
@@ -74,6 +78,64 @@ public class AdvancedSettingsFragment extends LauncherPreferenceFragment {
                     .show();
             return true;
         });
+    }
+
+    /**
+     * The Quick setup row ({@link AdvancedPresets}) keeps no value of its own. It shows the preset that the 24 rows below
+     * add up to ("Your own mix" when none matches) and picking one writes those rows.
+     */
+    private void setupPreset() {
+        ListPreference preset = requirePreference(KEY_PRESET, ListPreference.class);
+        preset.setOnPreferenceChangeListener((p, newValue) -> {
+            applyPreset((String) newValue);
+            return false; // the row is refreshed from the rows below, not from the tapped value
+        });
+        refreshPreset();
+    }
+
+    /** Writes every one of the 24 performance rows with the values of a preset. */
+    private void applyPreset(String id) {
+        if (!AdvancedPresets.isPreset(id)) return;
+        for (Map.Entry<String, Object> entry : AdvancedPresets.valuesFor(id).entrySet()) {
+            Preference preference = findPreference(entry.getKey());
+            Object value = entry.getValue();
+            if (preference instanceof ListPreference) {
+                ((ListPreference) preference).setValue((String) value);
+            } else if (preference instanceof SwitchPreferenceCompat) {
+                ((SwitchPreferenceCompat) preference).setChecked((Boolean) value);
+            }
+        }
+        refreshPreset();
+    }
+
+    /** Shows which preset the stored rows add up to, with what it does. */
+    private void refreshPreset() {
+        ListPreference preset = findPreference(KEY_PRESET);
+        if (preset == null) return;
+        String id = AdvancedPresets.detect(LauncherPreferences.DEFAULT_PREF.getAll());
+        boolean known = AdvancedPresets.isPreset(id);
+        preset.setValue(known ? id : null);
+        CharSequence name = known ? preset.getEntry() : getString(R.string.urinth_adv_preset_custom);
+        int description;
+        switch (id) {
+            case AdvancedPresets.BALANCED:
+                description = R.string.urinth_adv_preset_balanced_desc;
+                break;
+            case AdvancedPresets.MAX_FPS:
+                description = R.string.urinth_adv_preset_maxfps_desc;
+                break;
+            case AdvancedPresets.SMOOTHEST:
+                description = R.string.urinth_adv_preset_smoothest_desc;
+                break;
+            case AdvancedPresets.COOL:
+                description = R.string.urinth_adv_preset_cool_desc;
+                break;
+            default:
+                description = R.string.urinth_adv_preset_custom_desc;
+                break;
+        }
+        preset.setSummary(getString(R.string.urinth_adv_preset_now, name) + "\n" + getString(description)
+                + "\n\n" + getString(R.string.urinth_adv_preset_note));
     }
 
     /** The RAM slider is the Settings one; this screen says how far it goes on this phone and why. */
@@ -116,6 +178,8 @@ public class AdvancedSettingsFragment extends LauncherPreferenceFragment {
             AntiCrash.clearJitFallback(context);
             refreshAntiCrash(context);
         }
+        // Any one of the 24 rows can turn the Quick setup row into "Your own mix" (or back into a preset).
+        if (AdvancedPerformance.allKeys().contains(key)) refreshPreset();
     }
 
     private void resetAdvanced() {
