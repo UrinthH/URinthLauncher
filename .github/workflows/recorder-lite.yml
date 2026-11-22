@@ -23,8 +23,9 @@ jobs:
           distribution: temurin
           java-version: '25'
       - uses: gradle/actions/setup-gradle@v4
-      - name: Build and test the mod
-        run: ./gradlew build --no-daemon --stacktrace
+      # The jar comes first and the tests after it, so a failing test never hides a jar that built fine.
+      - name: Build the mod (compile and remap)
+        run: ./gradlew remapJar --no-daemon --stacktrace
       - name: Show what is in the jar
         if: always()
         run: |
@@ -36,10 +37,6 @@ jobs:
       - name: List the Minecraft, Fabric API and LWJGL members the mod uses
         if: always()
         run: bash tools/discover-api.sh
-      - uses: actions/upload-artifact@v4
-        with:
-          name: urinth-recordable-lite-jar
-          path: recorder-lite-mod/build/libs/urinth-recordable-lite-*.jar
       # The jar is printed in 3000-character lines between two markers and rebuilt from the log. The checksum comes first.
       - name: Print the jar (so it can be fetched from this log)
         run: |
@@ -49,3 +46,10 @@ jobs:
           echo "JAR-BASE64-BEGIN"
           base64 -w 3000 "$jar"
           echo "JAR-BASE64-END"
+      - name: Run the tests
+        run: ./gradlew test --no-daemon --stacktrace
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: urinth-recordable-lite-jar
+          path: recorder-lite-mod/build/libs/urinth-recordable-lite-*.jar

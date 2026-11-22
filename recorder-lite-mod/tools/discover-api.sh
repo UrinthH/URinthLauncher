@@ -20,7 +20,7 @@ LIFE=$(fab 'fabric-lifecycle-events-v1.*\.jar'); CMD=$(fab 'fabric-command-api-v
 echo "FABRIC: $REND | $SCR | $KEY | $LIFE | $CMD"
 
 echo "::group::Minecraft"
-pj "$MC" net.minecraft.client.Minecraft 'getInstance|getMainRenderTarget|getWindow\(|gameDirectory|screen;|player;|level;|options;|getFps|isPaused|gui;|font;|getDeltaTracker|getToasts|execute\(|isSingleplayer|getConnection|getCurrentServer|runTick|getFrameTimeNs|renderBuffers'
+pj "$MC" net.minecraft.client.Minecraft 'getInstance|getMainRenderTarget|getWindow\(|gameDirectory|screen;|player;|level;|options;|getFps|isPaused|gui;|font;|getDeltaTracker|getToasts|execute\(|isSingleplayer|getConnection|getCurrentServer|runTick|getFrameTimeNs|renderBuffers|setScreen'
 echo "-- RenderTarget"; pj "$MC" com.mojang.blaze3d.pipeline.RenderTarget
 echo "-- Window"; pj "$MC" com.mojang.blaze3d.platform.Window 'getWidth|getHeight|getGuiScaled|getScreenWidth|getScreenHeight|getGuiScale|getWindow|isFocused|getRefreshRate|getFramerateLimit'
 echo "-- GuiGraphics"; pj "$MC" net.minecraft.client.gui.GuiGraphics 'fill\(|drawString|guiWidth|guiHeight|pose\(|flush'
@@ -58,4 +58,32 @@ echo "-- MemoryUtil"; pj "$CORE" org.lwjgl.system.MemoryUtil 'memAddress\(java.n
 echo "-- STBImageWrite"; pj "$STB" org.lwjgl.stb.STBImageWrite 'jpg'
 echo "-- STBIWriteCallbackI"; pj "$STB" org.lwjgl.stb.STBIWriteCallbackI
 echo "-- STBIWriteCallback"; pj "$STB" org.lwjgl.stb.STBIWriteCallback 'create|invoke'
+echo "::endgroup::"
+
+echo "::group::Extra members used by the controls"
+echo "-- Gui"; pj "$MC" net.minecraft.client.gui.Gui 'getChat|render\('
+echo "-- Font"; pj "$MC" net.minecraft.client.gui.Font 'width\('
+echo "-- AbstractWidget"; pj "$MC" net.minecraft.client.gui.components.AbstractWidget 'setMessage|getMessage'
+echo "-- Screen (protected members too)"; javap -protected -cp "$MC" net.minecraft.client.gui.screens.Screen 2>&1 | grep -E 'addRenderableWidget|Screen\(|Font font|Minecraft minecraft|void init\(\)|clearWidgets|rebuildWidgets'
+echo "-- PauseScreen"; pj "$MC" net.minecraft.client.gui.screens.PauseScreen
+echo "-- Screens (Fabric)"; pj "$SCR" net.fabricmc.fabric.api.client.screen.v1.Screens
+echo "-- FabricLoader"; LOADER=$(find_one 'fabric-loader-[0-9].*\.jar'); echo "$LOADER"; pj "$LOADER" net.fabricmc.loader.api.FabricLoader 'getGameDir|getConfigDir|getInstance'
+echo "-- CommandBuildContext"; pj "$MC" net.minecraft.commands.CommandBuildContext
+echo "-- Brigadier"; BR=$(find_one 'brigadier-[0-9].*\.jar'); echo "$BR"; pj "$BR" com.mojang.brigadier.suggestion.SuggestionsBuilder 'suggest\(java.lang.String\)|buildFuture'
+echo "-- STBIWriteCallback (all)"; pj "$STB" org.lwjgl.stb.STBIWriteCallback
+echo "-- Callback.free"; pj "$CORE" org.lwjgl.system.Callback 'free|Callback\('
+echo "::endgroup::"
+
+echo "::group::Where HudRenderCallback fires (is it skipped when the HUD is hidden with F1?)"
+for j in $(echo "$JARS" | grep -E 'fabric-rendering-v1.*\.jar' | grep -v -E 'sources|javadoc'); do
+  echo "-- jar $j"
+  for c in $(unzip -Z1 "$j" 2>/dev/null | grep -E 'mixin/client/rendering/.*(Gui|Hud).*Mixin.*\.class$' | sed 's/\.class$//; s#/#.#g'); do
+    echo "   class $c"
+    javap -v -p -cp "$j" "$c" 2>&1 | grep -E 'method=|target=|Lorg/spongepowered/asm/mixin/injection/(Inject|At)|ordinal|HudRenderCallback|value = |at=' | head -40
+  done
+done
+echo "-- vanilla Gui.render(...) bytecode (only the interesting instructions)"
+javap -c -p -cp "$MC" net.minecraft.client.gui.Gui 2>&1 | awk '/ void render\(/{p=1} p{print} /^$/{if(p)exit}' | grep -E 'void render|hideGui|invokevirtual|invokestatic|invokeinterface|ifne|ifeq|return' | head -80
+echo "-- vanilla GameRenderer.render(...) bytecode (only the interesting instructions)"
+javap -c -p -cp "$MC" net.minecraft.client.renderer.GameRenderer 2>&1 | awk '/ void render\(/{p=1} p{print} /^$/{if(p)exit}' | grep -E 'void render|hideGui|Gui\.render|renderWithTooltip|flush|renderLevel|blit|ifne|ifeq|return|Overlay' | head -80
 echo "::endgroup::"
