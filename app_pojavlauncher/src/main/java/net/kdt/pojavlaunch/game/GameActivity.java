@@ -78,6 +78,7 @@ import net.kdt.pojavlaunch.services.GameService;
 import net.kdt.pojavlaunch.tasks.AsyncAssetManager;
 import net.kdt.pojavlaunch.utils.JREUtils;
 import net.kdt.pojavlaunch.utils.LaunchGuard;
+import net.kdt.pojavlaunch.utils.RunningGame;
 import net.kdt.pojavlaunch.utils.MCOptionUtils;
 import net.kdt.pojavlaunch.authenticator.accounts.Account;
 import net.kdt.pojavlaunch.utils.jre.GameRunner;
@@ -142,6 +143,14 @@ public class GameActivity extends BaseActivity implements ControlButtonMenuListe
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        // This process may have been started early and be waiting with no game in it (the launcher wakes it while the
+        // Play animation runs, and a failed or cancelled start leaves it behind). Its copy of the settings is from when
+        // it was started, so read them again before anything below uses them. A process whose game is already running
+        // keeps what that game was started with.
+        if(!RunningGame.jvmRequested()) {
+            RunningGame.refreshSettings(this);
+            LauncherPreferences.loadPreferences(getApplicationContext());
+        }
         mVoiceChatAudio = new VoiceChatAudio(this);
         // The volume keys always change the game volume, even while the phone is in call mode.
         setVolumeControlStream(android.media.AudioManager.STREAM_MUSIC);
@@ -502,6 +511,10 @@ public class GameActivity extends BaseActivity implements ControlButtonMenuListe
     @Override
     public void onResume() {
         super.onResume();
+        // Settings may have been changed in the launcher while this game ran in the background. This process holds its own
+        // copy of the preferences file and writes all of it back on every change it makes (a control layout, a quick
+        // setting), so look at the file again first, or those changes would be undone by the next write from here.
+        RunningGame.refreshSettings(this);
         ContextExecutor.setActivity(this);
         if(PREF_ENABLE_GYRO) mGyroControl.enable();
         if(mVoiceChatAudio != null) mVoiceChatAudio.start();
@@ -784,6 +797,9 @@ public class GameActivity extends BaseActivity implements ControlButtonMenuListe
     public void onServiceConnected(ComponentName name, IBinder service) {
         GameService.LocalBinder localBinder = (GameService.LocalBinder) service;
         mServiceBinder = localBinder;
+        // A game that is not running yet is about to be started: write down the settings it starts with, so the launcher
+        // can tell later whether the game still running in the background is out of date.
+        if(!localBinder.isActive) RunningGame.publish(this);
         launcherGLView.start(localBinder.isActive);
         localBinder.isActive = true;
     }

@@ -5,7 +5,7 @@
 <resources>
     <!-- Screen -->
     <string name="urinth_adv_info_title">How these settings work</string>
-    <string name="urinth_adv_info_summary">These settings work only while Performance Mode is ON. Not sure what to pick? Choose a Quick setup, or leave everything on Auto. Changes apply the next time you start the game. Anything you type yourself in Java arguments always wins. To see what is in use, open Settings and tap Copy game log.</string>
+    <string name="urinth_adv_info_summary">These settings work only while Performance Mode is ON. Not sure what to pick? Choose a Quick setup, or leave everything on Auto. Your changes are saved as soon as you make them and apply the next time the game starts. If the game is still running in the background, Play asks whether to restart it with the new settings. Anything you type yourself in Java arguments always wins. To see what is in use, open Settings and tap Copy game log.</string>
 
     <string name="urinth_adv_cat_memory">RAM (memory)</string>
     <string name="urinth_adv_cat_gc">Memory cleanup (fewer freezes)</string>
@@ -283,4 +283,19 @@
         <item>90</item>
         <item>120</item>
     </string-array>
+
+    <!-- Play pressed while an older game is still running in the background with other settings (RunningGame) -->
+    <string name="urinth_restart_game_title">Restart the game?</string>
+    <string name="urinth_restart_game_message">The game is still running in the background. It was started before you changed these settings: %1$s.\n\nA running game keeps its old settings, so restart it to use the new ones. Anything in your world that is not saved will be lost.</string>
+    <string name="urinth_restart_game_confirm">Restart game</string>
+    <string name="urinth_restart_game_keep">Keep playing</string>
+    <string name="urinth_restart_game_closing">Closing the old game…</string>
+    <string name="urinth_restart_game_failed">The old game would not close. Swipe the launcher away from your recent apps, then open it again.</string>
+    <string name="urinth_restart_group_memory">Memory (RAM)</string>
+    <string name="urinth_restart_group_java_args">Java arguments</string>
+    <string name="urinth_restart_group_renderer">Renderer</string>
+    <string name="urinth_restart_group_performance_mode">Performance Mode</string>
+    <string name="urinth_restart_group_advanced">Advanced settings</string>
+    <string name="urinth_restart_group_mobileglues">MobileGlues options</string>
+    <string name="urinth_restart_group_other">Other launch options</string>
 </resources>

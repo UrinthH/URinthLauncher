@@ -119,6 +119,17 @@ public final class LaunchGuard {
         }
     }
 
+    /**
+     * The launcher closed the game process itself (to start it again with new settings). Call this once the process
+     * is gone: the marker of a game that was closed within its first seconds would otherwise be read as a launch that
+     * died during start-up, and the next launch would run in safe launch.
+     */
+    public static void forget(Context context) {
+        File marker = markerFile(context);
+        marker.delete();
+        new File(marker.getParentFile(), MARKER_NAME + ".tmp").delete();
+    }
+
     /** What the last launch left behind, without changing anything. Used by the launcher UI. */
     @Nullable
     public static Record peek(Context context) {

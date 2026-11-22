@@ -47,6 +47,7 @@ import net.kdt.pojavlaunch.lifecycle.ContextAwareDoneListener;
 import net.kdt.pojavlaunch.game.LaunchTransition;
 import net.kdt.pojavlaunch.lifecycle.ContextExecutor;
 import net.kdt.pojavlaunch.modloaders.modpacks.imagecache.IconCacheJanitor;
+import net.kdt.pojavlaunch.prefs.LaunchFingerprint;
 import net.kdt.pojavlaunch.prefs.LauncherPreferences;
 import net.kdt.pojavlaunch.prefs.screens.LauncherPreferenceFragment;
 import net.kdt.pojavlaunch.progresskeeper.ProgressKeeper;
@@ -57,6 +58,7 @@ import net.kdt.pojavlaunch.tasks.MoJsonExtras;
 import net.kdt.pojavlaunch.tasks.MoJsonDownloader;
 import net.kdt.pojavlaunch.utils.GameExitReporter;
 import net.kdt.pojavlaunch.utils.NotificationUtils;
+import net.kdt.pojavlaunch.utils.RunningGame;
 
 import git.artdeell.mojo.R;
 
@@ -109,6 +111,18 @@ public class LauncherActivity extends BaseActivity {
 
         String normalizedVersionId = MoJsonExtras.normalizeVersionId(selectedInstance.versionId);
         JVersionList.Version mcVersion = MoJsonExtras.getListedVersion(normalizedVersionId);
+        // The game keeps running in the background after the player leaves it, and Play would bring that same game
+        // back with the settings it was started with. If settings were changed since then, ask first.
+        RunningGame.Check running = RunningGame.check(this);
+        if(running.shouldAsk()) {
+            Tools.runOnUiThread(() -> askToRestartGame(running, () -> startGame(normalizedVersionId, mcVersion)));
+            return false;
+        }
+        startGame(normalizedVersionId, mcVersion);
+        return false;
+    };
+
+    private void startGame(String normalizedVersionId, JVersionList.Version mcVersion) {
         // The Play animation: the launcher's screen shrinks into a small, wide, rounded window in
         // the middle of a white page while the game files are checked, and the game's screen then
         // zooms that window to full screen once the game is up. Pure decoration; the game starts
@@ -120,8 +134,55 @@ public class LauncherActivity extends BaseActivity {
                 normalizedVersionId,
                 new ContextAwareDoneListener(this, normalizedVersionId)
         );
-        return false;
-    };
+    }
+
+    /**
+     * The game that is still running was started with other settings than the ones chosen now. "Restart game" closes it
+     * and starts a new one with the new settings; "Keep playing" goes back into the running game as it is. Closing the
+     * dialog without choosing does nothing.
+     */
+    private void askToRestartGame(RunningGame.Check running, Runnable startGame) {
+        if(isFinishing() || isDestroyed()) return;
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.urinth_restart_game_title)
+                .setMessage(getString(R.string.urinth_restart_game_message, describeChangedSettings(running)))
+                .setPositiveButton(R.string.urinth_restart_game_confirm, (dialog, which) -> closeGameThen(startGame))
+                .setNegativeButton(R.string.urinth_restart_game_keep, (dialog, which) -> startGame.run())
+                .show();
+    }
+
+    private void closeGameThen(Runnable startGame) {
+        Toast.makeText(this, R.string.urinth_restart_game_closing, Toast.LENGTH_SHORT).show();
+        Context appContext = getApplicationContext();
+        PojavApplication.sExecutorService.execute(() -> {
+            boolean closed = RunningGame.stop(appContext);
+            Tools.runOnUiThread(() -> {
+                if(isFinishing() || isDestroyed()) return;
+                if(closed) startGame.run();
+                else Toast.makeText(this, R.string.urinth_restart_game_failed, Toast.LENGTH_LONG).show();
+            });
+        });
+    }
+
+    /** "Memory (RAM), Advanced settings": which kinds of settings differ from what the running game started with. */
+    private String describeChangedSettings(RunningGame.Check running) {
+        StringBuilder names = new StringBuilder();
+        for(LaunchFingerprint.Group group : running.changed) {
+            int name;
+            switch(group) {
+                case MEMORY: name = R.string.urinth_restart_group_memory; break;
+                case JAVA_ARGUMENTS: name = R.string.urinth_restart_group_java_args; break;
+                case RENDERER: name = R.string.urinth_restart_group_renderer; break;
+                case PERFORMANCE_MODE: name = R.string.urinth_restart_group_performance_mode; break;
+                case ADVANCED: name = R.string.urinth_restart_group_advanced; break;
+                case MOBILEGLUES: name = R.string.urinth_restart_group_mobileglues; break;
+                default: name = R.string.urinth_restart_group_other; break;
+            }
+            if(names.length() > 0) names.append(", ");
+            names.append(getString(name));
+        }
+        return names.toString();
+    }
 
     private final TaskCountListener mDoubleLaunchPreventionListener = taskCount -> {
         if(taskCount > 0) {
