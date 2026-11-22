@@ -74,6 +74,14 @@ echo "-- STBIWriteCallback (all)"; pj "$STB" org.lwjgl.stb.STBIWriteCallback
 echo "-- Callback.free"; pj "$CORE" org.lwjgl.system.Callback 'free|Callback\('
 echo "::endgroup::"
 
+echo "::group::World render hook and the F1 (hide HUD) path"
+echo "-- WorldRenderEvents"; pj "$REND" net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents
+echo "-- WorldRenderEvents.End"; pj "$REND" 'net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents$End'
+echo "-- Options.hideGui"; pj "$MC" net.minecraft.client.Options 'hideGui'
+echo "-- GameRenderer.renderLevel / renderItemInHand: does F1 hide the hand?"
+javap -c -p -cp "$MC" net.minecraft.client.renderer.GameRenderer 2>&1 | grep -E 'hideGui|renderItemInHand|LevelRenderer.renderLevel|void renderLevel|void renderItemInHand|renderHand' | head -30
+echo "::endgroup::"
+
 echo "::group::Where HudRenderCallback fires (is it skipped when the HUD is hidden with F1?)"
 for j in $(echo "$JARS" | grep -E 'fabric-rendering-v1.*\.jar' | grep -v -E 'sources|javadoc'); do
   echo "-- jar $j"

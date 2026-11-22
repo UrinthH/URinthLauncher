@@ -15,9 +15,9 @@ package dev.urinth.recordable;
  * steps down one level; when it stays far below the budget for a long time it steps back up (never above the rate that was asked for).
  * If even the lowest level costs far too much, the governor asks for the recording to stop, because protecting the game is the point.
  *
- * <p>The graphics share can only be told apart from normal frame-to-frame changes when there are frames that follow no capture. That is
- * the case while the game runs at least about three times faster than the capture rate (90 fps game, 30 fps video). Below that the
- * governor works from the processor time and the encoder only.
+ * <p>The graphics share can only be told apart from normal frame-to-frame changes when there are frames that follow no capture. With a
+ * 90 fps game and a 30 fps video that is the normal rhythm (capture, two frames after it, capture again). When the game is slower the
+ * recorder keeps one frame free now and then, see {@link #needsCleanFrame()}.
  *
  * <p>No dependence on Minecraft or on the real clock: time is the sum of the frame times it is given, which makes it easy to test.
  */
@@ -40,6 +40,8 @@ public final class Governor {
     private static final long MAX_INTERVAL_NS = 120_000_000L;
     private static final long CLEAN_FRESH_NS = 3_000_000_000L;
     private static final int CLEAN_MIN_SAMPLES = 8;
+    /** A frame that follows no capture closely is wanted at least this often, or the graphics cost cannot be measured. */
+    private static final long CLEAN_WANTED_NS = 350_000_000L;
 
     private final int fastest;
     private int index;
@@ -92,6 +94,15 @@ public final class Governor {
     /** True if the graphics part of the cost could be measured (there were frames without a capture close by). */
     public boolean graphicsMeasured() {
         return graphicsKnown;
+    }
+
+    /**
+     * True when no frame free of capture influence was seen for a little while. The recorder then waits one more frame before the next
+     * capture. Without this, a capture that makes frames longer pushes the game into "every second frame is a capture", where nothing
+     * can be compared any more and the governor would be blind exactly when it is needed.
+     */
+    public boolean needsCleanFrame() {
+        return clock - cleanAt > CLEAN_WANTED_NS;
     }
 
     /** Why the rate changed last time; empty if it never did. */

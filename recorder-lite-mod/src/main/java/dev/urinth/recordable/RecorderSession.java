@@ -404,7 +404,9 @@ public final class RecorderSession {
 
         long intervalNs = 1_000_000_000L / Math.max(1, governor.fps());
         boolean due = t0 + (long) (frameNs / 2) >= nextCaptureNs;
-        if (due && (!everCaptured || sinceCapture >= 2)) {
+        // Two frames apart at the closest; three while the governor wants a frame that follows no capture, so it can measure the cost
+        int spacing = governor.needsCleanFrame() ? 3 : 2;
+        if (due && (!everCaptured || sinceCapture >= spacing)) {
             long pts = Math.max(0, (t0 - startNs - pausedTotalNs) / 1000L);
             if (capture.issue(srcFbo, srcW, srcH, pts)) {
                 everCaptured = true;

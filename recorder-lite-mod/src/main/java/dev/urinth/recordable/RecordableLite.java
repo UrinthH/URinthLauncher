@@ -13,6 +13,7 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
+import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
 import net.fabricmc.fabric.api.client.screen.v1.Screens;
 import net.fabricmc.loader.api.FabricLoader;
@@ -97,6 +98,7 @@ public final class RecordableLite implements ClientModInitializer {
                 InputConstants.KEY_F9, "key.categories.recordable_lite"));
 
         HudRenderCallback.EVENT.register(RecordableLite::onHud);
+        WorldRenderEvents.END.register(context -> onWorldEnd());
         ScreenEvents.AFTER_INIT.register((client, screen, width, height) -> {
             if (screen instanceof PauseScreen) {
                 addPauseButtons(screen);
@@ -193,6 +195,20 @@ public final class RecordableLite implements ClientModInitializer {
         }
     }
 
+    /**
+     * The world was drawn. With the HUD hidden (F1) the game skips the HUD completely, so {@link #onHud} never runs; this is then the last
+     * point of the frame that is still ours. It does nothing in every other case, so no frame is captured twice.
+     */
+    private static void onWorldEnd() {
+        if (session == null) {
+            return;
+        }
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.screen == null && mc.options.hideGui) {
+            frame(mc, null);
+        }
+    }
+
     /** A screen was drawn on top of (or instead of) the game. */
     private static void onScreenRender(Screen screen, GuiGraphics graphics, int mouseX, int mouseY, float tickDelta) {
         if (session == null) {
@@ -211,7 +227,9 @@ public final class RecordableLite implements ClientModInitializer {
         }
         try {
             if (s.isActive()) {
-                graphics.flush();                          // draw what the HUD has batched so far, so it is in the picture
+                if (graphics != null) {
+                    graphics.flush();                      // draw what the HUD has batched so far, so it is in the picture
+                }
                 RenderTarget target = mc.getMainRenderTarget();
                 s.frame(target.frameBufferId, target.viewWidth, target.viewHeight);
             }
@@ -220,7 +238,7 @@ public final class RecordableLite implements ClientModInitializer {
                 finishing = s;
                 return;
             }
-            if (settings.showIndicator) {
+            if (settings.showIndicator && graphics != null) {
                 drawIndicator(mc, graphics, s);            // after the capture, so the dot is not in the video
             }
         } catch (Throwable t) {
