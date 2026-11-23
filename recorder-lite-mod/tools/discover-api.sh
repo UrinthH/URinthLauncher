@@ -95,3 +95,35 @@ javap -c -p -cp "$MC" net.minecraft.client.gui.Gui 2>&1 | awk '/ void render\(/{
 echo "-- vanilla GameRenderer.render(...) bytecode (only the interesting instructions)"
 javap -c -p -cp "$MC" net.minecraft.client.renderer.GameRenderer 2>&1 | awk '/ void render\(/{p=1} p{print} /^$/{if(p)exit}' | grep -E 'void render|hideGui|Gui\.render|renderWithTooltip|flush|renderLevel|blit|ifne|ifeq|return|Overlay' | head -80
 echo "::endgroup::"
+
+echo "::group::v2 discovery: native calls, OpenAL, sound engine, events"
+ALJ=$(find_one 'lwjgl-openal-3\.3\.3\.jar')
+echo "OPENAL JAR: $ALJ"
+echo "-- org.lwjgl.system.JNI (call/invoke natives with up to 7 params)"
+javap -public -cp "$CORE" org.lwjgl.system.JNI 2>&1 | grep -E 'static native' | grep -E '(call|invoke)[A-Z]+\(' | sed 's/public static native //' | head -400
+echo "-- JNI method count"; javap -public -cp "$CORE" org.lwjgl.system.JNI 2>&1 | grep -c 'static native'
+echo "-- DynamicLinkLoader"; pj "$CORE" org.lwjgl.system.linux.DynamicLinkLoader
+echo "-- SharedLibrary / Library"; pj "$CORE" org.lwjgl.system.SharedLibrary; pj "$CORE" org.lwjgl.system.Library 'load|loadNative|getFunctionAddress'
+echo "-- MemoryUtil (more)"; pj "$CORE" org.lwjgl.system.MemoryUtil 'memAddress\(|nmemAlloc|nmemFree|memPutByte|memGetByte|memCopy|memUTF8\(|memASCII\(|nmemAllocChecked'
+echo "-- SOFTLoopback"; pj "$ALJ" org.lwjgl.openal.SOFTLoopback
+echo "-- ALC10"; pj "$ALJ" org.lwjgl.openal.ALC10 'alcOpenDevice|alcCloseDevice|alcCreateContext|alcMakeContextCurrent|alcDestroyContext|alcIsExtensionPresent|alcGetError|ALC_FREQUENCY'
+echo "-- ALC"; pj "$ALJ" org.lwjgl.openal.ALC 'create|createCapabilities|getICD|getFunctionProvider'
+echo "-- ALCCapabilities"; pj "$ALJ" org.lwjgl.openal.ALCCapabilities 'ALC_SOFT_loopback|OpenALC11|ALC_SOFT_HRTF'
+echo "-- SOFTHRTF"; pj "$ALJ" org.lwjgl.openal.SOFTHRTF 'alcResetDeviceSOFT'
+echo "-- Library (blaze3d audio): all members"; javap -p -cp "$MC" com.mojang.blaze3d.audio.Library 2>&1
+echo "-- Library.init / openDeviceOrFallback / tryOpenDevice / cleanup bytecode"
+javap -c -p -cp "$MC" com.mojang.blaze3d.audio.Library 2>&1 | awk '/^  [a-z].*\(/{p=0} /(void init\(|openDeviceOrFallback\(|tryOpenDevice\(|void cleanup\(|getChannelCount\(|setHrtf\()/{p=1} p{print}' | grep -E '^  [a-z]|invoke|new |ifeq|ifne|areturn|lreturn|return|getstatic|putfield|getfield' | head -200
+echo "-- SoundEngine"; javap -p -cp "$MC" net.minecraft.client.sounds.SoundEngine 2>&1 | grep -E 'reload|destroy|library|loadLibrary|tick|pause|resume|stopAll|SoundEngine\('
+echo "-- SoundManager"; javap -p -cp "$MC" net.minecraft.client.sounds.SoundManager 2>&1 | grep -E 'reload|destroy|soundEngine|resume|pause|stop|tick'
+echo "-- Minecraft.getSoundManager"; pj "$MC" net.minecraft.client.Minecraft 'getSoundManager|getToastManager|getWindow|getSingleplayerServer|isLocalServer'
+echo "-- Mixin annotations"; SM=$(find_one 'sponge-mixin-.*\.jar'); echo "$SM"; pj "$SM" org.spongepowered.asm.mixin.injection.Redirect; pj "$SM" org.spongepowered.asm.mixin.injection.Inject; pj "$SM" org.spongepowered.asm.mixin.injection.At
+echo "-- Fabric events"; INT=$(find_one 'fabric-events-interaction-v0.*\.jar'); MSG=$(find_one 'fabric-message-api-v1.*\.jar'); echo "$INT | $MSG"
+pj "$INT" net.fabricmc.fabric.api.event.player.AttackEntityCallback; pj "$MSG" net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents
+for c in 'net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents$Game' 'net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents$Chat'; do pj "$MSG" "$c"; done
+echo "-- Component / TranslatableContents"; pj "$MC" net.minecraft.network.chat.Component 'getContents|getString|getSiblings'; pj "$MC" net.minecraft.network.chat.contents.TranslatableContents 'getKey|getArgs'
+echo "-- Entity / LivingEntity / ClientLevel / DeathScreen"; pj "$MC" net.minecraft.world.entity.Entity 'isRemoved|isAlive|getId\(|getName\(|getRemovalReason|level\(\)'; pj "$MC" net.minecraft.world.entity.LivingEntity 'isDeadOrDying|getHealth'
+pj "$MC" net.minecraft.client.multiplayer.ClientLevel 'dimension\(\)|dimensionType'; pj "$MC" net.minecraft.world.level.Level 'dimension\(\)'; pj "$MC" net.minecraft.client.gui.screens.DeathScreen 'DeathScreen\('
+pj "$MC" net.minecraft.client.player.LocalPlayer 'isDeadOrDying|getName|getGameProfile|getScoreboardName|getHealth'
+pj "$MC" net.minecraft.resources.ResourceKey 'location\(\)'
+echo "-- Language: Util / Platform"; pj "$MC" net.minecraft.client.gui.components.toasts.ToastManager 2>&1 | head -30
+echo "::endgroup::"
