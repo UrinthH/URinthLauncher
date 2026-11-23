@@ -47,6 +47,7 @@ import net.kdt.pojavlaunch.lifecycle.ContextAwareDoneListener;
 import net.kdt.pojavlaunch.game.LaunchTransition;
 import net.kdt.pojavlaunch.lifecycle.ContextExecutor;
 import net.kdt.pojavlaunch.modloaders.modpacks.imagecache.IconCacheJanitor;
+import net.kdt.pojavlaunch.prefs.AdvancedPresetStore;
 import net.kdt.pojavlaunch.prefs.LaunchFingerprint;
 import net.kdt.pojavlaunch.prefs.LauncherPreferences;
 import net.kdt.pojavlaunch.prefs.screens.LauncherPreferenceFragment;
@@ -111,6 +112,11 @@ public class LauncherActivity extends BaseActivity {
 
         String normalizedVersionId = MoJsonExtras.normalizeVersionId(selectedInstance.versionId);
         JVersionList.Version mcVersion = MoJsonExtras.getListedVersion(normalizedVersionId);
+        // The quick setup the player picked on the Advanced screen is what the game gets: if something rewrote its
+        // options since, they are written again (and on disk) before the game process reads them.
+        if(AdvancedPresetStore.heal(LauncherPreferences.DEFAULT_PREF)) {
+            LauncherPreferences.loadPreferences(getApplicationContext());
+        }
         // The game keeps running in the background after the player leaves it, and Play would bring that same game
         // back with the settings it was started with. If settings were changed since then, ask first.
         RunningGame.Check running = RunningGame.check(this);
@@ -240,6 +246,10 @@ public class LauncherActivity extends BaseActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        // A quick setup that was picked keeps its options even if another process wrote an older copy of the settings.
+        if(AdvancedPresetStore.heal(LauncherPreferences.DEFAULT_PREF)) {
+            LauncherPreferences.loadPreferences(getApplicationContext());
+        }
         applyImmersiveFullscreen();
         setContentView(R.layout.activity_pojav_launcher);
         MoJsonDownloader.prepareSubstitutionMap(getAssets());

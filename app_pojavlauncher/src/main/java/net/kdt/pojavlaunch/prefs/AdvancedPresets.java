@@ -95,6 +95,63 @@ public final class AdvancedPresets {
     }
 
     /**
+     * The stored key that remembers which quick setup the player picked, until a single option is changed by hand. Without
+     * it the row could only say which preset the options happen to add up to, so a choice was gone the moment anything
+     * rewrote the options (another process writing an older copy of the preferences file, for one).
+     */
+    public static final String KEY_CHOSEN = "advQuickSetup";
+
+    /** What the Quick setup row shows, and whether the 24 options have to be put back to match it. */
+    public static final class Shown {
+        /** One of {@link #PRESETS}, or {@link #CUSTOM}. */
+        public final String id;
+        /** True when the player picked {@link #id} but the stored options no longer add up to it. */
+        public final boolean restore;
+
+        Shown(String id, boolean restore) {
+            this.id = id;
+            this.restore = restore;
+        }
+    }
+
+    /**
+     * Everything that picking a quick setup writes: its 24 options and the choice itself (key to a Boolean for a switch or
+     * a String), to be put into one preferences edit so that the game and the screen never see a half-written mix.
+     */
+    public static Map<String, Object> writesFor(String id) {
+        Map<String, Object> writes = new LinkedHashMap<>(valuesFor(id));
+        writes.put(KEY_CHOSEN, id);
+        return Collections.unmodifiableMap(writes);
+    }
+
+    /** The quick setup the player picked and has not left by changing a single option, or null. */
+    public static String chosen(Map<String, ?> stored) {
+        Object raw = stored == null ? null : stored.get(KEY_CHOSEN);
+        return raw instanceof String && isPreset((String) raw) ? (String) raw : null;
+    }
+
+    /**
+     * What the row shows for the stored options and the remembered choice. A remembered choice wins: when the options no
+     * longer match it, something other than the player changed them, so the choice is shown and {@link Shown#restore} says
+     * to write its options again. With no remembered choice the row shows what the options add up to, as before.
+     */
+    public static Shown shown(Map<String, ?> stored) {
+        String chosen = chosen(stored);
+        String detected = detect(stored);
+        if (chosen != null) return new Shown(chosen, !chosen.equals(detected));
+        return new Shown(detected, false);
+    }
+
+    /**
+     * True when a choice is remembered but the options no longer match it because the player changed one of them. Call it
+     * after a change made on the screen, and forget the choice (remove {@link #KEY_CHOSEN}) when it says true.
+     */
+    public static boolean choiceIsOutdated(Map<String, ?> stored) {
+        String chosen = chosen(stored);
+        return chosen != null && !chosen.equals(detect(stored));
+    }
+
+    /**
      * The preset that the stored options add up to, or {@link #CUSTOM} when none matches. A missing or unknown value counts
      * as the default, like everywhere else ({@link AdvancedPerformance#fromMap}), so a phone that never opened the screen is
      * on Balanced.
