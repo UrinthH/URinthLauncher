@@ -61,6 +61,7 @@ final class PerfMonitor {
 
     /** Call once per frame with the time the last frame took, in milliseconds. */
     void frame(double ms) {
+        BlockUpdates.noteFrame(ms);
         int kind = stats.frame(ms);
         if (kind == FrameStats.NORMAL) return;
         long now = System.nanoTime();

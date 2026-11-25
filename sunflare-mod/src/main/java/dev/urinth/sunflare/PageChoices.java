@@ -24,6 +24,18 @@ public final class PageChoices {
     public static final String LEAVES_TIP = "Does not draw the leaf faces that are buried inside a tree, so the game has less to draw. "
         + "Light skips the most, Safe skips the least and is the safest. The world is rebuilt when you change it.";
 
+    public static final String CLOUDS_NAME = "Cloud Fix";
+    public static final String CLOUDS_TIP = "Clouds vanish at a short render distance: the game cuts off everything beyond 4 times it, and "
+        + "clouds are high up. This gives only the clouds a longer reach. It can cost a little FPS when you look up.";
+
+    public static final String HELPERS_NAME = "Chunk Helpers";
+    public static final String HELPERS_TIP = "How many background helpers build the blocks of the world. More helpers show new chunks "
+        + "sooner but use more CPU while you move. Auto is Sodium's number, or 3 on phones with 6+ cores. Reloads the world.";
+
+    public static final String UPDATES_NAME = "Block Updates";
+    public static final String UPDATES_TIP = "How fast blocks you place or break change on screen. Instant shows them in the same frame "
+        + "(that frame waits a few ms). Smooth is Sodium's way. Auto is instant while your FPS is good.";
+
     public static final String GUARD_NAME = "Perf Guard";
     public static final String GUARD_TIP = "Keeps the sun effects from pulling your FPS below the number you pick: when the frame rate "
         + "gets lower, they become cheaper or pause. Off lets them cost any amount.";
@@ -106,6 +118,44 @@ public final class PageChoices {
 
         public static Leaves of(int level) {
             return values()[clamp(level, values().length)];
+        }
+    }
+
+    /** Chunk Helpers: the settings in {@link ChunkThreads#CHOICES}, in the same order (the name of each constant says which). */
+    public enum Helpers implements Labeled {
+        AUTO, TWO, THREE, FOUR, SIX;
+
+        @Override
+        public String label() {
+            return ChunkThreads.label(count());
+        }
+
+        /** The setting this choice stands for ({@link ChunkThreads#AUTO} = 0 for Auto). */
+        public int count() {
+            return ChunkThreads.CHOICES[ordinal()];
+        }
+
+        /** The choice closest to a number of helpers (a setting file may hold any number). */
+        public static Helpers nearest(int count) {
+            int wanted = ChunkThreads.nearest(count);
+            for (Helpers h : values()) {
+                if (h.count() == wanted) return h;
+            }
+            return AUTO;
+        }
+    }
+
+    /** Block Updates: {@link BlockUpdates#NAMES}. */
+    public enum Updates implements Labeled {
+        SMOOTH, AUTO, INSTANT;
+
+        @Override
+        public String label() {
+            return BlockUpdates.NAMES[ordinal()];
+        }
+
+        public static Updates of(int mode) {
+            return values()[clamp(mode, values().length)];
         }
     }
 

@@ -67,9 +67,51 @@ public final class FlareConfig {
     private boolean perfLog = true;
     /** The photographic "Real" look (default) or the pack's own colourful flare. */
     private boolean real = true;
+    /** Clouds stay visible at a short render distance (see CloudFar). On by default. */
+    private boolean cloudFix = true;
+    /** Helper threads that build chunks: {@link ChunkThreads#AUTO} or one of {@link ChunkThreads#CHOICES}. */
+    private int chunkHelpers = ChunkThreads.AUTO;
+    /** How fast blocks the player changes show up: {@link BlockUpdates#SMOOTH}, {@link BlockUpdates#AUTO} or {@link BlockUpdates#INSTANT}. */
+    private int blockUpdates = BlockUpdates.AUTO;
 
     public FlareConfig(Path file) {
         this.file = file;
+    }
+
+    public boolean cloudFix() {
+        return cloudFix;
+    }
+
+    public boolean setCloudFix(boolean on) {
+        cloudFix = on;
+        return cloudFix;
+    }
+
+    public int chunkHelpers() {
+        return chunkHelpers;
+    }
+
+    /** Any number is accepted and becomes the closest choice (0 or less is Auto). */
+    public int setChunkHelpers(int value) {
+        chunkHelpers = ChunkThreads.nearest(value);
+        return chunkHelpers;
+    }
+
+    public int blockUpdates() {
+        return blockUpdates;
+    }
+
+    /** Out-of-range values are ignored. Returns the active mode. */
+    public int setBlockUpdates(int value) {
+        if (value >= BlockUpdates.SMOOTH && value <= BlockUpdates.INSTANT) blockUpdates = value;
+        return blockUpdates;
+    }
+
+    /** Hands the cloud, chunk helper and block update settings to the code that uses them (they live in plain static fields there). */
+    public void applyRenderSettings() {
+        CloudFar.setEnabled(cloudFix);
+        ChunkThreads.setSetting(chunkHelpers);
+        BlockUpdates.setMode(blockUpdates);
     }
 
     public int mode() {
@@ -226,6 +268,9 @@ public final class FlareConfig {
         real = !"pack".equalsIgnoreCase(p.getProperty("style", "real").trim());
         leaves = Math.max(0, Math.min(LEAVES_MAX, parseInt(p.getProperty("leaves"), LEAVES_DEFAULT)));
         perfLog = !"off".equalsIgnoreCase(p.getProperty("perfLog", "on").trim());
+        cloudFix = !"off".equalsIgnoreCase(p.getProperty("cloudFix", "on").trim());
+        chunkHelpers = ChunkThreads.fromName(p.getProperty("chunkHelpers"));
+        blockUpdates = BlockUpdates.fromName(p.getProperty("blockUpdates"), BlockUpdates.AUTO);
         if (parseInt(p.getProperty("version"), 1) < FILE_VERSION) {
             // saved by an older build: the beams are different now (Extreme level, frame guard at 80), so start from the new defaults
             beams = BEAMS_DEFAULT;
@@ -246,11 +291,14 @@ public final class FlareConfig {
         p.setProperty("targetFps", Integer.toString(targetFps));
         p.setProperty("leaves", Integer.toString(leaves));
         p.setProperty("perfLog", perfLog ? "on" : "off");
+        p.setProperty("cloudFix", cloudFix ? "on" : "off");
+        p.setProperty("chunkHelpers", ChunkThreads.toName(chunkHelpers));
+        p.setProperty("blockUpdates", BlockUpdates.toName(blockUpdates));
         try {
             Path parent = file.getParent();
             if (parent != null) Files.createDirectories(parent);
             try (OutputStream out = Files.newOutputStream(file)) {
-                p.store(out, "URinth sun lens flare. mode: 0 = off, 1 = subtle, 2 = full, 3 = strong. beams (light shafts): 0 = off, 1 = low, 2 = medium, 3 = high, 4 = extreme. style: real or pack. targetFps: frame rate the effects try to keep (0 = no limit). leaves: cheaper Fancy leaves, 0 = off, 1 = light, 2 = balanced, 3 = safe. perfLog: on/off, writes logs/urinth-perf.log when the game hitches");
+                p.store(out, "URinth sun lens flare. mode: 0 = off, 1 = subtle, 2 = full, 3 = strong. beams (light shafts): 0 = off, 1 = low, 2 = medium, 3 = high, 4 = extreme. style: real or pack. targetFps: frame rate the effects try to keep (0 = no limit). leaves: cheaper Fancy leaves, 0 = off, 1 = light, 2 = balanced, 3 = safe. perfLog: on/off, writes logs/urinth-perf.log when the game hitches. cloudFix: on/off, clouds stay visible at a short render distance. chunkHelpers: auto or 2, 3, 4, 6 helper threads that build chunks. blockUpdates: smooth, auto or instant, how fast blocks you place or break change on screen");
             }
         } catch (IOException ignored) {
             // the toggle still works for this session

@@ -1,6 +1,7 @@
 package dev.urinth.sunflare;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
@@ -132,5 +133,109 @@ class FlareConfigTest {
         java.nio.file.Files.writeString(file, "version=2\nleaves=17\n");
         again.load();
         assertEquals(FlareConfig.LEAVES_MAX, again.leaves(), "a bad value is clamped");
+    }
+
+    @Test
+    void cloudHelpersAndBlockUpdateSettingsHaveDefaultsAndAreSaved() throws java.io.IOException {
+        java.nio.file.Path file = java.nio.file.Files.createTempDirectory("sunflare-render").resolve("c.properties");
+        FlareConfig c = new FlareConfig(file);
+        assertTrue(c.cloudFix(), "the clouds fix is on by default");
+        assertEquals(ChunkThreads.AUTO, c.chunkHelpers());
+        assertEquals(BlockUpdates.AUTO, c.blockUpdates());
+        c.setCloudFix(false);
+        c.setChunkHelpers(4);
+        c.setBlockUpdates(BlockUpdates.INSTANT);
+        c.save();
+        String text = java.nio.file.Files.readString(file);
+        assertTrue(text.contains("cloudFix=off"), text);
+        assertTrue(text.contains("chunkHelpers=4"), text);
+        assertTrue(text.contains("blockUpdates=instant"), text);
+        FlareConfig again = new FlareConfig(file);
+        again.load();
+        assertFalse(again.cloudFix());
+        assertEquals(4, again.chunkHelpers());
+        assertEquals(BlockUpdates.INSTANT, again.blockUpdates());
+    }
+
+    @Test
+    void aFileFromBeforeTheseSettingsKeepsTheNewDefaultsAndItsOwnValues() throws java.io.IOException {
+        java.nio.file.Path file = java.nio.file.Files.createTempDirectory("sunflare-older").resolve("c.properties");
+        java.nio.file.Files.writeString(file, "version=2\nmode=3\nbeams=3\nstyle=real\ntargetFps=90\nleaves=1\nperfLog=on\n");
+        FlareConfig c = new FlareConfig(file);
+        c.load();
+        assertEquals(3, c.beams());
+        assertEquals(90, c.targetFps());
+        assertEquals(1, c.leaves());
+        assertTrue(c.cloudFix());
+        assertEquals(ChunkThreads.AUTO, c.chunkHelpers());
+        assertEquals(BlockUpdates.AUTO, c.blockUpdates());
+    }
+
+    @Test
+    void badValuesOfTheNewSettingsFallBack() throws java.io.IOException {
+        java.nio.file.Path file = java.nio.file.Files.createTempDirectory("sunflare-bad").resolve("c.properties");
+        FlareConfig c = new FlareConfig(file);
+        java.nio.file.Files.writeString(file, "version=2\ncloudFix=maybe\nchunkHelpers=lots\nblockUpdates=turbo\n");
+        c.load();
+        assertTrue(c.cloudFix(), "anything but off is on");
+        assertEquals(ChunkThreads.AUTO, c.chunkHelpers());
+        assertEquals(BlockUpdates.AUTO, c.blockUpdates());
+        java.nio.file.Files.writeString(file, "version=2\nchunkHelpers=5\nblockUpdates=SMOOTH\n");
+        c.load();
+        assertEquals(4, c.chunkHelpers(), "a number between two choices becomes the closest one");
+        assertEquals(BlockUpdates.SMOOTH, c.blockUpdates(), "the name is not case sensitive");
+        java.nio.file.Files.writeString(file, "version=2\nchunkHelpers=0\n");
+        c.load();
+        assertEquals(ChunkThreads.AUTO, c.chunkHelpers());
+    }
+
+    @Test
+    void anOlderFileStillGetsTheNewSettingsRead() throws java.io.IOException {
+        java.nio.file.Path file = java.nio.file.Files.createTempDirectory("sunflare-v1").resolve("c.properties");
+        java.nio.file.Files.writeString(file, "mode=2\nbeams=1\ncloudFix=off\nchunkHelpers=3\nblockUpdates=instant\n");
+        FlareConfig c = new FlareConfig(file);
+        c.load();
+        assertEquals(FlareConfig.BEAMS_EXTREME, c.beams(), "the beams of an old file are reset, as before");
+        assertFalse(c.cloudFix(), "the new settings in it are still read");
+        assertEquals(3, c.chunkHelpers());
+        assertEquals(BlockUpdates.INSTANT, c.blockUpdates());
+    }
+
+    @Test
+    void theSettersTakeTheClosestChoiceOrIgnoreNonsense() {
+        FlareConfig c = new FlareConfig(java.nio.file.Path.of("unused.properties"));
+        assertEquals(4, c.setChunkHelpers(5));
+        assertEquals(ChunkThreads.AUTO, c.setChunkHelpers(-3));
+        assertEquals(6, c.setChunkHelpers(60));
+        assertEquals(BlockUpdates.INSTANT, c.setBlockUpdates(BlockUpdates.INSTANT));
+        assertEquals(BlockUpdates.INSTANT, c.setBlockUpdates(9), "out of range is ignored");
+        assertEquals(BlockUpdates.INSTANT, c.setBlockUpdates(-1), "out of range is ignored");
+        assertFalse(c.setCloudFix(false));
+        assertTrue(c.setCloudFix(true));
+    }
+
+    @Test
+    void applyingHandsTheSettingsToTheCodeThatUsesThem() {
+        FlareConfig c = new FlareConfig(java.nio.file.Path.of("unused.properties"));
+        try {
+            c.setCloudFix(false);
+            c.setChunkHelpers(6);
+            c.setBlockUpdates(BlockUpdates.SMOOTH);
+            c.applyRenderSettings();
+            assertFalse(CloudFar.enabled());
+            assertEquals(6, ChunkThreads.setting());
+            assertEquals(BlockUpdates.SMOOTH, BlockUpdates.mode());
+            c.setCloudFix(true);
+            c.setChunkHelpers(ChunkThreads.AUTO);
+            c.setBlockUpdates(BlockUpdates.INSTANT);
+            c.applyRenderSettings();
+            assertTrue(CloudFar.enabled());
+            assertEquals(ChunkThreads.AUTO, ChunkThreads.setting());
+            assertEquals(BlockUpdates.INSTANT, BlockUpdates.mode());
+        } finally {
+            CloudFar.setEnabled(true);
+            ChunkThreads.setSetting(ChunkThreads.AUTO);
+            BlockUpdates.reset();
+        }
     }
 }

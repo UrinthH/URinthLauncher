@@ -71,6 +71,40 @@ public final class UrinthPage {
             .setFlags(OptionFlag.REQUIRES_RENDERER_RELOAD)
             .build();
 
+        OptionImpl<FlareConfig, Boolean> clouds = OptionImpl.createBuilder(boolean.class, storage)
+            .setName(Component.literal(PageChoices.CLOUDS_NAME))
+            .setTooltip(Component.literal(PageChoices.CLOUDS_TIP))
+            .setControl(TickBoxControl::new)
+            .setBinding((c, v) -> {
+                c.setCloudFix(v);
+                c.applyRenderSettings();
+            }, FlareConfig::cloudFix)
+            .setImpact(OptionImpact.LOW)
+            .build();
+
+        OptionImpl<FlareConfig, PageChoices.Helpers> helpers = OptionImpl.createBuilder(PageChoices.Helpers.class, storage)
+            .setName(Component.literal(PageChoices.HELPERS_NAME))
+            .setTooltip(Component.literal(PageChoices.HELPERS_TIP))
+            .setControl(option -> new CyclingControl<>(option, PageChoices.Helpers.class, names(PageChoices.Helpers.values())))
+            .setBinding((c, v) -> {
+                c.setChunkHelpers(v.count());
+                c.applyRenderSettings();
+            }, c -> PageChoices.Helpers.nearest(c.chunkHelpers()))
+            .setImpact(OptionImpact.VARIES)
+            // Sodium starts its helper threads when it makes the chunk builder, so the world renderer has to be made again
+            .setFlags(OptionFlag.REQUIRES_RENDERER_RELOAD)
+            .build();
+
+        OptionImpl<FlareConfig, PageChoices.Updates> updates = OptionImpl.createBuilder(PageChoices.Updates.class, storage)
+            .setName(Component.literal(PageChoices.UPDATES_NAME))
+            .setTooltip(Component.literal(PageChoices.UPDATES_TIP))
+            .setControl(option -> new CyclingControl<>(option, PageChoices.Updates.class, names(PageChoices.Updates.values())))
+            .setBinding((c, v) -> {
+                c.setBlockUpdates(v.ordinal());
+                c.applyRenderSettings();
+            }, c -> PageChoices.Updates.of(c.blockUpdates()))
+            .build();
+
         OptionImpl<FlareConfig, PageChoices.Guard> guard = OptionImpl.createBuilder(PageChoices.Guard.class, storage)
             .setName(Component.literal(PageChoices.GUARD_NAME))
             .setTooltip(Component.literal(PageChoices.GUARD_TIP))
@@ -87,7 +121,8 @@ public final class UrinthPage {
 
         List<OptionGroup> groups = List.of(
             OptionGroup.createBuilder().add(flare).add(beams).add(style).build(),
-            OptionGroup.createBuilder().add(leaves).build(),
+            OptionGroup.createBuilder().add(clouds).add(leaves).build(),
+            OptionGroup.createBuilder().add(helpers).add(updates).build(),
             OptionGroup.createBuilder().add(guard).add(log).build());
         return new OptionPage(Component.literal(PageChoices.PAGE_NAME), ImmutableList.copyOf(groups));
     }

@@ -23,6 +23,8 @@ class UrinthPageTest {
         assertEquals(FlareConfig.BEAM_NAMES.length, PageChoices.Beams.values().length);
         assertEquals(FlareConfig.LEAVES_NAMES.length, PageChoices.Leaves.values().length);
         assertEquals(FlareConfig.FPS_CHOICES.length, PageChoices.Guard.values().length);
+        assertEquals(ChunkThreads.CHOICES.length, PageChoices.Helpers.values().length);
+        assertEquals(BlockUpdates.NAMES.length, PageChoices.Updates.values().length);
         for (PageChoices.Flare choice : PageChoices.Flare.values()) assertEquals(FlareConfig.NAMES[choice.ordinal()], choice.label());
         for (PageChoices.Beams choice : PageChoices.Beams.values()) assertEquals(FlareConfig.BEAM_NAMES[choice.ordinal()], choice.label());
         for (PageChoices.Leaves choice : PageChoices.Leaves.values()) assertEquals(FlareConfig.LEAVES_NAMES[choice.ordinal()], choice.label());
@@ -30,6 +32,15 @@ class UrinthPageTest {
             assertEquals(FlareConfig.FPS_CHOICES[choice.ordinal()], choice.fps());
             assertEquals(FlareConfig.fpsName(choice.fps()), choice.label());
         }
+        for (PageChoices.Helpers choice : PageChoices.Helpers.values()) {
+            assertEquals(ChunkThreads.CHOICES[choice.ordinal()], choice.count());
+            assertEquals(ChunkThreads.label(choice.count()), choice.label());
+        }
+        for (PageChoices.Updates choice : PageChoices.Updates.values()) assertEquals(BlockUpdates.NAMES[choice.ordinal()], choice.label());
+        assertEquals(BlockUpdates.SMOOTH, PageChoices.Updates.SMOOTH.ordinal());
+        assertEquals(BlockUpdates.AUTO, PageChoices.Updates.AUTO.ordinal());
+        assertEquals(BlockUpdates.INSTANT, PageChoices.Updates.INSTANT.ordinal());
+        assertEquals(ChunkThreads.AUTO, PageChoices.Helpers.AUTO.count());
     }
 
     @Test
@@ -48,6 +59,13 @@ class UrinthPageTest {
         assertEquals(PageChoices.Guard.FPS_60, PageChoices.Guard.nearest(30));
         assertEquals(PageChoices.Guard.FPS_250, PageChoices.Guard.nearest(240));
         assertEquals(PageChoices.Guard.FPS_250, PageChoices.Guard.nearest(1000));
+        assertEquals(PageChoices.Helpers.AUTO, PageChoices.Helpers.nearest(0));
+        assertEquals(PageChoices.Helpers.AUTO, PageChoices.Helpers.nearest(-2));
+        assertEquals(PageChoices.Helpers.FOUR, PageChoices.Helpers.nearest(5));
+        assertEquals(PageChoices.Helpers.SIX, PageChoices.Helpers.nearest(40));
+        for (PageChoices.Helpers choice : PageChoices.Helpers.values()) assertEquals(choice, PageChoices.Helpers.nearest(choice.count()));
+        assertEquals(PageChoices.Updates.SMOOTH, PageChoices.Updates.of(-1));
+        assertEquals(PageChoices.Updates.INSTANT, PageChoices.Updates.of(99));
         for (PageChoices.Guard choice : PageChoices.Guard.values()) assertEquals(choice, PageChoices.Guard.nearest(choice.fps()));
     }
 
@@ -83,6 +101,9 @@ class UrinthPageTest {
             {PageChoices.LEAVES_NAME, PageChoices.LEAVES_TIP},
             {PageChoices.GUARD_NAME, PageChoices.GUARD_TIP},
             {PageChoices.LOG_NAME, PageChoices.LOG_TIP},
+            {PageChoices.CLOUDS_NAME, PageChoices.CLOUDS_TIP},
+            {PageChoices.HELPERS_NAME, PageChoices.HELPERS_TIP},
+            {PageChoices.UPDATES_NAME, PageChoices.UPDATES_TIP},
         };
         for (String[] row : rows) {
             assertTrue(row[0].length() >= 3 && row[0].length() <= 24, "name length of " + row[0]);

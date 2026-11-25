@@ -577,7 +577,8 @@ public class GameRunner {
             MCOptionUtils.load(instance.getGameDirectory().getAbsolutePath());
             Logger.appendToLog("[Options] options.txt as the launcher found it (read only, never written): renderDistance="
                     + MCOptionUtils.get("renderDistance") + ", simulationDistance=" + MCOptionUtils.get("simulationDistance")
-                    + ", maxFps=" + MCOptionUtils.get("maxFps") + ", enableVsync=" + MCOptionUtils.get("enableVsync"));
+                    + ", maxFps=" + MCOptionUtils.get("maxFps") + ", enableVsync=" + MCOptionUtils.get("enableVsync")
+                    + ", renderClouds=" + MCOptionUtils.get("renderClouds"));
         } catch (Throwable ignored) {
             // diagnostics only
         }

@@ -51,6 +51,7 @@ public final class SunFlareMod implements ClientModInitializer {
         config.load();
         shared = config;
         applyLeaves(false);
+        config.applyRenderSettings();
         registerLightingPack();
         FlareRenderer renderer = new FlareRenderer(config);
         HudRenderCallback.EVENT.register(renderer::render);
@@ -67,6 +68,11 @@ public final class SunFlareMod implements ClientModInitializer {
         registerCommand();
         registerKey();
         LOG.info("[SunFlare] ready, mode={}", FlareConfig.NAMES[config.mode()]);
+    }
+
+    /** One line in the game log, for the hooks that run inside Sodium (they are in another package). */
+    public static void note(String line) {
+        LOG.info(line);
     }
 
     /** The settings the whole mod uses, for the URinth page in Sodium's video settings. Null until the mod has started. */
