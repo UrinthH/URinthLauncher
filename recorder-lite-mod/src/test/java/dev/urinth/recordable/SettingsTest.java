@@ -48,6 +48,14 @@ final class SettingsTest {
             s.showIndicator = false;
             s.swapChroma = true;
             s.minFreeMb = 777;
+            s.recordSound = false;
+            s.saveToGallery = false;
+            s.maxFileMb = 2000;
+            s.replaySeconds = 60;
+            s.autoClip = true;
+            s.overlayCorner = 3;
+            s.overlayScale = 150;
+            s.microphone = true;
             Path f = dir.resolve("sub").resolve("settings.json");
             s.save(f);
             Settings t = Settings.load(f);
@@ -57,6 +65,14 @@ final class SettingsTest {
             assertFalse(t.showIndicator);
             assertTrue(t.swapChroma);
             assertEquals(777, t.minFreeMb);
+            assertFalse(t.recordSound);
+            assertFalse(t.saveToGallery);
+            assertEquals(2000, t.maxFileMb);
+            assertEquals(60, t.replaySeconds);
+            assertTrue(t.autoClip);
+            assertEquals(3, t.overlayCorner);
+            assertEquals(150, t.overlayScale);
+            assertTrue(t.microphone);
         } finally {
             TestFiles.deleteTree(dir);
         }
@@ -101,7 +117,7 @@ final class SettingsTest {
         Path dir = TestFiles.tempDir();
         try {
             Settings s = Settings.load(write(dir, "{\"fpsCap\": 999, \"minFreeMb\": -5, \"preset\": \"nonsense\"}"));
-            assertEquals(30, s.fps(), "the frame rate never exceeds what the preset allows");
+            assertEquals(90, s.fps(), "the frame rate never exceeds the highest choice");
             assertEquals(50, s.minFreeMb);
             assertEquals(Settings.Preset.BALANCED, s.preset);
             Settings t = Settings.load(write(dir, "{\"fpsCap\": \"abc\", \"hardwareEncoder\": \"maybe\"}"));
@@ -115,17 +131,90 @@ final class SettingsTest {
     @Test
     void theFrameRateButtonWalksDownTheChoicesAndWrapsToThePresetValue() {
         Settings s = new Settings();
+        assertEquals(30, s.fps(), "the preset decides until the player picks something");
         int[] seen = new int[Governor.TIERS.length];
-        for (int i = 0; i < Governor.TIERS.length; i++) {
-            seen[i] = s.fps();
+        for (int i = 0; i < seen.length; i++) {
             s.cycleFps();
+            seen[i] = s.fps();
         }
-        assertEquals(Governor.TIERS[0], seen[0]);
-        for (int i = 1; i < seen.length; i++) {
-            assertTrue(seen[i] < seen[i - 1], Arrays.toString(seen));
-        }
+        assertEquals(Arrays.toString(Governor.TIERS), Arrays.toString(seen), "90 comes first, then every lower choice");
+        assertEquals(90, seen[0]);
+        s.cycleFps();
         assertEquals(0, s.fpsCap, "after the lowest choice it is back to what the preset says");
         assertEquals(30, s.fps());
+    }
+
+    @Test
+    void moreFramesPerSecondGetMoreBitsButNotInProportion() {
+        Settings s = new Settings();
+        assertEquals(4000, s.kbps());
+        s.fpsCap = 24;
+        assertEquals(4000, s.kbps(), "never fewer bits than the preset says");
+        s.fpsCap = 60;
+        assertEquals(5600, s.kbps());
+        s.fpsCap = 90;
+        assertEquals(7200, s.kbps());
+        s.fpsCap = 45;
+        assertTrue(s.kbps() > 4000 && s.kbps() < 5600, "" + s.kbps());
+    }
+
+    @Test
+    void aFileFromTheFirstReleaseGetsAFreshChanceForTheHardwareEncoder() throws Exception {
+        Path dir = TestFiles.tempDir();
+        try {
+            Settings old = Settings.load(write(dir, "{ \"hardwareEncoder\": false, \"preset\": \"quality\" }"));
+            assertTrue(old.hardwareEncoder, "the first release may have switched it off after a crash that was fixed since");
+            assertEquals(Settings.Preset.QUALITY, old.preset);
+            assertEquals(Settings.VERSION, old.version);
+            Settings current = Settings.load(write(dir, "{ \"version\": " + Settings.VERSION + ", \"hardwareEncoder\": false }"));
+            assertFalse(current.hardwareEncoder, "a choice made with this version stays");
+        } finally {
+            TestFiles.deleteTree(dir);
+        }
+    }
+
+    @Test
+    void theOtherButtonsCycleThroughTheirChoices() {
+        Settings s = new Settings();
+        int[] replay = new int[Settings.REPLAY_CHOICES.length];
+        for (int i = 0; i < replay.length; i++) {
+            s.cycleReplay();
+            replay[i] = s.replaySeconds;
+        }
+        assertEquals(30, replay[0]);
+        assertEquals(0, replay[replay.length - 1], "it wraps back to off");
+        int[] max = new int[Settings.MAX_FILE_CHOICES.length];
+        for (int i = 0; i < max.length; i++) {
+            s.cycleMaxFile();
+            max[i] = s.maxFileMb;
+        }
+        assertEquals(500, max[0]);
+        assertEquals(0, max[max.length - 1], "it wraps back to no limit");
+        for (int i = 0; i < 4; i++) {
+            s.cycleCorner();
+        }
+        assertEquals(0, s.overlayCorner, "four corners and round again");
+        int steps = 0;
+        do {
+            s.cycleScale();
+            steps++;
+            assertTrue(s.overlayScale >= 50 && s.overlayScale <= 200, "" + s.overlayScale);
+        } while (s.overlayScale != 100 && steps < 20);
+        assertTrue(steps < 20, "the size cycle comes back to 100");
+    }
+
+    @Test
+    void overlayAndLimitValuesAreBroughtBackIntoRange() throws Exception {
+        Path dir = TestFiles.tempDir();
+        try {
+            Settings s = Settings.load(write(dir, "{\"overlayCorner\": 9, \"overlayScale\": 5000, \"replaySeconds\": 99999, \"maxFileMb\": -3}"));
+            assertEquals(3, s.overlayCorner);
+            assertEquals(200, s.overlayScale);
+            assertEquals(300, s.replaySeconds);
+            assertEquals(0, s.maxFileMb);
+        } finally {
+            TestFiles.deleteTree(dir);
+        }
     }
 
     @Test

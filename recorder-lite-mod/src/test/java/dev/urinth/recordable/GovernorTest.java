@@ -21,6 +21,8 @@ final class GovernorTest {
         long extraFirstNs;
         long extraSecondNs;
         long hookNs;
+        /** The recorder takes no picture for this long after the start, so the game's own speed can be measured. */
+        long preRollNs = 300_000_000L;
 
         Sim(Governor governor, double gameFps) {
             this.governor = governor;
@@ -40,9 +42,11 @@ final class GovernorTest {
                     interval += extraSecondNs;
                 }
                 clock += interval;
-                governor.onFrame(interval, everCaptured ? sinceCapture : 0, hookNs);
-                boolean due = clock + frameNs / 2 >= nextCapture;
-                int spacing = governor.needsCleanFrame() ? 3 : 2;
+                // the same rule as the session: pictures on most frames mean fast mode
+                boolean fast = 1e9 / governor.fps() < 1.8 * frameNs;
+                governor.onFrame(interval, everCaptured ? sinceCapture : 0, hookNs, fast);
+                boolean due = clock >= preRollNs && clock + frameNs / 2 >= nextCapture;
+                int spacing = fast ? 1 : governor.needsCleanFrame() ? 3 : 2;
                 if (due && (!everCaptured || sinceCapture >= spacing)) {
                     everCaptured = true;
                     sinceCapture = 0;
@@ -62,7 +66,11 @@ final class GovernorTest {
 
     @Test
     void startsAtTheHighestRateNotAboveTheRequest() {
-        assertEquals(30, new Governor(60).fps());
+        assertEquals(90, new Governor(90).fps());
+        assertEquals(90, new Governor(120).fps());
+        assertEquals(60, new Governor(60).fps());
+        assertEquals(45, new Governor(50).fps());
+        assertEquals(30, new Governor(40).fps());
         assertEquals(30, new Governor(30).fps());
         assertEquals(24, new Governor(25).fps());
         assertEquals(24, new Governor(24).fps());
@@ -145,13 +153,25 @@ final class GovernorTest {
     }
 
     @Test
-    void aSlowGameStillGetsFramesFreeOfCapturesSoTheCostCanBeMeasured() {
-        // a 45 fps game and a 30 fps capture would be "every second frame"; the recorder keeps a frame free now and then
-        Sim sim = new Sim(new Governor(30), 45);
+    void aGameAtSixtyWithAThirtyFpsCaptureStillGetsFramesFreeOfCapturesSoTheCostCanBeMeasured() {
+        // every second frame is a capture at best; the recorder keeps a frame free now and then so the graphics cost can be seen
+        Sim sim = new Sim(new Governor(30), 60);
         sim.extraFirstNs = ms(1);
         sim.hookNs = ms(0.3);
         sim.run(40);
+        assertFalse(sim.governor.fastMode());
         assertTrue(sim.governor.graphicsMeasured());
+        assertEquals(30, sim.governor.fps());
+    }
+
+    @Test
+    void aGameAtFortyFiveWithAThirtyFpsCaptureTakesPicturesOnMostFramesSoItUsesFastMode() {
+        Sim sim = new Sim(new Governor(30), 45);
+        sim.extraFirstNs = ms(0.5);
+        sim.hookNs = ms(0.3);
+        sim.run(40);
+        assertTrue(sim.governor.fastMode(), "a picture on two of every three frames leaves nothing to compare with");
+        assertTrue(sim.governor.hasBaseline(), "the speed before the first picture was measured");
         assertEquals(30, sim.governor.fps());
     }
 
@@ -176,5 +196,63 @@ final class GovernorTest {
         sim.run(20);
         assertEquals(30, sim.governor.fps());
         assertFalse(sim.governor.stopRequested());
+    }
+
+    // ---- fast mode (90 fps) ----------------------------------------------------------------------------------------------------
+
+    @Test
+    void ninetyFramesPerSecondIsKeptWhenTheCaptureIsCheap() {
+        Sim sim = new Sim(new Governor(90), 90);
+        sim.extraFirstNs = ms(0.2);
+        sim.hookNs = ms(0.3);
+        sim.run(90);
+        assertEquals(90, sim.governor.fps(), sim.governor.reason());
+        assertTrue(sim.governor.fastMode());
+        assertTrue(sim.governor.hasBaseline(), "the first moments, before any picture, give the baseline");
+        assertFalse(sim.governor.stopRequested());
+    }
+
+    @Test
+    void ninetyFramesPerSecondStepsDownWhenTheGameBecomesClearlySlower() {
+        Sim sim = new Sim(new Governor(90), 90);
+        sim.extraFirstNs = ms(3.0);
+        sim.hookNs = ms(0.3);
+        sim.run(40);
+        assertTrue(sim.governor.fps() < 90, "still " + sim.governor.fps());
+        assertTrue(sim.governor.reason().contains("slower") || sim.governor.reason().contains("used"), sim.governor.reason());
+        assertFalse(sim.governor.stopRequested());
+    }
+
+    @Test
+    void theFastModeStepDownLeadsToNormalModeWhereTheCostIsMeasuredProperly() {
+        Sim sim = new Sim(new Governor(90), 90);
+        sim.extraFirstNs = ms(6);
+        sim.extraSecondNs = ms(3);
+        sim.hookNs = ms(0.3);
+        sim.run(200);
+        assertTrue(sim.governor.fps() <= 30, "ended at " + sim.governor.fps() + ": " + sim.governor.reason());
+        assertFalse(sim.governor.fastMode());
+        assertFalse(sim.governor.stopRequested());
+    }
+
+    @Test
+    void afterAFastModeStepDownTheRateDoesNotBounceBackUpAtOnce() {
+        Sim sim = new Sim(new Governor(90), 90);
+        sim.extraFirstNs = ms(3.0);
+        sim.hookNs = ms(0.3);
+        sim.run(40);
+        int low = sim.governor.fps();
+        assertTrue(low < 90);
+        sim.extraFirstNs = 0;
+        sim.run(60);
+        assertTrue(sim.governor.fps() <= low, "went up after only 60 s: " + sim.governor.fps());
+    }
+
+    @Test
+    void aSlowGameNeverUsesFastModeAtLowCaptureRates() {
+        Sim sim = new Sim(new Governor(30), 90);
+        sim.hookNs = ms(0.2);
+        sim.run(30);
+        assertFalse(sim.governor.fastMode(), "a picture every third frame is normal mode");
     }
 }

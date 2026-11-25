@@ -86,6 +86,9 @@ public final class RecordableLite implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         gameDir = FabricLoader.getInstance().getGameDir();
+        String version = FabricLoader.getInstance().getModContainer(ID).map(c -> c.getMetadata().getVersion().getFriendlyString())
+                .orElse("dev");
+        Report.setHeader("Record-able Lite " + version);
         settingsFile = FabricLoader.getInstance().getConfigDir().resolve("recordable_lite.json");
         settings = Settings.load(settingsFile);
         checkCrashMarker();
@@ -111,7 +114,8 @@ public final class RecordableLite implements ClientModInitializer {
         ClientTickEvents.END_CLIENT_TICK.register(RecordableLite::onTick);
         ClientLifecycleEvents.CLIENT_STOPPING.register(RecordableLite::onStopping);
         ClientCommandRegistrationCallback.EVENT.register(RecordableLite::registerCommands);
-        LOG.info("Record-able Lite is loaded (keys: - start/stop, = pause, F9 settings; recordings go to {})", gameDir.resolve("recordings"));
+        LOG.info("Record-able Lite {} is loaded (keys: - start/stop, = pause, F9 settings; recordings go to Movies/Record-able or {})", version,
+                gameDir.resolve("recordings"));
     }
 
     /**
@@ -261,11 +265,19 @@ public final class RecordableLite implements ClientModInitializer {
         if (!paused && s.currentFps() < settings.fps()) {
             text += " (" + s.currentFps() + " fps)";
         }
-        int width = mc.font.width(text) + 12;
-        int x = graphics.guiWidth() / 2 - width / 2;
-        int y = 3;
-        graphics.fill(x, y + 1, x + 6, y + 7, dot);
-        graphics.drawString(mc.font, text, x + 11, y, 0xFFFFFFFF, true);
+        float scale = settings.overlayScale / 100f;
+        int margin = 3;
+        float boxWidth = (mc.font.width(text) + 12) * scale;
+        float boxHeight = 10 * scale;
+        int corner = settings.overlayCorner;
+        float x = corner % 2 == 0 ? margin : graphics.guiWidth() - boxWidth - margin;
+        float y = corner < 2 ? margin : graphics.guiHeight() - boxHeight - margin;
+        graphics.pose().pushPose();
+        graphics.pose().translate(x, y, 0f);
+        graphics.pose().scale(scale, scale, 1f);
+        graphics.fill(0, 1, 6, 7, dot);
+        graphics.drawString(mc.font, text, 11, 0, 0xFFFFFFFF, true);
+        graphics.pose().popPose();
     }
 
     private static void onTick(Minecraft mc) {
@@ -356,7 +368,8 @@ public final class RecordableLite implements ClientModInitializer {
                     String text = s != null && s.isActive()
                             ? "Recording " + RecorderSession.clock(s.elapsedMs()) + " at " + s.currentFps() + " fps: " + s.description()
                             : "Not recording. Preset " + settings.preset.id + " (" + settings.height() + "p, up to " + settings.fps()
-                            + " fps), hardware encoder " + (settings.hardwareEncoder ? "on" : "off") + ".";
+                            + " fps), hardware encoder " + (settings.hardwareEncoder ? "on" : "off") + ", saves to "
+                            + (settings.saveToGallery ? "Movies/Record-able" : "the game's recordings folder") + ".";
                     c.getSource().sendFeedback(Component.literal(text));
                     return 1;
                 }))
@@ -375,8 +388,14 @@ public final class RecordableLite implements ClientModInitializer {
                                             + settings.height() + "p, up to " + settings.fps() + " fps). It applies to the next recording."));
                                     return 1;
                                 })))
+                .then(ClientCommandManager.literal("report").executes(c -> {
+                    for (String line : Report.summary(Report.fileFor(gameDir))) {
+                        c.getSource().sendFeedback(Component.literal(line));
+                    }
+                    return 1;
+                }))
                 .then(ClientCommandManager.literal("fps")
-                        .then(ClientCommandManager.argument("fps", IntegerArgumentType.integer(0, 30))
+                        .then(ClientCommandManager.argument("fps", IntegerArgumentType.integer(0, Governor.TIERS[0]))
                                 .executes(c -> {
                                     settings.fpsCap = IntegerArgumentType.getInteger(c, "fps");
                                     saveSettings();

@@ -1,6 +1,7 @@
 package dev.urinth.recordable.enc;
 
 import dev.urinth.recordable.mux.Fmp4Writer;
+import dev.urinth.recordable.nat.NdkCodec;
 import dev.urinth.recordable.nat.NdkEncoder;
 
 import java.io.IOException;
@@ -18,7 +19,7 @@ public final class H264Out implements VideoOut {
     private final boolean rgbaInput;
     private final boolean swapChroma;
     private final Runnable onFirstOutput;
-    private final NdkEncoder.Sink sink;
+    private final NdkCodec.Sink sink;
     private byte[] nv12;
     private boolean sawOutput;
     private boolean closed;
@@ -52,33 +53,28 @@ public final class H264Out implements VideoOut {
      */
     public static H264Out open(Path file, int width, int height, int fps, int bitrateBps, boolean rgbaInput, boolean swapChroma,
                                Runnable onFirstOutput) throws IOException {
-        NdkEncoder.Params p = new NdkEncoder.Params();
-        p.width = width;
-        p.height = height;
-        p.fps = fps;
-        p.bitrate = bitrateBps;
-        NdkEncoder enc = NdkEncoder.open(p);
-        try {
-            if (enc.isSoftware()) {
-                throw new SoftwareEncoderException(enc.codecName());
-            }
-            Fmp4Writer mux = new Fmp4Writer(file, width, height, fps);
-            return new H264Out(enc, mux, width, height, rgbaInput, swapChroma, onFirstOutput);
-        } catch (IOException | RuntimeException e) {
-            enc.close();
-            throw e;
-        }
+        return open(file, width, height, fps, bitrateBps, rgbaInput, swapChroma, onFirstOutput, false);
     }
 
     /** Opens the encoder even if it is a software one; used when the player accepts that. */
     public static H264Out openAllowingSoftware(Path file, int width, int height, int fps, int bitrateBps, boolean rgbaInput,
                                                boolean swapChroma, Runnable onFirstOutput) throws IOException {
+        return open(file, width, height, fps, bitrateBps, rgbaInput, swapChroma, onFirstOutput, true);
+    }
+
+    private static H264Out open(Path file, int width, int height, int fps, int bitrateBps, boolean rgbaInput, boolean swapChroma,
+                                Runnable onFirstOutput, boolean allowSoftware) throws IOException {
         NdkEncoder.Params p = new NdkEncoder.Params();
         p.width = width;
         p.height = height;
         p.fps = fps;
         p.bitrate = bitrateBps;
-        NdkEncoder enc = NdkEncoder.open(p);
+        NdkEncoder enc;
+        try {
+            enc = NdkEncoder.open(p, allowSoftware);
+        } catch (NdkEncoder.SoftwareOnlyException e) {
+            throw new SoftwareEncoderException(e.codec, e.getMessage());
+        }
         try {
             Fmp4Writer mux = new Fmp4Writer(file, width, height, fps);
             return new H264Out(enc, mux, width, height, rgbaInput, swapChroma, onFirstOutput);
@@ -92,13 +88,18 @@ public final class H264Out implements VideoOut {
     public static final class SoftwareEncoderException extends IOException {
         private static final long serialVersionUID = 1L;
 
-        public SoftwareEncoderException(String codec) {
-            super("only a software encoder is available (" + codec + ")");
+        public SoftwareEncoderException(String codec, String detail) {
+            super(detail);
         }
     }
 
     public boolean isSoftware() {
         return encoder.isSoftware();
+    }
+
+    /** What was tried while looking for a working encoder, for the report. */
+    public String attempts() {
+        return encoder.attempts();
     }
 
     @Override

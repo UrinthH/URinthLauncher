@@ -99,6 +99,11 @@ public final class Shim {
                     Files.write(tmp, bytes);
                     Files.move(tmp, target, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
                 }
+                try {
+                    target.toFile().setReadOnly();            // newer Android versions refuse to load code from a writable file
+                } catch (RuntimeException ignored) {
+                    // loading may still work
+                }
                 System.load(target.toAbsolutePath().toString());
                 ok = true;
                 status = "loaded from " + target;
