@@ -3,17 +3,27 @@
   "id": "recordable_lite",
   "version": "${version}",
   "name": "Record-able Lite",
-  "description": "Record your gameplay without losing FPS. The picture is shrunk and converted on the GPU and encoded by the phone's hardware video encoder, so the game thread does almost nothing. Keys: - start/stop, = pause, F9 settings.",
-  "authors": ["URinth"],
+  "description": "Record your gameplay without losing FPS. The picture is shrunk and converted on the GPU and encoded by the phone's hardware video encoder, so the game thread does almost nothing. The game's sound is recorded too. Keys: - start/stop, = pause, F9 settings.",
+  "authors": [
+    "URinth"
+  ],
   "license": "MIT",
   "environment": "client",
   "entrypoints": {
-    "client": ["dev.urinth.recordable.RecordableLite"]
+    "client": [
+      "dev.urinth.recordable.RecordableLite"
+    ]
   },
   "depends": {
     "fabricloader": ">=0.16.0",
     "minecraft": "1.21.4",
     "java": ">=21",
     "fabric-api": "*"
-  }
+  },
+  "mixins": [
+    {
+      "config": "recordable_lite.mixins.json",
+      "environment": "client"
+    }
+  ]
 }

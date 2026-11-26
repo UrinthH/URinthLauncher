@@ -1,5 +1,6 @@
 package dev.urinth.recordable;
 
+import dev.urinth.recordable.audio.GameAudio;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
@@ -48,6 +49,8 @@ public final class SettingsScreen extends Screen {
         entries.add(new Entry(() -> "Save in: " + (s.saveToGallery ? "gallery (Movies)" : "game folder"),
                 () -> s.saveToGallery = !s.saveToGallery));
         entries.add(new Entry(() -> "Max file size: " + size(s.maxFileMb), s::cycleMaxFile));
+        entries.add(new Entry(() -> "Game sound: " + (s.recordSound ? "recorded" : "off") + (s.recordSound == GameAudio.wanted() ? "" : " (restart)"),
+                () -> s.recordSound = !s.recordSound));
         entries.add(new Entry(() -> "Red dot: " + (s.showIndicator ? "on" : "off"), () -> s.showIndicator = !s.showIndicator));
         entries.add(new Entry(() -> "Dot corner: " + CORNERS[Math.floorMod(s.overlayCorner, CORNERS.length)], s::cycleCorner));
         entries.add(new Entry(() -> "Dot size: " + s.overlayScale + "%", s::cycleScale));
@@ -79,6 +82,8 @@ public final class SettingsScreen extends Screen {
                 footerY + 12, 0xFF909090);
         center(graphics, Component.literal("Videos go to Movies/Record-able (the gallery and CapCut see them) when the phone allows it."),
                 footerY + 24, 0xFF909090);
+        center(graphics, Component.literal("Game sound: the setting counts from the next start of the game (the sound engine starts once)."),
+                footerY + 36, 0xFF909090);
     }
 
     private void center(GuiGraphics graphics, Component text, int y, int color) {

@@ -36,7 +36,20 @@ final class JarIntegrityTest {
             "dev/urinth/recordable/mux/Fmp4Writer.class",
             "dev/urinth/recordable/mux/AviWriter.class",
             "dev/urinth/recordable/enc/H264Out.class",
-            "dev/urinth/recordable/enc/MjpegOut.class"};
+            "dev/urinth/recordable/enc/MjpegOut.class",
+            // the game's sound: the hook into the game's sound engine and everything it uses
+            "recordable_lite.mixins.json",
+            "dev/urinth/recordable/NativeFolders.class",
+            "dev/urinth/recordable/mixin/LibraryMixin.class",
+            "dev/urinth/recordable/audio/GameAudio.class",
+            "dev/urinth/recordable/audio/AudioPump.class",
+            "dev/urinth/recordable/audio/AudioRecorder.class",
+            "dev/urinth/recordable/audio/AudioTap.class",
+            "dev/urinth/recordable/audio/AudioTimeline.class",
+            "dev/urinth/recordable/audio/AAudioOutput.class",
+            "dev/urinth/recordable/audio/OpenAlBridge.class",
+            "dev/urinth/recordable/nat/AAudioLib.class",
+            "dev/urinth/recordable/nat/NdkAudioEncoder.class"};
 
     private static byte[] read(ZipFile zip, String name) throws IOException {
         ZipEntry e = zip.getEntry(name);
@@ -85,6 +98,26 @@ final class JarIntegrityTest {
             assertTrue(meta.contains("\"id\": \"recordable_lite\""), "mod id");
             assertTrue(meta.contains("dev.urinth.recordable.RecordableLite"), "entry point");
             assertFalse(meta.contains("${version}"), "the version was filled in");
+            assertTrue(meta.contains("recordable_lite.mixins.json"), "the game hook configuration is listed in fabric.mod.json");
+
+            // The sound hook: it must be optional (a game that does not fit it still starts) and, in the remapped jar, it must come with
+            // the table that translates the Minecraft names it uses into the names the game runs with.
+            String mixins = new String(read(zip, "recordable_lite.mixins.json"), StandardCharsets.UTF_8).replaceAll("\\s+", "");
+            assertTrue(mixins.contains("\"package\":\"dev.urinth.recordable.mixin\""), "mixin package");
+            assertTrue(mixins.contains("LibraryMixin"), "the sound engine hook is listed");
+            assertTrue(mixins.contains("\"required\":false"), "the hook configuration is not required");
+            assertTrue(mixins.contains("\"defaultRequire\":0"), "hooks that do not fit are skipped, not fatal");
+            if (!Boolean.getBoolean("urinth.unremapped")) {
+                int at = mixins.indexOf("\"refmap\":\"");
+                assertTrue(at >= 0, "the hook configuration names its translation table (refmap)");
+                int from = at + "\"refmap\":\"".length();
+                String refmapName = mixins.substring(from, mixins.indexOf('"', from));
+                String refmap = new String(read(zip, refmapName), StandardCharsets.UTF_8);
+                assertTrue(refmap.contains("dev/urinth/recordable/mixin/LibraryMixin"), "the refmap covers the sound engine hook");
+                assertTrue(refmap.contains("openDeviceOrFallback(Ljava/lang/String;)J"), "the refmap translates the device call that is redirected");
+                assertTrue(refmap.contains("method_"), "the refmap has intermediary method names");
+                assertTrue(refmap.contains("net/minecraft/class_"), "the refmap has intermediary class names");
+            }
 
             String lang = new String(read(zip, "assets/recordable_lite/lang/en_us.json"), StandardCharsets.UTF_8);
             for (String key : new String[]{"key.categories.recordable_lite", "key.recordable_lite.toggle", "key.recordable_lite.pause",

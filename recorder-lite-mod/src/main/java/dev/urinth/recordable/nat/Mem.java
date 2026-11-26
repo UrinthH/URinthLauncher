@@ -4,7 +4,7 @@ import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 
 /** Raw native memory for the calls into the media codec library. Everything here is only used by the encoder thread. */
-final class Mem {
+public final class Mem {
     private static final sun.misc.Unsafe U;
     private static final long BYTE_BASE;
 
@@ -24,53 +24,53 @@ final class Mem {
     private Mem() {
     }
 
-    static boolean available() {
+    public static boolean available() {
         return U != null;
     }
 
-    static long alloc(long bytes) {
+    public static long alloc(long bytes) {
         long p = U.allocateMemory(Math.max(8, bytes));
         U.setMemory(p, Math.max(8, bytes), (byte) 0);
         return p;
     }
 
-    static void free(long p) {
+    public static void free(long p) {
         if (p != 0) {
             U.freeMemory(p);
         }
     }
 
-    static void putInt(long p, int v) {
+    public static void putInt(long p, int v) {
         U.putInt(p, v);
     }
 
-    static void putLong(long p, long v) {
+    public static void putLong(long p, long v) {
         U.putLong(p, v);
     }
 
-    static int getInt(long p) {
+    public static int getInt(long p) {
         return U.getInt(p);
     }
 
-    static long getLong(long p) {
+    public static long getLong(long p) {
         return U.getLong(p);
     }
 
-    static void put(long dst, byte[] src, int off, int len) {
+    public static void put(long dst, byte[] src, int off, int len) {
         U.copyMemory(src, BYTE_BASE + off, null, dst, len);
     }
 
-    static void get(long src, byte[] dst, int off, int len) {
+    public static void get(long src, byte[] dst, int off, int len) {
         U.copyMemory(null, src, dst, BYTE_BASE + off, len);
     }
 
     /** Copies native memory to native memory. */
-    static void copy(long src, long dst, long len) {
+    public static void copy(long src, long dst, long len) {
         U.copyMemory(src, dst, len);
     }
 
     /** A NUL terminated copy of the text; the caller frees it. */
-    static long cstr(String s) {
+    public static long cstr(String s) {
         byte[] b = s.getBytes(StandardCharsets.UTF_8);
         long p = alloc(b.length + 1L);
         put(p, b, 0, b.length);
@@ -78,7 +78,7 @@ final class Mem {
     }
 
     /** Reads a NUL terminated string, at most {@code max} bytes. */
-    static String readCstr(long p, int max) {
+    public static String readCstr(long p, int max) {
         if (p == 0) {
             return "";
         }

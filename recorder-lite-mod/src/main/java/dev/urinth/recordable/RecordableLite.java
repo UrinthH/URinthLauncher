@@ -5,6 +5,7 @@ import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
+import dev.urinth.recordable.audio.GameAudio;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
@@ -92,6 +93,12 @@ public final class RecordableLite implements ClientModInitializer {
         settingsFile = FabricLoader.getInstance().getConfigDir().resolve("recordable_lite.json");
         settings = Settings.load(settingsFile);
         checkCrashMarker();
+        if (!GameAudio.configure(settings.recordSound, gameDir)) {
+            settings.recordSound = false;                       // the last sound start did not finish: stay safe, say so, and save it
+            saveSettings();
+            MESSAGES.add("The game closed while its sound was being set up for recording last time, so sound recording is switched off "
+                    + "now. You can turn it on again with F9 (it applies after the game is restarted).");
+        }
 
         toggleKey = KeyBindingHelper.registerKeyBinding(new KeyMapping("key.recordable_lite.toggle", InputConstants.Type.KEYSYM,
                 InputConstants.KEY_MINUS, "key.categories.recordable_lite"));
@@ -369,7 +376,8 @@ public final class RecordableLite implements ClientModInitializer {
                             ? "Recording " + RecorderSession.clock(s.elapsedMs()) + " at " + s.currentFps() + " fps: " + s.description()
                             : "Not recording. Preset " + settings.preset.id + " (" + settings.height() + "p, up to " + settings.fps()
                             + " fps), hardware encoder " + (settings.hardwareEncoder ? "on" : "off") + ", saves to "
-                            + (settings.saveToGallery ? "Movies/Record-able" : "the game's recordings folder") + ".";
+                            + (settings.saveToGallery ? "Movies/Record-able" : "the game's recordings folder") + ". "
+                            + GameAudio.status() + ".";
                     c.getSource().sendFeedback(Component.literal(text));
                     return 1;
                 }))

@@ -31,4 +31,9 @@ public interface VideoOut {
 
     /** One line for the log. */
     String describe();
+
+    /** One line about the sound track for the report, or null if this output has none. */
+    default String audioNote() {
+        return null;
+    }
 }

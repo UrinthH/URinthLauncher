@@ -1,5 +1,7 @@
 package dev.urinth.recordable;
 
+import dev.urinth.recordable.audio.AudioTap;
+import dev.urinth.recordable.audio.GameAudio;
 import dev.urinth.recordable.enc.Frame;
 import dev.urinth.recordable.enc.FramePool;
 import dev.urinth.recordable.enc.H264Out;
@@ -11,7 +13,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
@@ -65,6 +66,7 @@ public final class RecorderSession {
     private final Path marker;
     private final Report report;
     private final Thread worker;
+    private final AudioTap audioTap;
     private final AtomicLong encoderDrops = new AtomicLong();
 
     private volatile State state = State.RECORDING;
@@ -89,7 +91,7 @@ public final class RecorderSession {
     private long lastRateNoticeNs;
 
     private RecorderSession(Consumer<String> say, Governor governor, GpuCapture capture, FramePool pool, VideoOut out, Path file,
-                            String summary, long minFreeBytes, long maxFileBytes, Path marker, Report report) {
+                            String summary, long minFreeBytes, long maxFileBytes, Path marker, Report report, AudioTap audioTap) {
         this.say = say;
         this.governor = governor;
         this.capture = capture;
@@ -101,6 +103,7 @@ public final class RecorderSession {
         this.maxFileBytes = maxFileBytes;
         this.marker = marker;
         this.report = report;
+        this.audioTap = audioTap;
         this.reportedFps = governor.fps();
         this.nextCaptureNs = startNs;
         this.worker = new Thread(this::encoderLoop, "Record-able Lite encoder");
@@ -122,6 +125,10 @@ public final class RecorderSession {
         String brief;
         /** Something the player must be told right away (a fallback was used), or null. */
         String warning;
+        /** The tap that feeds the sound track, or null if this recording has no sound. */
+        AudioTap tap;
+        /** One line about the sound for the report and the chat; null for outputs that cannot have sound. */
+        String audioNote;
     }
 
     /**
@@ -192,19 +199,30 @@ public final class RecorderSession {
             return null;
         }
         report.add("recording: " + b.file + " - " + b.text);
+        if (b.audioNote != null) {
+            report.add(b.audioNote);
+        }
         FramePool pool = new FramePool(poolFrames(b.maxFps, b.capture.frameBytes()), b.capture.frameBytes());
         Governor governor = new Governor(b.maxFps);
         RecorderSession session = new RecorderSession(say, governor, b.capture, pool, b.out, b.file, b.text, s.minFreeMb * MB,
-                s.maxFileMb * MB, marker, report);
+                s.maxFileMb * MB, marker, report, b.tap);
+        if (b.tap != null) {
+            b.tap.arm(session.startNs);                       // the sound's zero point is the picture's zero point
+        }
         report.write();
         for (String n : notes) {
             LOG.info("{}", n);
         }
         session.worker.start();
         LOG.info("Recording to {}: {}", b.file, b.text);
-        say.accept("Recording started: " + b.brief + ". Saving to " + dir + (shared ? "" : " (not visible to the gallery)") + ". Press - to stop.");
+        say.accept("Recording started: " + b.brief + (b.tap != null ? ", with sound" : "") + ". Saving to " + dir
+                + (shared ? "" : " (not visible to the gallery)") + ". Press - to stop.");
         if (b.warning != null) {
             say.accept(b.warning);
+        }
+        if (b.tap == null && s.recordSound && b.audioNote != null) {
+            say.accept("No sound in this recording: " + shorten(b.audioNote.replaceFirst("^sound: (not recorded \\()?", "").replaceFirst("\\)$", ""), 180)
+                    + ". See /recordable report.");
         }
         return session;
     }
@@ -237,6 +255,7 @@ public final class RecorderSession {
                 H264Out out = H264Out.open(file, size[0], size[1], s.fps(), s.kbps() * 1000, cap.mode() == GpuCapture.Mode.RGBA,
                         s.swapChroma, firstOutput);
                 Built b = new Built();
+                attachSound(out, s, b);
                 b.capture = cap;
                 b.out = out;
                 b.file = file;
@@ -274,6 +293,7 @@ public final class RecorderSession {
                     H264Out out = H264Out.openAllowingSoftware(file, size[0], size[1], fps, Math.min(s.kbps(), 2500) * 1000,
                             cap.mode() == GpuCapture.Mode.RGBA, s.swapChroma, firstOutput);
                     Built b = new Built();
+                    attachSound(out, s, b);
                     b.capture = cap;
                     b.out = out;
                     b.file = file;
@@ -293,6 +313,19 @@ public final class RecorderSession {
             cap.close();
         }
         return null;
+    }
+
+    /** Adds the sound track if the game's sound is going through the recorder; otherwise notes why there is none. */
+    private static void attachSound(H264Out out, Settings s, Built b) {
+        String why = GameAudio.whyNotRecorded(s.recordSound);
+        if (why != null) {
+            b.audioNote = "sound: not recorded (" + why + ")";
+            return;
+        }
+        if (out.attachAudio(GameAudio.tap())) {
+            b.tap = GameAudio.tap();
+        }
+        b.audioNote = out.audioNote();
     }
 
     private static Built buildBackup(Settings s, Path dir, String stamp, int srcW, int srcH, List<String> notes) {
@@ -352,41 +385,12 @@ public final class RecorderSession {
 
     /** Places where the native helper may be unpacked; some phones forbid running code from some folders, so there are several. */
     static Path[] nativeFolders(Path gameDir) {
-        List<Path> folders = new ArrayList<>();
-        addFolder(folders, System.getProperty("java.io.tmpdir"), "recordable-lite");
-        addFolder(folders, System.getProperty("user.home"), ".recordable-lite");
-        String javaHome = System.getProperty("java.home");
-        if (javaHome != null && !javaHome.isEmpty()) {
-            folders.add(Path.of(javaHome, "lib", "recordable-lite"));
-        }
-        String pkg = androidPackage();
-        if (pkg != null) {
-            folders.add(Path.of("/data/data", pkg, "cache", "recordable-lite"));
-            folders.add(Path.of("/data/data", pkg, "files", "recordable-lite"));
-        }
-        folders.add(Settings.configDir(gameDir).resolve("native"));
-        return folders.toArray(new Path[0]);
-    }
-
-    private static void addFolder(List<Path> list, String base, String name) {
-        if (base != null && !base.isEmpty()) {
-            list.add(Path.of(base).resolve(name));
-        }
+        return NativeFolders.list(gameDir);
     }
 
     /** The package name of the Android app this Java runs in (the name of the process), or null if that is not a phone. */
     static String androidPackage() {
-        try {
-            byte[] raw = Files.readAllBytes(Path.of("/proc/self/cmdline"));
-            int end = 0;
-            while (end < raw.length && raw[end] != 0) {
-                end++;
-            }
-            String name = new String(raw, 0, end, StandardCharsets.UTF_8).trim();
-            return name.matches("[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z0-9_]+)+") ? name : null;
-        } catch (IOException | RuntimeException e) {
-            return null;
-        }
+        return NativeFolders.androidPackage();
     }
 
     static String shorten(String text, int max) {
@@ -436,6 +440,9 @@ public final class RecorderSession {
     public void pause() {
         if (state == State.RECORDING) {
             pauseStartNs = System.nanoTime();
+            if (audioTap != null) {
+                audioTap.pause();
+            }
             state = State.PAUSED;
             say.accept("Recording paused. Press = to continue.");
         }
@@ -445,6 +452,9 @@ public final class RecorderSession {
         if (state == State.PAUSED) {
             long now = System.nanoTime();
             pausedTotalNs += now - pauseStartNs;
+            if (audioTap != null) {
+                audioTap.resume(pausedTotalNs);
+            }
             nextCaptureNs = now;
             lastFrameNs = 0;
             sinceCapture = 0;
@@ -570,6 +580,9 @@ public final class RecorderSession {
             pausedTotalNs += System.nanoTime() - pauseStartNs;
         }
         state = State.STOPPING;
+        if (audioTap != null) {
+            audioTap.disarm();                                 // the sound ends where the picture ends
+        }
         stopReason = reason == null ? "" : reason;
         try {
             long deadline = System.nanoTime() + 80_000_000L;   // pictures still on their way get a moment to arrive
@@ -689,6 +702,10 @@ public final class RecorderSession {
             result = "The recording failed: " + (error == null ? "unknown error" : error)
                     + (size > 0 ? ". What was already written is saved in " + file : "");
             say.accept(result);
+        }
+        String sound = out.audioNote();
+        if (sound != null) {
+            report.add(sound);
         }
         report.add("result: " + result);
         report.write();

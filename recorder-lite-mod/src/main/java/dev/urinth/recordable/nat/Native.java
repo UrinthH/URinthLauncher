@@ -99,7 +99,7 @@ public final class Native {
     }
 
     /** dlopen with the given library name; 0 if it cannot be loaded. */
-    static long dlopen(String library) {
+    public static long dlopen(String library) {
         if (kind == Kind.LWJGL) {
             return LwjglCalls.dlopen(library, RTLD_NOW);
         }
@@ -112,7 +112,7 @@ public final class Native {
     }
 
     /** dlsym; 0 if the library has no such function. */
-    static long dlsym(long handle, String symbol) {
+    public static long dlsym(long handle, String symbol) {
         if (kind == Kind.LWJGL) {
             return LwjglCalls.dlsym(handle, symbol);
         }
@@ -125,7 +125,7 @@ public final class Native {
     }
 
     /** The system's last dynamic linking complaint, if the call path can tell. */
-    static String dlerror() {
+    public static String dlerror() {
         if (kind == Kind.LWJGL) {
             return LwjglCalls.dlerror();
         }

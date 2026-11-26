@@ -1,5 +1,7 @@
 package dev.urinth.recordable.enc;
 
+import dev.urinth.recordable.audio.AudioRecorder;
+import dev.urinth.recordable.audio.AudioTap;
 import dev.urinth.recordable.mux.Fmp4Writer;
 import dev.urinth.recordable.nat.NdkCodec;
 import dev.urinth.recordable.nat.NdkEncoder;
@@ -23,6 +25,9 @@ public final class H264Out implements VideoOut {
     private byte[] nv12;
     private boolean sawOutput;
     private boolean closed;
+    private AudioRecorder audio;
+    private String audioNote;
+    private String audioLast;
 
     private H264Out(NdkEncoder encoder, Fmp4Writer muxer, int width, int height, boolean rgbaInput, boolean swapChroma,
                     Runnable onFirstOutput) {
@@ -97,6 +102,56 @@ public final class H264Out implements VideoOut {
         return encoder.isSoftware();
     }
 
+    /**
+     * Adds a sound track that is fed from the tap. This never throws: if the phone has no AAC encoder the video is recorded without
+     * sound, as it would be if this was not called.
+     *
+     * @return true if the sound track was added
+     */
+    public boolean attachAudio(AudioTap tap) {
+        try {
+            audio = AudioRecorder.open(tap, muxer);
+            audioNote = "sound: recording through the phone's AAC encoder";
+            return true;
+        } catch (IOException | RuntimeException | LinkageError e) {
+            audio = null;
+            audioNote = "sound: not recorded (the phone's AAC encoder could not be used: " + e.getMessage() + ")";
+            return false;
+        }
+    }
+
+    public boolean hasAudio() {
+        return audio != null;
+    }
+
+    @Override
+    public String audioNote() {
+        AudioRecorder a = audio;
+        if (a != null) {
+            return a.describe();
+        }
+        return audioLast != null ? audioLast : audioNote;
+    }
+
+    /** Takes the sound that has been collected and gives it to the encoder. A problem here only ends the sound, never the video. */
+    private void serviceAudio() {
+        AudioRecorder a = audio;
+        if (a == null) {
+            return;
+        }
+        try {
+            a.service();
+        } catch (IOException | RuntimeException e) {
+            dropAudio(a, e);
+        }
+    }
+
+    private void dropAudio(AudioRecorder a, Exception e) {
+        audioLast = a.describe() + "; the sound stopped: " + e;
+        audio = null;
+        a.close();
+    }
+
     /** What was tried while looking for a working encoder, for the report. */
     public String attempts() {
         return encoder.attempts();
@@ -104,6 +159,7 @@ public final class H264Out implements VideoOut {
 
     @Override
     public boolean accept(Frame f) throws IOException {
+        serviceAudio();
         byte[] picture = f.data;
         if (rgbaInput) {
             Nv12.fromRgbaBottomUp(f.data, width, height, nv12);
@@ -119,6 +175,7 @@ public final class H264Out implements VideoOut {
 
     @Override
     public void idle() throws IOException {
+        serviceAudio();
         encoder.drain(sink, 4_000);
     }
 
@@ -129,6 +186,7 @@ public final class H264Out implements VideoOut {
         }
         closed = true;
         try {
+            finishAudio();
             encoder.finish(sink, 3_000);
         } finally {
             try {
@@ -139,12 +197,32 @@ public final class H264Out implements VideoOut {
         }
     }
 
+    private void finishAudio() {
+        AudioRecorder a = audio;
+        if (a == null) {
+            return;
+        }
+        try {
+            a.finish();
+        } catch (IOException | RuntimeException e) {
+            audioLast = a.describe() + "; the sound stopped: " + e;
+        }
+        audioLast = audioLast != null ? audioLast : a.describe();
+        audio = null;
+    }
+
     @Override
     public void abort() {
         if (closed) {
             return;
         }
         closed = true;
+        AudioRecorder a = audio;
+        if (a != null) {
+            audioLast = a.describe() + "; the recording was cut short";
+            audio = null;
+            a.close();
+        }
         try {
             encoder.close();
         } catch (RuntimeException ignored) {
