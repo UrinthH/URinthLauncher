@@ -100,23 +100,22 @@ final class JarIntegrityTest {
             assertFalse(meta.contains("${version}"), "the version was filled in");
             assertTrue(meta.contains("recordable_lite.mixins.json"), "the game hook configuration is listed in fabric.mod.json");
 
-            // The sound hook: it must be optional (a game that does not fit it still starts) and, in the remapped jar, it must come with
-            // the table that translates the Minecraft names it uses into the names the game runs with.
+            // The sound hook: it must be optional (a game that does not fit it still starts) and, in the remapped jar, it must name
+            // the game's classes and methods the way the running game knows them.
             String mixins = new String(read(zip, "recordable_lite.mixins.json"), StandardCharsets.UTF_8).replaceAll("\\s+", "");
             assertTrue(mixins.contains("\"package\":\"dev.urinth.recordable.mixin\""), "mixin package");
             assertTrue(mixins.contains("LibraryMixin"), "the sound engine hook is listed");
             assertTrue(mixins.contains("\"required\":false"), "the hook configuration is not required");
             assertTrue(mixins.contains("\"defaultRequire\":0"), "hooks that do not fit are skipped, not fatal");
             if (!Boolean.getBoolean("urinth.unremapped")) {
-                int at = mixins.indexOf("\"refmap\":\"");
-                assertTrue(at >= 0, "the hook configuration names its translation table (refmap)");
-                int from = at + "\"refmap\":\"".length();
-                String refmapName = mixins.substring(from, mixins.indexOf('"', from));
-                String refmap = new String(read(zip, refmapName), StandardCharsets.UTF_8);
-                assertTrue(refmap.contains("dev/urinth/recordable/mixin/LibraryMixin"), "the refmap covers the sound engine hook");
-                assertTrue(refmap.contains("openDeviceOrFallback(Ljava/lang/String;)J"), "the refmap translates the device call that is redirected");
-                assertTrue(refmap.contains("method_"), "the refmap has intermediary method names");
-                assertTrue(refmap.contains("net/minecraft/class_"), "the refmap has intermediary class names");
+                // Loom rewrites the names inside the hook's annotations in the class file itself (there is no separate refmap file):
+                // the game runs with its intermediary names, so the hook must name the sound library and its methods that way.
+                String hook = new String(read(zip, "dev/urinth/recordable/mixin/LibraryMixin.class"), StandardCharsets.ISO_8859_1);
+                assertTrue(hook.contains("Lnet/minecraft/class_"), "the hook targets the game's sound library by its runtime name");
+                assertTrue(hook.contains("method_"), "the hook names the game's methods by their runtime names");
+                assertTrue(hook.contains("Lorg/lwjgl/openal/ALC10;alcCreateContext"), "the hook finds the OpenAL context call (an LWJGL name, not remapped)");
+                assertFalse(hook.contains("com/mojang/blaze3d/audio/Library"), "no development name of the sound library is left in the hook");
+                assertFalse(hook.contains("openDeviceOrFallback"), "no development name of the sound library's methods is left in the hook");
             }
 
             String lang = new String(read(zip, "assets/recordable_lite/lang/en_us.json"), StandardCharsets.UTF_8);
