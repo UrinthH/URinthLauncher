@@ -1,5 +1,7 @@
 package dev.urinth.boost;
 
+import java.util.function.Consumer;
+
 /**
  * Everything the mod decides, with no game code in it: the mode, the level that follows from it, the four hook
  * decisions and the counters. The game side feeds it the clock and the frame rate once per tick and asks it
@@ -22,6 +24,11 @@ public final class BoostRuntime {
     private final Bench bench = new Bench();
     private final BoostStats stats = new BoostStats();
     private final PlayerCap playerCap = new PlayerCap();
+    private final LagWatch lag = new LagWatch();
+    private final LagWatch.Reading reading = new LagWatch.Reading();
+    private volatile Probe probe;
+    private volatile Consumer<String> lagSink;
+    private boolean lagBroken;
 
     private volatile int playersSetting;
     private volatile int playersAround;
@@ -87,6 +94,53 @@ public final class BoostRuntime {
 
     public Bench bench() {
         return bench;
+    }
+
+    // ---- the lag report ----
+
+    /** Gives the lag report the numbers only the game's own Java can tell (memory collections, memory in use). */
+    public interface Probe {
+        void fill(LagWatch.Reading reading);
+    }
+
+    /** Where the lag report goes (the game log). Without a sink nothing is watched. */
+    public void setLagSink(Consumer<String> sink) {
+        lagSink = sink;
+    }
+
+    public void setProbe(Probe newProbe) {
+        probe = newProbe;
+    }
+
+    /** How many times the frame rate fell below half of the aim. */
+    public int lagEpisodes() {
+        return lag.episodes();
+    }
+
+    /** The lowest frame rate of those times, or 0. */
+    public int worstLagFps() {
+        return lag.worstFps();
+    }
+
+    /** The last line of the lag report; empty until there was one. */
+    public String lastLag() {
+        return lag.last();
+    }
+
+    private void watchLag(long nowMs, int fps) {
+        Consumer<String> sink = lagSink;
+        if (sink == null || lagBroken) return;
+        try {
+            reading.clear();
+            Probe source = probe;
+            if (source != null) source.fill(reading);
+            reading.entityCalls = stats.calls(BoostStats.ENTITY);
+            reading.playerCalls = stats.calls(BoostStats.PLAYER);
+            String line = lag.sample(nowMs, fps, governor.target(), BoostLevel.name(limits.level), reading);
+            if (line != null) sink.accept(line);
+        } catch (RuntimeException | LinkageError error) {
+            lagBroken = true; // the report is a luxury: a failure in it must never switch Boost itself off
+        }
     }
 
     /** The result of the last finished /uboost bench, or null. */
@@ -200,6 +254,7 @@ public final class BoostRuntime {
         if (problem != null) return;
         if (!inWorld) {
             wasInWorld = false;
+            lag.leaveWorld();
             if (bench.active()) bench.cancel();
             governor.reset();
             playerCap.clear();
@@ -218,6 +273,7 @@ public final class BoostRuntime {
             applyLevel();
             return;
         }
+        watchLag(nowMs, fps);
         if (bench.active()) {
             bench.sample(fps);
             if (!bench.active()) lastBench = bench.result();

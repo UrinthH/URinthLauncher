@@ -179,4 +179,111 @@ public class GovernorTest {
         }
         assertEquals(3, sim.governor.level());
     }
+
+    @Test
+    public void aCrashThatGoesOnUsesTheTopLevelWithoutWaitingForTheVerdict() {
+        Governor governor = new Governor(85);
+        governor.sample(100_000, 88);
+        governor.sample(101_000, 8);
+        assertEquals(1, governor.level(), "one crashed second starts the first level");
+        governor.sample(102_000, 9);
+        assertEquals(BoostLevel.MAX, governor.level(), "the second one does not wait for the verdict");
+        assertTrue(governor.note().contains("straight"), governor.note());
+        assertTrue(governor.judging());
+    }
+
+    @Test
+    public void oneBadSecondOnlyStartsTheFirstLevel() {
+        Governor governor = new Governor(85);
+        governor.sample(100_000, 88);
+        governor.sample(101_000, 8);
+        governor.sample(102_000, 88);
+        governor.sample(103_000, 88);
+        governor.sample(104_000, 88);
+        assertEquals(1, governor.level());
+    }
+
+    @Test
+    public void aLowButNotCrashedFrameRateIsJudgedInTheUsualWay() {
+        Governor governor = new Governor(85);
+        governor.sample(100_000, 88);
+        governor.sample(101_000, 40);
+        assertEquals(1, governor.level());
+        governor.sample(102_000, 41);
+        governor.sample(103_000, 42);
+        assertEquals(1, governor.level(), "40 fps is low, not a crash: no jump");
+    }
+
+    @Test
+    public void aCrashThatSheddingCannotFixIsPutBackAfterTheVerdict() {
+        Sim sim = new Sim(85, 0, 0, 0, 0);
+        int highest = 0;
+        for (int i = 0; i < 30; i++) highest = Math.max(highest, sim.step(8));
+        assertEquals(BoostLevel.MAX, highest, "it went to the top for the trial");
+        assertEquals(0, sim.governor.level(), "and was put back because the frame rate did not change");
+        assertTrue(sim.governor.raiseLocked(sim.now));
+    }
+
+    @Test
+    public void aCrashThatSheddingFixesKeepsTheTopLevelAndComesBackWhenItIsOver() {
+        Sim sim = new Sim(85, 0, 0.3, 0.6, 1.0);
+        sim.step(80);
+        sim.run(8, 8);
+        assertEquals(BoostLevel.MAX, sim.governor.level(), "kept: 8 to 16 fps is a real gain");
+        sim.run(120, 100);
+        assertEquals(0, sim.governor.level(), "all the detail is back once the crowd is gone");
+    }
+
+    @Test
+    public void theTopLevelIsReachedInSecondsNotInHalfAMinute() {
+        Sim sim = new Sim(85, 0, 0.3, 0.6, 1.0);
+        sim.step(88);
+        int seconds = 0;
+        while (sim.governor.level() < BoostLevel.MAX && seconds < 30) {
+            sim.step(10);
+            seconds++;
+        }
+        assertTrue(seconds <= 3, "seconds from the first crashed reading to the top level: " + seconds);
+    }
+
+    @Test
+    public void aDropThatStartsRightBeforeTheRaiseDoesNotMakeSheddingLookUseless() {
+        Governor governor = new Governor(85);
+        governor.sample(100_000, 88);
+        governor.sample(101_000, 88);
+        governor.sample(102_000, 40);
+        assertEquals(1, governor.level());
+        governor.sample(103_000, 44);
+        governor.sample(104_000, 48);
+        governor.sample(105_000, 50);
+        governor.sample(106_000, 52);
+        assertEquals(1, governor.level(), "kept: 40 to 50 fps is a real gain");
+        assertFalse(governor.raiseLocked(106_000));
+        assertTrue(governor.note().contains("helps"), governor.note());
+    }
+
+    @Test
+    public void aRaiseThatChangesNothingIsStillPutBack() {
+        Governor governor = new Governor(85);
+        governor.sample(100_000, 40);
+        governor.sample(101_000, 40);
+        governor.sample(102_000, 40);
+        governor.sample(103_000, 40);
+        governor.sample(104_000, 40);
+        assertEquals(0, governor.level());
+        assertTrue(governor.raiseLocked(104_000));
+    }
+
+    @Test
+    public void theLevelIsLoweredAfterFewerSecondsOfRoomToSpare() {
+        Sim sim = new Sim(50, 0, 0.5, 0.5, 0.5);
+        sim.run(12, 30);
+        assertEquals(1, sim.governor.level());
+        int seconds = 0;
+        while (sim.governor.level() > 0 && seconds < 40) {
+            sim.step(100);
+            seconds++;
+        }
+        assertTrue(seconds <= 8, "seconds until the detail was back: " + seconds);
+    }
 }

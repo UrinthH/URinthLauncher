@@ -381,4 +381,82 @@ public class BoostRuntimeTest {
         }
         assertTrue(sawOff && sawOn, "the test went through both halves");
     }
+
+    @Test
+    public void theLagReportGoesToTheSinkOncePerEpisode() {
+        BoostRuntime runtime = new BoostRuntime(BoostMode.AUTO, 85);
+        java.util.List<String> lines = new java.util.ArrayList<>();
+        runtime.setLagSink(lines::add);
+        runtime.setProbe(reading -> {
+            reading.gcCount = 3;
+            reading.gcMillis = 120;
+            reading.heapUsedMb = 500;
+            reading.heapMaxMb = 1024;
+        });
+        run(runtime, 0, 12, 88);
+        assertTrue(lines.isEmpty());
+        runtime.tick(13_000L, 8, true);
+        runtime.tick(14_000L, 9, true);
+        assertTrue(lines.isEmpty(), "nothing is said while it is going on");
+        runtime.tick(15_000L, 88, true);
+        assertEquals(1, lines.size());
+        assertTrue(lines.get(0).startsWith(LagWatch.TAG), lines.get(0));
+        assertTrue(lines.get(0).contains("lowest 8 fps"), lines.get(0));
+        assertTrue(lines.get(0).contains("memory up to 48% of 1024 MB"), lines.get(0));
+        assertEquals(1, runtime.lagEpisodes());
+        assertEquals(8, runtime.worstLagFps());
+        assertEquals(lines.get(0), runtime.lastLag());
+    }
+
+    @Test
+    public void theFirstSecondsAfterJoiningAreNotWatched() {
+        BoostRuntime runtime = new BoostRuntime(BoostMode.AUTO, 85);
+        java.util.List<String> lines = new java.util.ArrayList<>();
+        runtime.setLagSink(lines::add);
+        run(runtime, 0, 7, 5);
+        run(runtime, 8, 12, 88);
+        assertTrue(lines.isEmpty());
+        assertEquals(0, runtime.lagEpisodes());
+    }
+
+    @Test
+    public void withoutASinkNothingIsWatchedAndTheProbeIsNotAsked() {
+        BoostRuntime runtime = new BoostRuntime(BoostMode.AUTO, 85);
+        int[] asked = {0};
+        runtime.setProbe(reading -> asked[0]++);
+        run(runtime, 0, 12, 88);
+        runtime.tick(13_000L, 8, true);
+        runtime.tick(14_000L, 88, true);
+        assertEquals(0, asked[0]);
+        assertEquals(0, runtime.lagEpisodes());
+    }
+
+    @Test
+    public void aBrokenSinkOnlySilencesTheReportAndNeverSwitchesTheModOff() {
+        BoostRuntime runtime = new BoostRuntime(BoostMode.AUTO, 85);
+        runtime.setLagSink(line -> {
+            throw new IllegalStateException("the log is closed");
+        });
+        runtime.setProbe(reading -> {
+            throw new IllegalStateException("no memory numbers");
+        });
+        run(runtime, 0, 12, 88);
+        runtime.tick(13_000L, 8, true);
+        runtime.tick(14_000L, 9, true);
+        runtime.tick(15_000L, 88, true);
+        assertNull(runtime.problem());
+        assertEquals(BoostLevel.MAX, runtime.level(), "Boost itself kept working");
+    }
+
+    @Test
+    public void leavingTheWorldEndsAWatchedEpisodeWithoutALine() {
+        BoostRuntime runtime = new BoostRuntime(BoostMode.AUTO, 85);
+        java.util.List<String> lines = new java.util.ArrayList<>();
+        runtime.setLagSink(lines::add);
+        run(runtime, 0, 12, 88);
+        runtime.tick(13_000L, 8, true);
+        runtime.tick(14_000L, 9, false);
+        run(runtime, 15, 40, 88);
+        assertTrue(lines.isEmpty());
+    }
 }

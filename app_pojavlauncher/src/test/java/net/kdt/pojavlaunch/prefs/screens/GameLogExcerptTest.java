@@ -360,4 +360,40 @@ public class GameLogExcerptTest {
             dir.delete();
         }
     }
+
+    private static final String LAG_A = "[20:41:12] [Render thread/INFO] (urinth_boost) [URinth Lag] lasted 7 s, lowest 8 fps, back to 88 fps (aim 85); "
+            + "memory collections: 2 (640 ms); memory up to 88% of 1024 MB; drawn per frame up to 40 entities, 3 players; Boost max; likely: memory collections";
+    private static final String LAG_B = "[20:49:30] [Render thread/INFO] (urinth_boost) [URinth Lag] lasted 3 s, lowest 21 fps, back to 86 fps (aim 85); "
+            + "memory collections: 0 (0 ms); memory up to 51% of 1024 MB; drawn per frame up to 230 entities, 41 players; Boost strong; likely: a crowd of entities";
+    private static final String LAG_C = "[21:02:01] [Render thread/INFO] (urinth_boost) [URinth Lag] still going after 70 s, lowest 15 fps, now 33 fps (aim 85); "
+            + "memory collections: 1 (30 ms); memory up to 60% of 1024 MB; drawn per frame up to 20 entities, 2 players; Boost max; likely: not memory and not a crowd (chunk loading, shaders or heat)";
+
+    @Test
+    public void bigDropsTheBoostModNotedAreSummarisedOverTheWholeLog() throws IOException {
+        StringBuilder log = new StringBuilder();
+        for (int i = 1; i <= 80; i++) {
+            if (i == 20) log.append(LAG_A).append('\n');
+            else if (i == 40) log.append(LAG_B).append('\n');
+            else if (i == 60) log.append(LAG_C).append('\n');
+            else log.append("line ").append(i).append('\n');
+        }
+        String text = excerpt(log.toString(), 3, 0, 3, BIG);
+        assertTrue(text, text.startsWith("--- summary counted over the whole log ---\n"
+                + "Big FPS drops (below half of the aim) noted by the Boost mod: 2 over, 1 long one(s) still going when noted; "
+                + "likely causes: memory collections x1, a crowd of entities x1\n"
+                + "Worst drop: [URinth Lag] lasted 7 s, lowest 8 fps, back to 88 fps (aim 85); "));
+        assertFalse(text, text.contains("Memory (GC) pauses"));
+    }
+
+    @Test
+    public void aLogWithoutLagLinesHasNoLagSummary() throws IOException {
+        String text = excerpt(lines(50), 3, 0, 3, BIG);
+        assertFalse(text, text.contains("Big FPS drops"));
+    }
+
+    @Test
+    public void aLagLineThatIsNotAReportIsNotCounted() throws IOException {
+        String text = excerpt("line 1\n[URinth Lag] hello\nline 3\n", 10, 10);
+        assertFalse(text, text.contains("Big FPS drops"));
+    }
 }

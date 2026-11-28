@@ -37,6 +37,12 @@ public final class BoostText {
         lines.add(describe(runtime.limits()));
         lines.add(playersLine(runtime));
         lines.add(counts(runtime.stats()));
+        if (runtime.lagEpisodes() > 0) {
+            int times = runtime.lagEpisodes();
+            lines.add("Big drops: " + times + (times == 1 ? " time" : " times") + " below half of the aim, the worst "
+                    + runtime.worstLagFps() + " fps. What was going on is in the game log (lines that start with "
+                    + LagWatch.TAG.trim() + ").");
+        }
         if (mode.isAuto() && !runtime.governorNote().isEmpty()) {
             lines.add("Last decision: " + runtime.governorNote());
         }

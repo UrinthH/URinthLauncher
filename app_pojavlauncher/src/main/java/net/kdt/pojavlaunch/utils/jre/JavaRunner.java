@@ -14,6 +14,7 @@ import net.kdt.pojavlaunch.Architecture;
 import net.kdt.pojavlaunch.Logger;
 import net.kdt.pojavlaunch.Tools;
 import net.kdt.pojavlaunch.awt.AWTView;
+import net.kdt.pojavlaunch.game.RefreshRateBoost;
 import net.kdt.pojavlaunch.multirt.MultiRTUtils;
 import net.kdt.pojavlaunch.multirt.Runtime;
 import net.kdt.pojavlaunch.prefs.AdvancedPerformance;
@@ -348,6 +349,9 @@ public class JavaRunner {
         // it paused the game. A lag spike can then be matched to a collection (or ruled out).
         if(LauncherPreferences.PREF_PERFORMANCE_MODE && advanced.on(AdvancedPerformance.KEY_GC_LOG)
                 && !hasArgument(runtimeArgs, "-verbose:gc")) runtimeArgs.add("-verbose:gc");
+        // The URinth Boost mod aims for the rate the screen runs at, so the game is told what the launcher asked of it.
+        String screenRate = ModJvmProperties.refreshRate(RefreshRateBoost.targetRate());
+        if(screenRate != null && !ModJvmProperties.names(runtimeArgs)) runtimeArgs.add(screenRate);
         addx86SignalWorkaround(runtimeArgs);
         StringBuilder classpathBuilder = new StringBuilder().append("-Djava.class.path=");
         boolean first = true;

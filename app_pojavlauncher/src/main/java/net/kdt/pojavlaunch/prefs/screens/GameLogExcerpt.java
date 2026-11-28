@@ -196,8 +196,9 @@ final class GameLogExcerpt {
 
     /**
      * Numbers counted over every line of the log while it is read: the memory-collection pauses the
-     * JVM logs ("[71.2s][info][gc] GC(18) Pause Young (Mixed) ... 94.223ms") and how often the
-     * launcher noted that the system lowered the screen's refresh rate.
+     * JVM logs ("[71.2s][info][gc] GC(18) Pause Young (Mixed) ... 94.223ms"), how often the
+     * launcher noted that the system lowered the screen's refresh rate, and the big frame rate drops the
+     * Boost mod noted ("[URinth Lag] lasted 7 s, lowest 8 fps, ... likely: memory collections").
      */
     static final class LogStats {
         private static final Pattern GC_PAUSE = Pattern.compile(
@@ -205,6 +206,13 @@ final class GameLogExcerpt {
         private static final Pattern GC_CYCLE_END = Pattern.compile(
                 "^\\[(\\d+(?:\\.\\d+)?)s\\]\\[info\\s*\\]\\[gc\\s*\\]\\s+GC\\(\\d+\\)\\s+Concurrent Mark Cycle\\s+(\\d+(?:\\.\\d+)?)ms\\s*$");
         private static final String REFRESH_LOWERED = "[RefreshRate] the system lowered";
+        /** The tag the Boost mod puts in front of each line of its lag report (LagWatch.TAG in boost-mod). */
+        private static final String LAG_TAG = "[URinth Lag] ";
+        private static final Pattern LAG_LOWEST = Pattern.compile("lowest (\\d+) fps");
+        private static final String[] LAG_CAUSES = {
+                "memory collections", "memory nearly full", "a crowd of entities", "not memory and not a crowd", "cannot tell"};
+        /** A line of the report is cut to this many characters in the summary. */
+        private static final int LAG_LINE_MAX = 330;
 
         private int pauses;
         private double totalMs;
@@ -218,6 +226,11 @@ final class GameLogExcerpt {
         private double longestCycleMs;
         private double lastStampSeconds;
         private int refreshLowered;
+        private int lagOver;
+        private int lagGoing;
+        private int worstLagFps = Integer.MAX_VALUE;
+        private String worstLagLine = "";
+        private final int[] lagCauses = new int[LAG_CAUSES.length];
 
         void accept(String line) {
             if (line.isEmpty()) return;
@@ -247,6 +260,31 @@ final class GameLogExcerpt {
                 return;
             }
             if (line.contains(REFRESH_LOWERED)) refreshLowered++;
+            int lag = line.indexOf(LAG_TAG);
+            if (lag >= 0) acceptLag(line.substring(lag));
+        }
+
+        private void acceptLag(String report) {
+            boolean over = report.startsWith(LAG_TAG + "lasted ");
+            if (over) lagOver++;
+            else if (report.startsWith(LAG_TAG + "still going")) lagGoing++;
+            else return;
+            Matcher lowest = LAG_LOWEST.matcher(report);
+            if (lowest.find()) {
+                int fps = Integer.parseInt(lowest.group(1));
+                if (fps < worstLagFps) {
+                    worstLagFps = fps;
+                    worstLagLine = report.length() > LAG_LINE_MAX ? report.substring(0, LAG_LINE_MAX) + "..." : report;
+                }
+            }
+            if (over) {
+                for (int i = 0; i < LAG_CAUSES.length; i++) {
+                    if (report.contains("likely: " + LAG_CAUSES[i])) {
+                        lagCauses[i]++;
+                        break;
+                    }
+                }
+            }
         }
 
         /** The summary lines; empty when the log holds nothing to count. */
@@ -264,6 +302,20 @@ final class GameLogExcerpt {
                             .append(Math.round(longestCycleMs)).append(" ms)");
                 }
                 lines.add(text.toString());
+            }
+            if (lagOver + lagGoing > 0) {
+                StringBuilder text = new StringBuilder("Big FPS drops (below half of the aim) noted by the Boost mod: ")
+                        .append(lagOver);
+                if (lagGoing > 0) text.append(" over, ").append(lagGoing).append(" long one(s) still going when noted");
+                StringBuilder causes = new StringBuilder();
+                for (int i = 0; i < LAG_CAUSES.length; i++) {
+                    if (lagCauses[i] == 0) continue;
+                    if (causes.length() > 0) causes.append(", ");
+                    causes.append(LAG_CAUSES[i]).append(" x").append(lagCauses[i]);
+                }
+                if (causes.length() > 0) text.append("; likely causes: ").append(causes);
+                lines.add(text.toString());
+                if (!worstLagLine.isEmpty()) lines.add("Worst drop: " + worstLagLine);
             }
             if (refreshLowered > 0) {
                 lines.add("Screen refresh rate: the system lowered it " + refreshLowered

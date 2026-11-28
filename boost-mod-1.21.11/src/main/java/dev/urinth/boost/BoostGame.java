@@ -1,6 +1,8 @@
 package dev.urinth.boost;
 
 import java.io.IOException;
+import java.lang.management.GarbageCollectorMXBean;
+import java.lang.management.ManagementFactory;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -59,13 +61,64 @@ public final class BoostGame {
 
     static void init() {
         settingsFile = FabricLoader.getInstance().getConfigDir().resolve(BoostConfig.FILE_NAME);
-        BoostConfig.Settings settings = BoostConfig.parse(read(settingsFile));
-        if (!Files.exists(settingsFile)) write(settingsFile, BoostConfig.DEFAULT_TEXT);
+        // The launcher tells the game how fast the screen is (a Java property); the aim follows it. Other launchers
+        // say nothing, and then the aim stays what it always was.
+        int screenHz = BoostConfig.screenHz(System.getProperty(BoostConfig.SCREEN_HZ_PROPERTY));
+        BoostConfig.Settings settings = BoostConfig.parse(read(settingsFile), screenHz);
+        if (!Files.exists(settingsFile) || settings.upgraded) {
+            write(settingsFile, BoostConfig.render(settings.mode, settings.targetFps, settings.players));
+        }
         runtime = new BoostRuntime(settings.mode, settings.targetFps, settings.players);
-        LOGGER.info("[URinth Boost] mode {}, aiming for {} fps, other players {}. Hooks: new particles, far "
+        runtime.setLagSink(line -> LOGGER.info("{}", line));
+        try {
+            runtime.setProbe(new GameProbe());
+        } catch (Throwable ignored) {
+            // no memory numbers in the lag report; everything else works
+        }
+        LOGGER.info("[URinth Boost] mode {}, aiming for {} fps{}{}, other players {}. Hooks: new particles, far "
                 + "items/stands/small mobs, name tags, armor of far players, the farthest players in a crowd. "
                 + "Type /uboost in the game for the state.", settings.mode.word(), settings.targetFps,
+                screenHz > 0 ? " (screen " + screenHz + " Hz)" : "",
+                settings.upgraded ? ", moved from the first version's 75 to follow the screen" : "",
                 BoostConfig.playersWord(settings.players));
+    }
+
+    /**
+     * Gives the lag report the numbers of the game's own Java: memory collections since the start and memory in use.
+     * Whatever cannot be read (a Java without the management classes, say) is left out of the report.
+     */
+    private static final class GameProbe implements BoostRuntime.Probe {
+        private final List<GarbageCollectorMXBean> collectors = collectors();
+
+        private static List<GarbageCollectorMXBean> collectors() {
+            try {
+                return ManagementFactory.getGarbageCollectorMXBeans();
+            } catch (Throwable ignored) {
+                return null;
+            }
+        }
+
+        @Override
+        public void fill(LagWatch.Reading reading) {
+            Runtime jvm = Runtime.getRuntime();
+            reading.heapMaxMb = jvm.maxMemory() >> 20;
+            reading.heapUsedMb = (jvm.totalMemory() - jvm.freeMemory()) >> 20;
+            if (collectors == null) return;
+            try {
+                long count = 0;
+                long millis = 0;
+                for (GarbageCollectorMXBean collector : collectors) {
+                    String name = collector.getName();
+                    if (name != null && name.contains("Concurrent")) continue; // background work, not a pause
+                    if (collector.getCollectionCount() > 0) count += collector.getCollectionCount();
+                    if (collector.getCollectionTime() > 0) millis += collector.getCollectionTime();
+                }
+                reading.gcCount = count;
+                reading.gcMillis = millis;
+            } catch (Throwable ignored) {
+                // leave the memory collections out
+            }
+        }
     }
 
     /** Writes the current mode and target to the settings file. */

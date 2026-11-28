@@ -13,6 +13,9 @@ import java.util.Locale;
  * again and compares. If the gain is too small (the slowdown comes from the terrain, the screen, the phone's heat,
  * not from particles or far entities) the level is put back and raising is switched off for a while, longer each
  * time it happens again. A limit that does not buy frames only makes the picture worse, so it is not kept.</li>
+ * <li><b>A crash is not waited out.</b> One reading far below the target starts the first level at once. If the
+ * next reading is a crash again (below {@link #CRASH_FACTOR} of the target twice in a row), the top level is used
+ * without waiting for the verdict. The verdict still comes, so the top level is put back when it buys nothing.</li>
  * <li><b>Come back to full quality.</b> When the frame rate would still be at the target without the current
  * level (using the gain measured when the level was raised), the level is lowered again after a few seconds.
  * When that evidence is missing, lowering is tried after a longer calm stretch, and put back if the frame rate
@@ -23,7 +26,15 @@ import java.util.Locale;
  */
 public final class Governor {
     /** A frame rate below this share of the target is a severe drop: one such sample is enough to raise. */
-    static final double SEVERE_FACTOR = 0.5;
+    static final double SEVERE_FACTOR = 0.6;
+    /**
+     * Two samples in a row below this share of the target are a crash (8 fps on a 85 fps target). The level that is
+     * being tried is then not waited out: it goes straight to the top, because every second of a crash is a second
+     * the player cannot play. The usual verdict still follows, so a top level that buys nothing is put back.
+     */
+    static final double CRASH_FACTOR = 0.35;
+    /** The most a single raise is credited with when it is measured, so one lucky second cannot stand for the level. */
+    static final double MAX_GAIN = 1.0;
     /** Samples in a row below the target before the level is raised. */
     static final int FALL_SAMPLES = 2;
     /** At least this long between two changes of level. */
@@ -40,7 +51,7 @@ public final class Governor {
     /** The scene counts as a different one when the frame rate moved this far from where the lock started. */
     static final double SCENE_CHANGE = 0.25;
     /** Samples in a row with room to spare before the level is lowered. */
-    static final int HEADROOM_SAMPLES = 6;
+    static final int HEADROOM_SAMPLES = 4;
     /** How close to the target the frame rate of a lower level must be expected to stay. */
     static final double SLACK = 0.97;
     /** Calm for this long at a raised level (at or above the target) and a lower level is tried anyway. */
@@ -148,6 +159,10 @@ public final class Governor {
         }
 
         if (judging != Judging.NONE) {
+            if (judging == Judging.RAISE && level < BoostLevel.MAX && crashContinues()) {
+                escalate(nowMs, fps);
+                return;
+            }
             judge(nowMs, fps);
             return;
         }
@@ -179,8 +194,25 @@ public final class Governor {
         }
     }
 
+    /** True when the last two samples were both a crash (the one just taken is already remembered). */
+    private boolean crashContinues() {
+        if (recentCount < 2) return false;
+        double crash = target * CRASH_FACTOR;
+        return recent[recentCount - 1] < crash && recent[recentCount - 2] < crash;
+    }
+
+    /** The crash goes on while a level is being tried: do not wait for the verdict, use the top level now. */
+    private void escalate(long now, int fps) {
+        level = BoostLevel.MAX;
+        startJudging(Judging.RAISE, now);
+        note = "fps " + fps + " is far below " + target + ": going straight to " + BoostLevel.name(level);
+    }
+
     private void raise(long now, int fps) {
-        baseline = meanRecent();
+        // The lower of the average and the latest reading: when the frame rate is falling for another reason, the
+        // average still holds the good seconds from before and would make a level that helps look like one that
+        // does not (and shedding would then be switched off in the middle of the very crowd it is for).
+        baseline = Math.min(meanRecent(), recent[recentCount - 1]);
         judgedFrom = level;
         level++;
         startJudging(Judging.RAISE, now);
@@ -226,7 +258,7 @@ public final class Governor {
         if (what == Judging.RAISE) {
             double measured = after / baseline - 1.0;
             if (measured >= MIN_GAIN[level]) {
-                gain[level] = measured;
+                recordGain(measured);
                 raiseLockMs = FUTILE_LOCK_MS;
                 note = BoostLevel.name(level) + " helps: " + format(baseline) + " to " + format(after) + " fps ("
                         + percent(measured) + "), kept";
@@ -250,6 +282,17 @@ public final class Governor {
                     + (probeBackoffMs / 1000) + " s";
             probeBackoffMs = Math.min(probeBackoffMs * 2, PROBE_MAX_MS);
         }
+    }
+
+    /**
+     * Keeps what a measured raise gave back. A raise over several levels at once (a crash) is shared evenly among
+     * the levels it covered, so that each level can be lowered again on its own evidence later.
+     */
+    private void recordGain(double measured) {
+        double total = Math.min(Math.max(measured, 0), MAX_GAIN);
+        int steps = Math.max(1, level - judgedFrom);
+        double each = steps == 1 ? total : Math.pow(1.0 + total, 1.0 / steps) - 1.0;
+        for (int step = 1; step <= steps; step++) gain[judgedFrom + step] = each;
     }
 
     private void remember(int fps) {

@@ -1,6 +1,8 @@
 package dev.urinth.boost;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
@@ -97,5 +99,67 @@ public class BoostConfigTest {
         assertEquals(BoostMode.LIGHT, s.mode);
         assertEquals(BoostConfig.DEFAULT_TARGET, s.targetFps);
         assertEquals(30, s.players);
+    }
+
+    @Test
+    public void theAimFollowsTheScreenWhenItsRateIsKnown() {
+        assertEquals(85, BoostConfig.targetForScreen(90));
+        assertEquals(56, BoostConfig.targetForScreen(60));
+        assertEquals(113, BoostConfig.targetForScreen(120));
+        assertEquals(135, BoostConfig.targetForScreen(144));
+        assertEquals(BoostConfig.MAX_TARGET, BoostConfig.targetForScreen(480));
+        assertEquals(BoostConfig.DEFAULT_TARGET, BoostConfig.targetForScreen(0));
+        assertEquals(BoostConfig.DEFAULT_TARGET, BoostConfig.targetForScreen(-1));
+        assertEquals(BoostConfig.DEFAULT_TARGET, BoostConfig.targetForScreen(29));
+        assertEquals(BoostConfig.DEFAULT_TARGET, BoostConfig.targetForScreen(9000));
+    }
+
+    @Test
+    public void theRefreshRateTextIsReadCarefully() {
+        assertEquals(90, BoostConfig.screenHz("90"));
+        assertEquals(90, BoostConfig.screenHz(" 90 "));
+        assertEquals(0, BoostConfig.screenHz(null));
+        assertEquals(0, BoostConfig.screenHz(""));
+        assertEquals(0, BoostConfig.screenHz("fast"));
+        assertEquals(0, BoostConfig.screenHz("90.5"));
+        assertEquals(0, BoostConfig.screenHz("-5"));
+        assertEquals(0, BoostConfig.screenHz("29"));
+        assertEquals(0, BoostConfig.screenHz("100000"));
+    }
+
+    @Test
+    public void aFileWithoutAnAimUsesTheScreenAndANumberThePlayerWroteStays() {
+        assertEquals(85, BoostConfig.parse(null, 90).targetFps);
+        assertEquals(85, BoostConfig.parse("mode=max\n", 90).targetFps);
+        assertEquals(85, BoostConfig.parse("target-fps=fast\n", 90).targetFps);
+        assertEquals(70, BoostConfig.parse("target-fps=70\n", 90).targetFps);
+        assertEquals(75, BoostConfig.parse("mode=max\ntarget-fps=75\n", 90).targetFps, "a changed file is not the old default");
+        assertEquals(BoostConfig.DEFAULT_TARGET, BoostConfig.parse(null, 0).targetFps);
+        assertEquals(BoostConfig.DEFAULT_TARGET, BoostConfig.parse("mode=max\n", 0).targetFps);
+    }
+
+    @Test
+    public void theUntouchedFileOfTheFirstVersionFollowsTheScreenAndAsksToBeRewritten() {
+        BoostConfig.Settings known = BoostConfig.parse(BoostConfig.LEGACY_DEFAULT_TEXT, 90);
+        assertEquals(85, known.targetFps);
+        assertTrue(known.upgraded);
+        assertEquals(BoostMode.AUTO, known.mode);
+        assertEquals(BoostConfig.PLAYERS_AUTO, known.players);
+
+        BoostConfig.Settings unknown = BoostConfig.parse(BoostConfig.LEGACY_DEFAULT_TEXT, 0);
+        assertEquals(75, unknown.targetFps);
+        assertFalse(unknown.upgraded, "without the screen's rate there is nothing to follow");
+
+        assertFalse(BoostConfig.parse("mode=auto\ntarget-fps=75\n", 90).upgraded);
+        assertFalse(BoostConfig.parse(null, 90).upgraded);
+        assertFalse(BoostConfig.parse(BoostConfig.render(BoostMode.AUTO, 85, BoostConfig.PLAYERS_AUTO), 90).upgraded);
+    }
+
+    @Test
+    public void theFileWrittenForAScreenReadsBackTheSame() {
+        BoostConfig.Settings s = BoostConfig.parse(BoostConfig.render(BoostMode.AUTO, 85, BoostConfig.PLAYERS_AUTO), 90);
+        assertEquals(85, s.targetFps);
+        assertEquals(85, BoostConfig.parse(BoostConfig.render(BoostMode.AUTO, 85, BoostConfig.PLAYERS_AUTO), 60).targetFps,
+                "a number in the file wins over the screen");
     }
 }

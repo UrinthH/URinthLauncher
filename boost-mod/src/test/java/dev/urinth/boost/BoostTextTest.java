@@ -183,4 +183,17 @@ public class BoostTextTest {
         stats.act(BoostStats.PLAYER);
         assertTrue(BoostText.counts(stats).contains("players 2 / 1"), BoostText.counts(stats));
     }
+
+    @Test
+    public void theStatusTellsOfBigDropsOnlyWhenThereWereSome() {
+        BoostRuntime runtime = new BoostRuntime(BoostMode.AUTO, 85);
+        runtime.setLagSink(line -> { });
+        assertFalse(any(BoostText.status(runtime), "Big drops"));
+        for (int second = 0; second <= 12; second++) runtime.tick(second * 1000L, 88, true);
+        runtime.tick(13_000L, 8, true);
+        runtime.tick(14_000L, 9, true);
+        List<String> lines = BoostText.status(runtime);
+        assertTrue(any(lines, "Big drops: 1 time below half of the aim, the worst 8 fps"), String.join("|", lines));
+        assertTrue(any(lines, "[URinth Lag]"));
+    }
 }
